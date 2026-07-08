@@ -1,302 +1,139 @@
-# Setup checklist
+# Qasa Backend — OSS Core Edition
 
-## 1. Vytvorenie projektu
+Modular monolith Laravel API pre CRM a time tracking. Postavený na Clean Architecture princípoch s vrstvami: Domain, Application, Infrastructure, Presentation.
 
-```bash
-git clone git@github.com:ty/moj-saas.git
-cd moj-saas
-composer create-project laravel/laravel .
-```
+## Development Setup
 
-## 2. Inštalácia balíčkov
+### Prerequisites
+- PHP ^8.4
+- Docker & Docker Compose (pre lokálny stack)
+- Composer
 
-```bash
-# Core API + Auth
-php artisan install:api
-composer require laravel/socialite
-composer require laravel/cashier
-
-# DDD / Architecture
-composer require spatie/laravel-data
-composer require spatie/laravel-query-builder
-
-# PDF
-composer require barryvdh/laravel-dompdf
-
-# CSV import
-composer require league/csv
-
-# Dev only
-composer require barryvdh/laravel-debugbar --dev
-composer require laravel/telescope --dev
-php artisan telescope:install
-
-# Static analysis
-composer require nunomaduro/larastan --dev
-composer require vimeo/psalm --dev
-composer require psalm/plugin-laravel --dev
-```
-
-## 3. Kopírovanie súborov
+### Rýchly start
 
 ```bash
-# Migrácie — zmaž defaultné Laravel migrácie pre users
-rm database/migrations/0001_01_01_000000_create_users_table.php
+# Clone & install
+git clone <repo>
+cd qasa_backend
+composer install
 
-# Skopíruj naše migrácie
-cp -r /cesta/k/suborom/migrations/* database/migrations/
+# Environment
+cp .env.example .env
+php artisan key:generate
 
-# Skopíruj moduly
-cp -r /cesta/k/suborom/app/Modules app/Modules
-
-# Skopíruj providera
-cp /cesta/k/suborom/app/Providers/ModuleServiceProvider.php app/Providers/
-
-# Skopíruj config
-cp /cesta/k/suborom/config/admin.php config/
-```
-
-## 4. composer.json — autoload
-
-```json
-"autoload": {
-    "psr-4": {
-        "App\\": "app/",
-        "App\\Modules\\": "app/Modules/"
-    }
-}
-```
-
-```bash
-composer dump-autoload
-```
-
-## 5. config/app.php — providers
-
-```php
-// V sekcii Application Service Providers pridaj:
-App\Providers\ModuleServiceProvider::class,
-```
-
-## 6. config/auth.php — guards a providers
-
-```php
-'guards' => [
-    // ... existujúce ...
-    'admin' => [
-        'driver'   => 'sanctum',
-        'provider' => 'admin_users',
-    ],
-],
-
-'providers' => [
-    'users' => [
-        'driver' => 'eloquent',
-        'model'  => App\Modules\Auth\Domain\Models\User::class,
-    ],
-    'admin_users' => [
-        'driver' => 'eloquent',
-        'model'  => App\Modules\Admin\Domain\Models\AdminUser::class,
-    ],
-],
-```
-
-## 7. config/sanctum.php — guard
-
-```php
-'guard' => ['web', 'admin'],
-```
-
-## 8. config/cashier.php — model
-
-```php
-// Cashier používa náš User model
-// V .env:
-// CASHIER_MODEL=App\Modules\Auth\Domain\Models\User
-```
-
-## 9. .env
-
-```env
-APP_NAME="Qasa"
-APP_ENV=local
-APP_KEY=
-APP_DEBUG=true
-APP_URL=http://localhost
+# Docker
+docker-compose up -d
 
 # Database
+php artisan migrate
+php artisan db:seed --class="App\Modules\Admin\Infrastructure\Seeders\AdminUserSeeder"
+```
+
+### Development Commands
+
+```bash
+# Spustenie — všetko v docker qasa_app containeri:
+docker-compose exec qasa_app php artisan serve
+
+# Testing — Pest
+composer pest
+# alebo vnútri containera
+docker-compose exec qasa_app php artisan pest
+
+# Static analysis — PHPStan (level 8)
+composer phpstan
+# alebo
+docker-compose exec qasa_app php artisan phpstan
+
+# Code formatting — Laravel Pint
+composer pint
+# alebo len check bez zmien
+composer pint:check
+```
+
+## Architecture
+
+Projekt je rozdelený do modulov pod `app/Modules/`:
+- **Admin** — admin panel, system config
+- **Auth** — user authentication, Sanctum tokens
+- **Clients** — klientske profily
+- **Invoicing** — faktúry, faktúračný cyklus
+- **Orders** — objednávky
+- **Pricing** — cenové plány, subscriptions (Stripe)
+- **Saas** — SaaS vrstva (Team, Organization — odpojená v OSS)
+- **Shared** — zdieľané utilities, middleware
+- **Subscriptions** — billing, Cashier integracia
+- **Team** — team management, permissions (Spatie)
+- **TimeTracking** — time entries, projektový tracking
+
+Každý modul má vrstvy:
+- **Domain**: Entities, Models, Repositories, business rules
+- **Application**: DTOs, Actions, Services, Commands
+- **Infrastructure**: External integrations, drivers
+- **Presentation**: Controllers, FormRequests, API Resources
+
+## Code Standards
+
+- ✅ **Strict typing**: `declare(strict_types=1);` povinný v každom PHP súbore
+- ✅ **PSR-12**: Formátovanie kontrolované Laravel Pint
+- ✅ **PHPStan level 8**: Via Larastan; výsledky v `phpstan.neon`
+- ✅ **Validation**: Cez FormRequest alebo Spatie Data DTOs, nikdy manuálne v controlleroch
+- ✅ **Localization**: Žiadne hardcoded stringy, vždy `__('module.key')` s `lang/{locale}/` súbormi
+- ✅ **Security**: Žiadne hardcoded credentials (`.env`), SQL injection prevention (Eloquent), auth middleware
+
+## Testing
+
+```bash
+# Spustiť všetky testy
+composer pest
+
+# Konkrétny test
+docker-compose exec qasa_app php artisan pest tests/Feature/AuthTest.php
+
+# S coverage
+composer pest -- --coverage
+```
+
+Testy sú v `tests/` a pomocou **Pest PHP** (^3.0) + **PHPUnit** (^11.3).
+
+## API Documentation
+
+OpenAPI docs sú vygenerované z L5-Swagger (^11.0) a dostupné na `/api/documentation` po spustení.
+
+## Key Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Laravel | ^13.0 | Framework |
+| PostgreSQL | default | Database (Eloquent ORM) |
+| Laravel Sanctum | ^4.3 | API authentication |
+| Laravel Cashier | ^16.5 | Stripe subscriptions |
+| Spatie Laravel Data | ^4.21 | DTOs & validation |
+| Spatie Laravel Query Builder | ^7.1 | Advanced query building |
+| Spatie Laravel Permission | ^7.2 | Role-based access |
+| Larastan / PHPStan | ^3.9 / ^2.1 | Static analysis |
+| Laravel Pint | ^1.27 | Code formatting |
+| Pest PHP | ^3.0 | Testing framework |
+
+## Database
+
+Default: **PostgreSQL** (`pgsql` connection). Ako konfigurované v `.env`:
+
+```env
 DB_CONNECTION=pgsql
 DB_HOST=db
 DB_PORT=5432
 DB_DATABASE=qasa
 DB_USERNAME=qasa
 DB_PASSWORD=secret
-
-# Redis
-REDIS_HOST=redis
-REDIS_PORT=6379
-CACHE_STORE=redis
-QUEUE_CONNECTION=redis
-SESSION_DRIVER=redis
-
-# Google OAuth
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI="${APP_URL}/api/v1/auth/google/callback"
-
-# Stripe
-STRIPE_KEY=
-STRIPE_SECRET=
-STRIPE_WEBHOOK_SECRET=
-CASHIER_MODEL=App\Modules\Auth\Domain\Models\User
-
-# Admin secret route
-ADMIN_PATH=
-ADMIN_TOKEN=
-ADMIN_SEED_EMAIL=admin@example.com
-ADMIN_SEED_PASSWORD=
-
-# Storage
-FILESYSTEM_DISK=local
-# Pre R2:
-# AWS_ACCESS_KEY_ID=
-# AWS_SECRET_ACCESS_KEY=
-# AWS_DEFAULT_REGION=auto
-# AWS_BUCKET=
-# AWS_URL=
-# AWS_ENDPOINT=https://<account>.r2.cloudflarestorage.com
 ```
 
-## 10. config/filesystems.php — R2 disk
+## Contributing
 
-```php
-'disks' => [
-    // ... existujúce ...
-    'r2' => [
-        'driver'   => 's3',
-        'key'      => env('AWS_ACCESS_KEY_ID'),
-        'secret'   => env('AWS_SECRET_ACCESS_KEY'),
-        'region'   => env('AWS_DEFAULT_REGION', 'auto'),
-        'bucket'   => env('AWS_BUCKET'),
-        'url'      => env('AWS_URL'),
-        'endpoint' => env('AWS_ENDPOINT'),
-        'use_path_style_endpoint' => true,
-    ],
-],
-```
+Pozri CLAUDE.md pre presné architektonické pravidlá, bezpečnostné pokyny, a workflow.
 
-## 11. config/services.php — Google + Stripe
-
-```php
-'google' => [
-    'client_id'     => env('GOOGLE_CLIENT_ID'),
-    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-    'redirect'      => env('GOOGLE_REDIRECT_URI'),
-],
-```
-
-## 12. Migrácie a seed
-
-```bash
-php artisan key:generate
-php artisan migrate
-php artisan db:seed --class="App\Modules\Admin\Infrastructure\Seeders\AdminUserSeeder"
-```
-
-## 13. Generovanie admin credentials
-
-```bash
-# Vygeneruj ADMIN_PATH a ADMIN_TOKEN
-php artisan tinker --execute="echo bin2hex(random_bytes(8)).PHP_EOL;"
-# Spusti dvakrát — raz pre PATH, raz pre TOKEN
-# Výsledky vlož do .env
-```
-
-## 14. Larastan konfig
-
-```bash
-cp vendor/nunomaduro/larastan/config/larastan.neon phpstan.neon
-```
-
-`phpstan.neon`:
-```neon
-includes:
-    - vendor/nunomaduro/larastan/extension.neon
-
-parameters:
-    paths:
-        - app
-    level: 6
-    ignoreErrors:
-        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder#'
-```
-
-## 15. Psalm konfig
-
-```bash
-vendor/bin/psalm --init
-vendor/bin/psalm-plugin enable psalm/plugin-laravel
-```
-
-`psalm.xml`:
-```xml
-<?xml version="1.0"?>
-<psalm errorLevel="4" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xmlns="https://getpsalm.org/schema/config"
-       xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd">
-    <projectFiles>
-        <directory name="app" />
-        <ignoreFiles>
-            <directory name="vendor" />
-        </ignoreFiles>
-    </projectFiles>
-    <plugins>
-        <pluginClass class="Psalm\LaravelPlugin\Plugin"/>
-    </plugins>
-</psalm>
-```
-
-## 16. Telescope — len lokálne
-
-`app/Providers/TelescopeServiceProvider.php` — Laravel generuje pri inštalácii, uprav:
-
-```php
-public function register(): void
-{
-    Telescope::night();
-
-    $this->hideSensitiveRequestDetails();
-
-    Telescope::filter(function (IncomingEntry $entry) {
-        if ($this->app->environment('local')) {
-            return true;
-        }
-        // Na produkcii nič neloguj
-        return false;
-    });
-}
-```
-
-## 17. Debugbar — len lokálne
-
-`.env`:
-```env
-DEBUGBAR_ENABLED=true  # automaticky false ak APP_ENV != local
-```
-
-## 18. Spustenie
-
-```bash
-# Docker
-docker-compose up -d
-
-# Alebo lokálne
-php artisan serve
-php artisan queue:work
-php artisan schedule:work
-```
-
-Scheduler (`schedule:work`, v produkcii cron `* * * * * php artisan schedule:run`)
-je potrebný pre pravidelné faktúry — denne o 05:00 beží
-`qasa:invoices:generate-recurring`, ktorý generuje koncepty faktúr
-zo šablón (`recurring_invoice_templates`).
+Stručne:
+1. Analyzuj existujúce kódy pred inštaláciou
+2. Drž sa PHPStan (level 8) a Pint (formátovanie)
+3. Lokalizuj všetky user-facing stringy (aj error messages)
+4. Validation vždy skrz FormRequest/DTO, nikdy manuálne
