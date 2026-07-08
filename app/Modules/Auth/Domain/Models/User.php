@@ -1,0 +1,309 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Auth\Domain\Models;
+
+use App\Modules\Auth\Domain\Contracts\ProvidesAccountMeta;
+use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Domain\Models\OrderAttachment;
+use App\Modules\Orders\Domain\Models\OrderNote;
+use App\Modules\Shared\Authorization\AbilityCatalog;
+use App\Modules\Shared\Enums\Currency;
+use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
+use App\Modules\TimeTracking\Domain\Models\Expense;
+use App\Modules\TimeTracking\Domain\Models\TimeEntry;
+use Database\Factories\Modules\Auth\Domain\Models\UserFactory;
+use Eloquent;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Notifications\DatabaseNotificationCollection;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\PersonalAccessToken;
+
+/**
+ * Core single-account user. The SaaS edition extends this model
+ * (App\Modules\Saas\Domain\Models\User) with billing, roles and teams and
+ * swaps it in via the auth provider config.
+ *
+ * @property string $id
+ * @property string|null $title
+ * @property string $name
+ * @property string $surname
+ * @property string $email
+ * @property string|null $phone
+ * @property string|null $password Null if Google auth only
+ * @property string|null $google_id
+ * @property string|null $avatar_path
+ * @property string|null $color Hex, e.g. #3B82F6
+ * @property string|null $ico
+ * @property string|null $dic
+ * @property bool $is_vat_payer
+ * @property int $tax_flat_rate 0-80; 0 = real expenses
+ * @property Currency $default_currency
+ * @property string $invoice_prefix
+ * @property string $locale UI language
+ * @property string $country ISO 3166-1 alpha-2
+ * @property string|null $address
+ * @property string|null $city
+ * @property string|null $postal_code
+ * @property string|null $logo_path Supplier logo printed on invoices
+ * @property string|null $vat_id IČ DPH / VAT ID
+ * @property string|null $website
+ * @property string|null $invoice_footer_text
+ * @property string|null $clockify_api_key
+ * @property string|null $clockify_workspace_id
+ * @property Carbon|null $email_verified_at
+ * @property string|null $remember_token
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ * @property-read Collection<int, Client> $clients
+ * @property-read int|null $clients_count
+ * @property-read Collection<int, ExchangeRate> $exchangeRates
+ * @property-read int|null $exchange_rates_count
+ * @property-read Collection<int, Expense> $expenses
+ * @property-read int|null $expenses_count
+ * @property-read string $full_name
+ * @property-read Collection<int, Invoice> $invoices
+ * @property-read int|null $invoices_count
+ * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
+ * @property-read int|null $notifications_count
+ * @property-read Collection<int, OrderAttachment> $orderAttachments
+ * @property-read int|null $order_attachments_count
+ * @property-read Collection<int, OrderNote> $orderNotes
+ * @property-read int|null $order_notes_count
+ * @property-read Collection<int, Order> $orders
+ * @property-read int|null $orders_count
+ * @property-read Collection<int, TimeEntry> $timeEntries
+ * @property-read int|null $time_entries_count
+ * @property-read Collection<int, PersonalAccessToken> $tokens
+ * @property-read int|null $tokens_count
+ *
+ * @method static UserFactory factory($count = null, $state = [])
+ * @method static Builder<static>|User newModelQuery()
+ * @method static Builder<static>|User newQuery()
+ * @method static Builder<static>|User onlyTrashed()
+ * @method static Builder<static>|User query()
+ * @method static Builder<static>|User whereAddress($value)
+ * @method static Builder<static>|User whereAvatarPath($value)
+ * @method static Builder<static>|User whereCity($value)
+ * @method static Builder<static>|User whereColor($value)
+ * @method static Builder<static>|User whereCountry($value)
+ * @method static Builder<static>|User whereCreatedAt($value)
+ * @method static Builder<static>|User whereDefaultCurrency($value)
+ * @method static Builder<static>|User whereDeletedAt($value)
+ * @method static Builder<static>|User whereDic($value)
+ * @method static Builder<static>|User whereEmail($value)
+ * @method static Builder<static>|User whereEmailVerifiedAt($value)
+ * @method static Builder<static>|User whereGoogleId($value)
+ * @method static Builder<static>|User whereIco($value)
+ * @method static Builder<static>|User whereId($value)
+ * @method static Builder<static>|User whereInvoicePrefix($value)
+ * @method static Builder<static>|User whereIsVatPayer($value)
+ * @method static Builder<static>|User whereLocale($value)
+ * @method static Builder<static>|User whereName($value)
+ * @method static Builder<static>|User wherePassword($value)
+ * @method static Builder<static>|User wherePhone($value)
+ * @method static Builder<static>|User wherePostalCode($value)
+ * @method static Builder<static>|User whereRememberToken($value)
+ * @method static Builder<static>|User whereSurname($value)
+ * @method static Builder<static>|User whereTaxFlatRate($value)
+ * @method static Builder<static>|User whereTitle($value)
+ * @method static Builder<static>|User whereUpdatedAt($value)
+ * @method static Builder<static>|User withTrashed(bool $withTrashed = true)
+ * @method static Builder<static>|User withoutTrashed()
+ *
+ * @mixin Eloquent
+ */
+class User extends Authenticatable implements ProvidesAccountMeta
+{
+    use HasApiTokens;
+
+    /** @use HasFactory<UserFactory> */
+    use HasFactory;
+
+    use HasUuids;
+    use Notifiable;
+    use SoftDeletes;
+
+    protected $fillable = [
+        'title', 'name', 'surname', 'email', 'phone',
+        'password', 'google_id', 'avatar_path', 'color',
+        'ico', 'dic', 'is_vat_payer', 'tax_flat_rate',
+        'default_currency', 'invoice_prefix', 'locale',
+        'country', 'address', 'city', 'postal_code',
+        'logo_path', 'vat_id', 'website', 'invoice_footer_text',
+        'clockify_api_key', 'clockify_workspace_id',
+    ];
+
+    protected $hidden = [
+        'password', 'remember_token', 'google_id', 'clockify_api_key',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'is_vat_payer' => 'boolean',
+            'tax_flat_rate' => 'integer',
+            'default_currency' => Currency::class,
+            'clockify_api_key' => 'encrypted',
+        ];
+    }
+
+    // ── Computed ──────────────────────────────────────────────────────────────
+
+    public function getFullNameAttribute(): string
+    {
+        return trim(implode(' ', array_filter([
+            $this->title, $this->name, $this->surname,
+        ])));
+    }
+
+    public function usesRealExpenses(): bool
+    {
+        return $this->tax_flat_rate === 0;
+    }
+
+    public function usesFlatRate(): bool
+    {
+        return $this->tax_flat_rate > 0;
+    }
+
+    public function hasGoogleAuth(): bool
+    {
+        return $this->google_id !== null;
+    }
+
+    public function hasPassword(): bool
+    {
+        return $this->password !== null;
+    }
+
+    // ── Account ───────────────────────────────────────────────────────────────
+
+    /**
+     * All business data is keyed by the account owner's user_id. The core
+     * edition is single-account — every user owns their own data; the SaaS
+     * edition overrides this for team members.
+     */
+    public function accountOwnerId(): string
+    {
+        return $this->id;
+    }
+
+    public function accountOwner(): self
+    {
+        return $this;
+    }
+
+    // ── ProvidesAccountMeta (single-account defaults) ─────────────────────────
+
+    public function roleName(): ?string
+    {
+        return 'owner';
+    }
+
+    public function permissionNames(): array
+    {
+        return AbilityCatalog::abilities();
+    }
+
+    public function isTeamMember(): bool
+    {
+        return false;
+    }
+
+    public function accountOwnerMeta(): ?array
+    {
+        return null;
+    }
+
+    public function exposesPlan(): bool
+    {
+        return false;
+    }
+
+    public function planSlug(): ?string
+    {
+        return null;
+    }
+
+    // ── Relations ─────────────────────────────────────────────────────────────
+
+    /**
+     * @return HasMany<Client, $this>
+     */
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class);
+    }
+
+    /**
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * @return HasMany<OrderNote, $this>
+     */
+    public function orderNotes(): HasMany
+    {
+        return $this->hasMany(OrderNote::class);
+    }
+
+    /**
+     * @return HasMany<OrderAttachment, $this>
+     */
+    public function orderAttachments(): HasMany
+    {
+        return $this->hasMany(OrderAttachment::class);
+    }
+
+    /**
+     * @return HasMany<TimeEntry, $this>
+     */
+    public function timeEntries(): HasMany
+    {
+        return $this->hasMany(TimeEntry::class);
+    }
+
+    /**
+     * @return HasMany<Expense, $this>
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    /**
+     * @return HasMany<ExchangeRate, $this>
+     */
+    public function exchangeRates(): HasMany
+    {
+        return $this->hasMany(ExchangeRate::class);
+    }
+
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+}

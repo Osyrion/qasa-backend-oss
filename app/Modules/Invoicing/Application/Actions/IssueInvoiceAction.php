@@ -1,0 +1,102 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Invoicing\Application\Actions;
+
+use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Enums\Currency;
+use App\Modules\TimeTracking\Application\Contracts\ExchangeRateServiceInterface;
+
+/**
+ * The draft → sent moment: freezes supplier/client/bank snapshots so later
+ * profile edits don't rewrite issued documents, snapshots the ČNB rate to CZK
+ * for foreign-currency invoices, and fills VS/DUZP defaults.
+ *
+ * Failures of the ČNB fetch must not block issuance — the rate snapshot
+ * simply stays null and the PDF omits the CZK conversion table.
+ */
+readonly class IssueInvoiceAction
+{
+    public function __construct(
+        private ExchangeRateServiceInterface $exchangeRateService,
+    ) {}
+
+    /**
+     * Fetch the ČNB rate for a foreign-currency invoice. This may perform an
+     * HTTP request, so call it before opening the transaction that will run
+     * execute(). Returns null when no rate is needed or the fetch failed.
+     */
+    public function resolveExchangeRateSnapshot(Invoice $invoice): ?float
+    {
+        if ($invoice->currency === Currency::CZK || $invoice->exchange_rate_snapshot !== null) {
+            return null;
+        }
+
+        return $this->exchangeRateService->getRateOrFetchCnb(
+            base: $invoice->currency,
+            userId: $invoice->user_id,
+            date: $invoice->issued_at->toDateString(),
+        );
+    }
+
+    public function execute(Invoice $invoice, ?float $exchangeRate = null): Invoice
+    {
+        $invoice->loadMissing(['user', 'client', 'bankAccount', 'items']);
+
+        $user = $invoice->user;
+        $client = $invoice->client;
+
+        assert($user !== null);
+
+        $invoice->supplier_snapshot = [
+            'name' => $user->full_name,
+            'ico' => $user->ico,
+            'dic' => $user->dic,
+            'vat_id' => $user->vat_id,
+            'is_vat_payer' => $user->is_vat_payer,
+            'address' => $user->address,
+            'city' => $user->city,
+            'postal_code' => $user->postal_code,
+            'country' => $user->country,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'website' => $user->website,
+            'logo_path' => $user->logo_path,
+            'invoice_footer_text' => $user->invoice_footer_text,
+        ];
+
+        $invoice->client_snapshot = $client === null ? null : [
+            'name' => $client->display_name,
+            'ico' => $client->ico,
+            'dic' => $client->dic,
+            'vat_id' => $client->vat_id,
+            'is_vat_payer' => $client->is_vat_payer,
+            'address' => $client->address,
+            'city' => $client->city,
+            'postal_code' => $client->postal_code,
+            'country' => $client->country,
+            'email' => $client->email,
+            'phone' => $client->phone,
+        ];
+
+        $invoice->bank_account_snapshot = $invoice->bankAccount?->toSnapshot();
+
+        if ($exchangeRate !== null && $invoice->exchange_rate_snapshot === null) {
+            $invoice->exchange_rate_snapshot = $exchangeRate;
+        }
+
+        if ($invoice->variable_symbol === null) {
+            $invoice->variable_symbol = CreateInvoiceAction::variableSymbolFromNumber($invoice->invoice_number);
+        }
+
+        if ($invoice->taxable_supply_at === null && $invoice->type->isTaxDocument()) {
+            $invoice->taxable_supply_at = $invoice->issued_at;
+        }
+
+        $invoice->recalculateTotals();
+        $invoice->save();
+
+        return $invoice;
+    }
+}

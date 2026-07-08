@@ -1,0 +1,30 @@
+includes:
+    - ./vendor/nunomaduro/larastan/extension.neon
+
+parameters:
+    parallel:
+        maximumNumberOfProcesses: 1
+    level: 8
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+    excludePaths:
+        analyseAndScan:
+            - app/Console/Kernel.php (?)
+            - app/Exceptions/Handler.php (?)
+            - bootstrap/*
+            - storage/*
+            - vendor/*
+            - node_modules/*
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Call to an undefined method.*#'
+        - '#Access to an undefined property.*#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*#'
+    bootstrapFiles:
+        - vendor/autoload.php

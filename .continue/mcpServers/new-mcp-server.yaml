@@ -1,0 +1,21 @@
+name: Qasa Backend MCP Suite
+version: 0.0.1
+schema: v1
+mcpServers:
+  # 1. Prístup k súborom pre analýzu modulov (tento balík na npm existuje)
+  - name: qasa-filesystem
+    command: npx
+    args:
+      - "-y"
+      - "@modelcontextprotocol/server-filesystem"
+      - "/home/osyrion/projects/qasa_backend"
+    env: {}
+
+  # 2. Vlastný Laravel MCP (keďže máš lokálne PHP 8.5, beží to priamo na tvojom PC)
+  - name: qasa-laravel
+    command: php
+    args:
+      - "/home/osyrion/projects/qasa_backend/artisan"
+      - "mcp:start"
+      - "qasa"
+    env: {}
