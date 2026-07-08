@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Contracts;
 
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 interface InvoiceRepositoryInterface
@@ -31,8 +32,9 @@ interface InvoiceRepositoryInterface
     public function delete(Invoice $invoice): void;
 
     /**
-     * Generate next invoice number for user.
-     * Format: {prefix}-{year}-{sequence} e.g. FA-2025-001
+     * Generate the next invoice number for a user, formatted by $mask.
+     * $start is the lower bound of the sequence (e.g. to continue numbering
+     * from a migrated system); it never lowers a sequence already in use.
      */
-    public function nextInvoiceNumber(string $userId, string $prefix): string;
+    public function nextInvoiceNumber(string $userId, InvoiceNumberMask $mask, int $start = 1): string;
 }

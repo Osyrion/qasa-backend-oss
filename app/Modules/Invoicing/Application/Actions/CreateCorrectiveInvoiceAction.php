@@ -55,7 +55,8 @@ readonly class CreateCorrectiveInvoiceAction
         return DB::transaction(function () use ($original, $type, $user): Invoice {
             $number = $this->repository->nextInvoiceNumber(
                 userId: $original->user_id,
-                prefix: $type->numberPrefix($user->accountOwner()->invoice_prefix),
+                mask: $type->numberMask($user),
+                start: $user->accountOwner()->invoice_number_start ?? 1,
             );
 
             $corrective = $this->repository->create([

@@ -25,4 +25,5 @@ return [
     'reminder_cooldown' => 'The next reminder can be sent on :next_allowed.',
     'client_email_missing_for_reminder' => 'The client has no email address on file.',
     'status_transition_not_allowed' => "The invoice cannot be changed from ':from' to ':to'.",
+    'invalid_number_mask' => 'The mask must contain exactly one sequence token ({N}, {NN}, ...) and only the {YYYY}, {YY}, {MM}, {DD} placeholders.',
 ];

@@ -25,4 +25,5 @@ return [
     'reminder_cooldown' => 'Ďalšiu upomienku bude možné poslať :next_allowed.',
     'client_email_missing_for_reminder' => 'Klient nemá vyplnenú e-mailovú adresu.',
     'status_transition_not_allowed' => "Faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
+    'invalid_number_mask' => 'Maska musí obsahovať práve jeden sekvenčný token ({N}, {NN}, ...) a len povolené polia {YYYY}, {YY}, {MM}, {DD}.',
 ];
