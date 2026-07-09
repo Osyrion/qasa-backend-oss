@@ -567,6 +567,18 @@ paths:
             type: integer
             default: 20
         -
+          name: role
+          in: query
+          description: 'Filter by role'
+          required: false
+          schema:
+            type: string
+            default: customer
+            enum:
+              - customer
+              - vendor
+              - all
+        -
           name: client_type
           in: query
           description: 'Filter by client type'
@@ -675,6 +687,12 @@ paths:
                   maxLength: 200
                 is_vat_payer:
                   type: boolean
+                is_customer:
+                  type: boolean
+                  default: true
+                is_vendor:
+                  type: boolean
+                  default: false
                 email:
                   type: string
                   format: email
@@ -823,6 +841,12 @@ paths:
                   maxLength: 20
                 is_vat_payer:
                   type: boolean
+                is_customer:
+                  type: boolean
+                  default: true
+                is_vendor:
+                  type: boolean
+                  default: false
                 email:
                   type: string
                   format: email
@@ -2554,6 +2578,389 @@ paths:
           description: Unauthenticated
         422:
           description: 'Template is not paused'
+      security:
+        -
+          sanctum: []
+  /api/v1/supplier-invoices:
+    get:
+      tags:
+        - SupplierInvoices
+      summary: 'List supplier (received) invoices'
+      operationId: caa1996a338bc34cde9d45f9b3829561
+      parameters:
+        -
+          name: per_page
+          in: query
+          description: 'Items per page'
+          required: false
+          schema:
+            type: integer
+            default: 20
+        -
+          name: status
+          in: query
+          description: 'Filter by status'
+          required: false
+          schema:
+            type: string
+            enum:
+              - draft
+              - received
+              - booked
+              - paid
+              - cancelled
+        -
+          name: client_id
+          in: query
+          description: 'Filter by vendor client'
+          required: false
+          schema:
+            type: string
+            format: uuid
+        -
+          name: search
+          in: query
+          description: 'Search internal or vendor document number'
+          required: false
+          schema:
+            type: string
+        -
+          name: date_from
+          in: query
+          description: 'Filter from date'
+          required: false
+          schema:
+            type: string
+            format: date
+        -
+          name: date_to
+          in: query
+          description: 'Filter to date'
+          required: false
+          schema:
+            type: string
+            format: date
+        -
+          name: sort
+          in: query
+          description: 'Sort field'
+          required: false
+          schema:
+            type: string
+        -
+          name: direction
+          in: query
+          description: 'Sort direction'
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+      responses:
+        200:
+          description: 'List of supplier invoices'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SupplierInvoice'
+                  meta:
+                    type: object
+                type: object
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+    post:
+      tags:
+        - SupplierInvoices
+      summary: 'Create supplier (received) invoice'
+      operationId: 411f323074f4c1f63597402c18a0737e
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - supplier_invoice_number
+                - issued_at
+                - currency
+                - vat_lines
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                supplier_invoice_number:
+                  type: string
+                  maxLength: 60
+                issued_at:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                taxable_supply_at:
+                  type: string
+                  format: date
+                  nullable: true
+                due_at:
+                  type: string
+                  format: date
+                  nullable: true
+                received_at:
+                  type: string
+                  format: date
+                  nullable: true
+                exchange_rate:
+                  type: number
+                  format: float
+                  nullable: true
+                variable_symbol:
+                  type: string
+                  nullable: true
+                  maxLength: 10
+                note:
+                  type: string
+                  nullable: true
+                vat_lines:
+                  type: array
+                  items:
+                    properties:
+                      vat_rate:
+                        type: number
+                        format: float
+                      base:
+                        type: number
+                        format: float
+                      vat_amount:
+                        type: number
+                        format: float
+                      sort_order:
+                        type: integer
+                    type: object
+              type: object
+      responses:
+        201:
+          description: 'Supplier invoice created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoice'
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error or client is not a vendor'
+      security:
+        -
+          sanctum: []
+  '/api/v1/supplier-invoices/{id}':
+    get:
+      tags:
+        - SupplierInvoices
+      summary: 'Get supplier invoice details'
+      operationId: f7b04dbc59a8bce3f4c705ac76c88b12
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Supplier invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Supplier invoice details'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoice'
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Supplier invoice not found'
+      security:
+        -
+          sanctum: []
+    put:
+      tags:
+        - SupplierInvoices
+      summary: 'Update draft supplier invoice'
+      operationId: 14bed7c895ea4c719dbb9f02d28443f1
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Supplier invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - supplier_invoice_number
+                - issued_at
+                - currency
+                - vat_lines
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                supplier_invoice_number:
+                  type: string
+                  maxLength: 60
+                issued_at:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                taxable_supply_at:
+                  type: string
+                  format: date
+                  nullable: true
+                due_at:
+                  type: string
+                  format: date
+                  nullable: true
+                received_at:
+                  type: string
+                  format: date
+                  nullable: true
+                exchange_rate:
+                  type: number
+                  format: float
+                  nullable: true
+                variable_symbol:
+                  type: string
+                  nullable: true
+                  maxLength: 10
+                note:
+                  type: string
+                  nullable: true
+                vat_lines:
+                  type: array
+                  items:
+                    properties:
+                      vat_rate:
+                        type: number
+                        format: float
+                      base:
+                        type: number
+                        format: float
+                      vat_amount:
+                        type: number
+                        format: float
+                      sort_order:
+                        type: integer
+                    type: object
+              type: object
+      responses:
+        200:
+          description: 'Supplier invoice updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoice'
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Supplier invoice not found'
+        422:
+          description: 'Validation error, client is not a vendor, or invoice not editable'
+      security:
+        -
+          sanctum: []
+    delete:
+      tags:
+        - SupplierInvoices
+      summary: 'Delete draft supplier invoice'
+      operationId: 7f14871933ef9b948ae8ae835b656425
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Supplier invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: 'Supplier invoice deleted'
+        401:
+          description: Unauthenticated
+        403:
+          description: 'Only draft supplier invoices can be deleted'
+        422:
+          description: 'Supplier invoice not editable'
+      security:
+        -
+          sanctum: []
+  '/api/v1/supplier-invoices/{supplier_invoice}/status':
+    post:
+      tags:
+        - SupplierInvoices
+      summary: 'Update supplier invoice status'
+      operationId: 371a62396bbcccad7a7284170f3fce90
+      parameters:
+        -
+          name: supplier_invoice
+          in: path
+          description: 'Supplier invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - received
+                    - booked
+                    - paid
+                    - cancelled
+                paid_at:
+                  description: 'Used when transitioning to paid; defaults to today'
+                  type: string
+                  format: date
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Supplier invoice status updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierInvoice'
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Invalid status transition'
       security:
         -
           sanctum: []
@@ -4322,6 +4729,10 @@ components:
         is_vat_payer:
           type: boolean
           nullable: true
+        is_customer:
+          type: boolean
+        is_vendor:
+          type: boolean
         email:
           type: string
           format: email
@@ -4781,6 +5192,111 @@ components:
         sort_order:
           type: integer
       type: object
+    SupplierInvoice:
+      properties:
+        id:
+          type: string
+          format: uuid
+        internal_number:
+          type: string
+          example: DF-2026-001
+        supplier_invoice_number:
+          type: string
+        variable_symbol:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - draft
+            - received
+            - booked
+            - paid
+            - cancelled
+        status_label:
+          type: string
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        taxable_supply_at:
+          type: string
+          format: date
+          nullable: true
+        due_at:
+          type: string
+          format: date
+          nullable: true
+        received_at:
+          type: string
+          format: date
+          nullable: true
+        paid_at:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+          enum:
+            - CZK
+            - EUR
+            - USD
+        exchange_rate:
+          type: number
+          format: float
+          nullable: true
+        subtotal:
+          type: number
+          format: float
+        vat_amount:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        vendor_snapshot:
+          description: 'Frozen at received'
+          type: object
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        client:
+          oneOf:
+            - $ref: '#/components/schemas/Client'
+          nullable: true
+        vat_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupplierInvoiceVatLine'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      type: object
+    SupplierInvoiceVatLine:
+      properties:
+        id:
+          type: string
+          format: uuid
+        vat_rate:
+          type: number
+          format: float
+        base:
+          type: number
+          format: float
+        vat_amount:
+          type: number
+          format: float
+        sort_order:
+          type: integer
+      type: object
     WorkReportLine:
       properties:
         id:
@@ -5132,6 +5648,8 @@ tags:
     description: 'Invoice PDF generation endpoints'
   - name: 'Recurring Invoice Templates'
     description: 'Templates that generate draft invoices on a schedule. Note and item description fields support period placeholders {BOM}, {EOM}, {MONTH}, {YEAR} resolved at generation time against the tax date (issue date for proforma).'
+  - name: SupplierInvoices
+    description: 'Received (supplier) invoice bookkeeping endpoints'
   - name: 'Order Attachments'
     description: 'Manage file attachments on orders'
   - name: Orders

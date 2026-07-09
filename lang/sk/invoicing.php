@@ -27,6 +27,12 @@ return [
     'status_transition_not_allowed' => "Faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
     'invalid_number_mask' => 'Maska musí obsahovať práve jeden sekvenčný token ({N}, {NN}, ...) a len povolené polia {YYYY}, {YY}, {MM}, {DD}.',
 
+    'supplier_invoice' => [
+        'client_must_be_vendor' => 'Vybraný klient nie je označený ako dodávateľ.',
+        'only_draft_editable' => 'Upravovať alebo zmazať je možné len koncept prijatej faktúry.',
+        'status_transition_not_allowed' => "Prijatú faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
+    ],
+
     'export' => [
         'csv_headers' => [
             'invoice_number' => 'Číslo faktúry',

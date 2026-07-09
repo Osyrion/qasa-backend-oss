@@ -8,6 +8,7 @@ use App\Modules\Invoicing\Presentation\Controllers\InvoiceExportController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePaymentController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePdfController;
 use App\Modules\Invoicing\Presentation\Controllers\RecurringInvoiceTemplateController;
+use App\Modules\Invoicing\Presentation\Controllers\SupplierInvoiceController;
 use App\Modules\Invoicing\Presentation\Controllers\WorkReportController;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,12 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
 
     Route::apiResource('bank-accounts', BankAccountController::class)
         ->parameters(['bank-accounts' => 'bank_account']);
+
+    Route::apiResource('supplier-invoices', SupplierInvoiceController::class)
+        ->parameters(['supplier-invoices' => 'supplier_invoice']);
+
+    Route::post('supplier-invoices/{supplier_invoice}/status', [SupplierInvoiceController::class, 'updateStatus'])
+        ->name('supplier-invoices.status');
 
     Route::prefix('invoices/{invoice}')->scopeBindings()->group(function (): void {
         Route::post('status', [InvoiceController::class, 'updateStatus'])->name('invoices.status');

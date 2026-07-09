@@ -7,16 +7,20 @@ namespace App\Modules\Invoicing\Infrastructure\Providers;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentBankAccountRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentInvoiceRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentRecurringInvoiceTemplateRepository;
+use App\Modules\Invoicing\Infrastructure\Repositories\EloquentSupplierInvoiceRepository;
 use App\Modules\Invoicing\Presentation\Console\GenerateRecurringInvoicesCommand;
 use App\Modules\Invoicing\Presentation\Policies\BankAccountPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoicePolicy;
 use App\Modules\Invoicing\Presentation\Policies\RecurringInvoiceTemplatePolicy;
+use App\Modules\Invoicing\Presentation\Policies\SupplierInvoicePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,6 +45,11 @@ class InvoicingServiceProvider extends ServiceProvider
             RecurringInvoiceTemplateRepositoryInterface::class,
             EloquentRecurringInvoiceTemplateRepository::class,
         );
+
+        $this->app->bind(
+            SupplierInvoiceRepositoryInterface::class,
+            EloquentSupplierInvoiceRepository::class,
+        );
     }
 
     public function boot(): void
@@ -63,6 +72,7 @@ class InvoicingServiceProvider extends ServiceProvider
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(BankAccount::class, BankAccountPolicy::class);
         Gate::policy(RecurringInvoiceTemplate::class, RecurringInvoiceTemplatePolicy::class);
+        Gate::policy(SupplierInvoice::class, SupplierInvoicePolicy::class);
 
         if ($this->app->runningInConsole()) {
             $this->commands([GenerateRecurringInvoicesCommand::class]);
