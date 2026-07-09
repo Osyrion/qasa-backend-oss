@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\DTOs\InvoiceExportData;
+use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -91,6 +95,29 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
         $query->orderBy($sort, $direction);
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * @return Collection<int, Invoice>
+     */
+    public function forExport(InvoiceExportData $filter): Collection
+    {
+        $column = $filter->period_basis->column();
+
+        $query = Invoice::query()
+            ->whereNot('status', InvoiceStatus::Draft->value)
+            ->whereIn('type', $filter->types)
+            ->whereBetween($column, [$filter->date_from, $filter->date_to]);
+
+        if ($filter->period_basis === ExportPeriodBasis::Tax) {
+            $query->whereNotNull('taxable_supply_at');
+        }
+
+        return $query
+            ->with(['items', 'client', 'payments', 'bankAccount'])
+            ->orderBy('issued_at')
+            ->orderBy('invoice_number')
+            ->get();
     }
 
     public function findById(string $id): ?Invoice

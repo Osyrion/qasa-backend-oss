@@ -26,4 +26,28 @@ return [
     'client_email_missing_for_reminder' => 'Klient nemá vyplnenú e-mailovú adresu.',
     'status_transition_not_allowed' => "Faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
     'invalid_number_mask' => 'Maska musí obsahovať práve jeden sekvenčný token ({N}, {NN}, ...) a len povolené polia {YYYY}, {YY}, {MM}, {DD}.',
+
+    'export' => [
+        'csv_headers' => [
+            'invoice_number' => 'Číslo faktúry',
+            'type' => 'Typ',
+            'status' => 'Stav',
+            'issued_at' => 'Dátum vystavenia',
+            'taxable_supply_at' => 'Dátum zdaniteľného plnenia',
+            'due_at' => 'Dátum splatnosti',
+            'client_name' => 'Klient',
+            'client_ico' => 'IČO klienta',
+            'client_dic' => 'DIČ klienta',
+            'client_vat_id' => 'IČ DPH klienta',
+            'currency' => 'Mena',
+            'subtotal' => 'Základ dane',
+            'discount_amount' => 'Zľava',
+            'vat_amount' => 'DPH',
+            'total' => 'Celkom',
+            'paid_amount' => 'Uhradené',
+            'balance' => 'Zostatok',
+            'variable_symbol' => 'Variabilný symbol',
+            'exchange_rate' => 'Kurz',
+        ],
+    ],
 ];

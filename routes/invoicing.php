@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Invoicing\Presentation\Controllers\BankAccountController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoiceController;
+use App\Modules\Invoicing\Presentation\Controllers\InvoiceExportController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePaymentController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePdfController;
 use App\Modules\Invoicing\Presentation\Controllers\RecurringInvoiceTemplateController;
@@ -12,6 +13,9 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])->group(function (): void {
+
+    Route::get('invoices/export/pohoda', [InvoiceExportController::class, 'pohoda'])->name('invoices.export.pohoda');
+    Route::get('invoices/export/csv', [InvoiceExportController::class, 'csv'])->name('invoices.export.csv');
 
     Route::apiResource('invoices', InvoiceController::class);
 
