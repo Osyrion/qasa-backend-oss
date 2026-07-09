@@ -7,7 +7,7 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [2.1.0] - 2026-07-09
+## [1.1.0] - 2026-07-09
 
 ### Pridané (Added)
 
@@ -61,7 +61,7 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [2.0.0] - 2026-07-08
+## [1.0.0] - 2026-07-08
 
 ### Pridané (Added)
 
@@ -88,9 +88,3 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - PHPStan level 8 (cez Larastan)
 - Pest PHP / PHPUnit pre testy
 - L5-Swagger pre API dokumentáciu
-
----
-
-## [1.0.0] - Prvá verzia
-
-Východzí stav jadra Qasa — foundation pre open-source edíciu.
