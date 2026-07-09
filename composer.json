@@ -19,8 +19,10 @@
         "laravel/tinker": "^3.0",
         "league/csv": "^9.28",
         "mcp/sdk": "^0.5.0",
+        "smalot/pdfparser": "^2.12",
         "spatie/laravel-data": "^4.21",
-        "spatie/laravel-query-builder": "^7.1"
+        "spatie/laravel-query-builder": "^7.1",
+        "thiagoalessio/tesseract_ocr": "^2.13"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^4.2",

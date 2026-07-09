@@ -33,6 +33,18 @@ return [
         'status_transition_not_allowed' => "Prijatú faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
     ],
 
+    'inbox' => [
+        'already_processed' => 'Táto položka bola už spracovaná.',
+        'unsupported_file' => 'Nepodporovaný typ súboru.',
+        'extraction_failed' => 'Nepodarilo sa extrahovať text z dokladu.',
+        'status' => [
+            'pending' => 'Čaká',
+            'imported' => 'Importovaná',
+            'ignored' => 'Ignorovaná',
+            'failed' => 'Chyba spracovania',
+        ],
+    ],
+
     'export' => [
         'csv_headers' => [
             'invoice_number' => 'Číslo faktúry',

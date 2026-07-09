@@ -94,4 +94,14 @@ class EloquentClientRepository implements ClientRepositoryInterface
             ->where('user_id', $userId)
             ->count();
     }
+
+    public function findVendorByIco(string $userId, string $ico): ?Client
+    {
+        /** @var Client|null */
+        return Client::withoutGlobalScope('user')
+            ->where('user_id', $userId)
+            ->where('ico', $ico)
+            ->where('is_vendor', true)
+            ->first();
+    }
 }

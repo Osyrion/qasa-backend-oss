@@ -31,4 +31,10 @@ interface ClientRepositoryInterface
     public function delete(Client $client): void;
 
     public function countForUser(string $userId): int;
+
+    /**
+     * Auto-match a vendor by IČO for the invoice inbox scanner, which runs
+     * without an authenticated user.
+     */
+    public function findVendorByIco(string $userId, string $ico): ?Client;
 }

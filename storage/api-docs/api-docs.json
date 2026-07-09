@@ -3070,6 +3070,388 @@
                 ]
             }
         },
+        "/api/v1/invoice-inbox": {
+            "get": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "List invoice inbox items",
+                "operationId": "43c59f66895ab7df2d62be565d4a905b",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "imported",
+                                "ignored",
+                                "failed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Filter scanned from date",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Filter scanned to date",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of invoice inbox items",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/InvoiceInboxItem"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoice-inbox/{id}": {
+            "get": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Get invoice inbox item details",
+                "operationId": "305fc9c7c52b0f3df5fe89b4193439dd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Invoice inbox item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invoice inbox item details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvoiceInboxItem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice inbox item not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Delete an invoice inbox item",
+                "operationId": "3bb878202cc2d294385dd86c65c413c8",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Invoice inbox item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Invoice inbox item deleted"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice inbox item not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoice-inbox/{inbox_item}/download": {
+            "get": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Download the original scanned document",
+                "operationId": "0a1d8706c37f00ef8e8e52358fd38c8c",
+                "parameters": [
+                    {
+                        "name": "inbox_item",
+                        "in": "path",
+                        "description": "Invoice inbox item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The stored document"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice inbox item not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoice-inbox/{inbox_item}/convert": {
+            "post": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Convert a reviewed inbox item into a supplier invoice",
+                "operationId": "6585fdf442afb6a7be265f0b7d4711d7",
+                "parameters": [
+                    {
+                        "name": "inbox_item",
+                        "in": "path",
+                        "description": "Invoice inbox item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "client_id",
+                                    "supplier_invoice_number",
+                                    "issued_at",
+                                    "currency",
+                                    "vat_lines"
+                                ],
+                                "properties": {
+                                    "client_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "supplier_invoice_number": {
+                                        "type": "string",
+                                        "maxLength": 60
+                                    },
+                                    "issued_at": {
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "enum": [
+                                            "CZK",
+                                            "EUR",
+                                            "USD"
+                                        ]
+                                    },
+                                    "taxable_supply_at": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "due_at": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "received_at": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "exchange_rate": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "nullable": true
+                                    },
+                                    "variable_symbol": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 10
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "vat_lines": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "vat_rate": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "base": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "vat_amount": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "sort_order": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Supplier invoice created from the inbox item",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupplierInvoice"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error, client is not a vendor, or item already processed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoice-inbox/{inbox_item}/ignore": {
+            "post": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Ignore an inbox item",
+                "operationId": "25b77f72460f1f824642574cead32dd2",
+                "parameters": [
+                    {
+                        "name": "inbox_item",
+                        "in": "path",
+                        "description": "Invoice inbox item ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invoice inbox item ignored",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvoiceInboxItem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Item already processed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/invoices/{invoice}/payments": {
             "post": {
                 "tags": [
@@ -6940,6 +7322,84 @@
                 },
                 "type": "object"
             },
+            "InvoiceInboxItem": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "imported",
+                            "ignored",
+                            "failed"
+                        ]
+                    },
+                    "status_label": {
+                        "type": "string"
+                    },
+                    "original_filename": {
+                        "type": "string"
+                    },
+                    "mime_type": {
+                        "type": "string"
+                    },
+                    "size_bytes": {
+                        "type": "integer"
+                    },
+                    "formatted_size": {
+                        "type": "string",
+                        "example": "1.2 MB"
+                    },
+                    "ocr_engine": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "pdfparser",
+                            "tesseract"
+                        ]
+                    },
+                    "suggestions": {
+                        "description": "Parsed field suggestions for prefilling the review form",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "matched_client": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Client"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "supplier_invoice_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "download_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "scanned_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "InvoiceItem": {
                 "properties": {
                     "id": {
@@ -7501,6 +7961,14 @@
                         },
                         "nullable": true
                     },
+                    "has_attachment": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "inbox_download_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -8017,6 +8485,10 @@
         {
             "name": "Invoice Export",
             "description": "Bulk export of issued invoices for accounting handoff"
+        },
+        {
+            "name": "InvoiceInbox",
+            "description": "Review queue for supplier invoices scanned from the inbox folder"
         },
         {
             "name": "Invoice PDF",

@@ -16,6 +16,10 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libmagickwand-dev \
+    tesseract-ocr \
+    tesseract-ocr-slk \
+    tesseract-ocr-ces \
+    tesseract-ocr-eng \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

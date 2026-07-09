@@ -33,6 +33,18 @@ return [
         'status_transition_not_allowed' => "The supplier invoice cannot be changed from ':from' to ':to'.",
     ],
 
+    'inbox' => [
+        'already_processed' => 'This item has already been processed.',
+        'unsupported_file' => 'Unsupported file type.',
+        'extraction_failed' => 'Could not extract text from the document.',
+        'status' => [
+            'pending' => 'Pending',
+            'imported' => 'Imported',
+            'ignored' => 'Ignored',
+            'failed' => 'Processing failed',
+        ],
+    ],
+
     'export' => [
         'csv_headers' => [
             'invoice_number' => 'Invoice number',

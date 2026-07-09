@@ -32,6 +32,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'note', type: 'string', nullable: true),
         new OA\Property(property: 'client', ref: '#/components/schemas/Client', nullable: true),
         new OA\Property(property: 'vat_lines', type: 'array', items: new OA\Items(ref: '#/components/schemas/SupplierInvoiceVatLine'), nullable: true),
+        new OA\Property(property: 'has_attachment', type: 'boolean', nullable: true),
+        new OA\Property(property: 'inbox_download_url', type: 'string', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
     ]
@@ -70,6 +72,16 @@ class SupplierInvoiceResource extends JsonResource
             'vat_lines' => $this->when(
                 $this->resource->relationLoaded('vatLines'),
                 fn () => SupplierInvoiceVatLineResource::collection($this->resource->vatLines),
+            ),
+
+            'has_attachment' => $this->when(
+                $this->resource->relationLoaded('inboxItem'),
+                fn (): bool => $this->resource->inboxItem !== null,
+            ),
+
+            'inbox_download_url' => $this->when(
+                $this->resource->relationLoaded('inboxItem') && $this->resource->inboxItem !== null,
+                fn (): string => route('invoice-inbox.download', $this->resource->inboxItem->id),
             ),
 
             'created_at' => $this->resource->created_at?->toISOString(),

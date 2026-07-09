@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -47,6 +48,7 @@ use Illuminate\Support\Carbon;
  * @property-read Client|null $client
  * @property-read Collection<int, SupplierInvoiceVatLine> $vatLines
  * @property-read int|null $vat_lines_count
+ * @property-read InvoiceInboxItem|null $inboxItem
  * @property-read User|null $user
  *
  * @method static Builder<static>|SupplierInvoice draft()
@@ -169,5 +171,13 @@ class SupplierInvoice extends Model
     public function vatLines(): HasMany
     {
         return $this->hasMany(SupplierInvoiceVatLine::class)->orderBy('sort_order');
+    }
+
+    /**
+     * @return HasOne<InvoiceInboxItem, $this>
+     */
+    public function inboxItem(): HasOne
+    {
+        return $this->hasOne(InvoiceInboxItem::class);
     }
 }
