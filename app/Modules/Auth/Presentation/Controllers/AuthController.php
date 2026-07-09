@@ -206,6 +206,8 @@ class AuthController extends Controller
                 new OA\Property(property: 'tax_flat_rate', type: 'integer', example: 20, nullable: true),
                 new OA\Property(property: 'default_currency', type: 'string', example: 'EUR', nullable: true, enum: ['CZK', 'EUR', 'USD']),
                 new OA\Property(property: 'invoice_prefix', type: 'string', example: 'FA', nullable: true, maxLength: 10),
+                new OA\Property(property: 'invoice_number_mask', type: 'string', example: '{YYYY}{NNNN}', nullable: true, maxLength: 40),
+                new OA\Property(property: 'invoice_number_start', type: 'integer', example: 1, nullable: true),
                 new OA\Property(property: 'locale', type: 'string', example: 'sk', nullable: true, maxLength: 5),
                 new OA\Property(property: 'country', type: 'string', example: 'SK', nullable: true, maxLength: 2),
                 new OA\Property(property: 'address', type: 'string', example: 'Hlavná 1', nullable: true),

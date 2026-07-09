@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\DTOs\InvoiceExportData;
+use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -91,6 +97,29 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
         return $query->paginate($perPage);
     }
 
+    /**
+     * @return Collection<int, Invoice>
+     */
+    public function forExport(InvoiceExportData $filter): Collection
+    {
+        $column = $filter->period_basis->column();
+
+        $query = Invoice::query()
+            ->whereNot('status', InvoiceStatus::Draft->value)
+            ->whereIn('type', $filter->types)
+            ->whereBetween($column, [$filter->date_from, $filter->date_to]);
+
+        if ($filter->period_basis === ExportPeriodBasis::Tax) {
+            $query->whereNotNull('taxable_supply_at');
+        }
+
+        return $query
+            ->with(['items', 'client', 'payments', 'bankAccount'])
+            ->orderBy('issued_at')
+            ->orderBy('invoice_number')
+            ->get();
+    }
+
     public function findById(string $id): ?Invoice
     {
         /** @var Invoice|null */
@@ -127,9 +156,9 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
         $invoice->delete();
     }
 
-    public function nextInvoiceNumber(string $userId, string $prefix): string
+    public function nextInvoiceNumber(string $userId, InvoiceNumberMask $mask, int $start = 1): string
     {
-        $year = now()->year;
+        $now = CarbonImmutable::now();
 
         // Serialize per account (runs inside the create transaction) —
         // concurrent requests would otherwise read the same max sequence.
@@ -138,15 +167,23 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
 
         // Max is computed numerically in PHP — lexicographic ordering breaks
         // once the sequence passes 999 ("999" > "1000"). Trashed invoices are
-        // included so their numbers are never reissued.
+        // included so their numbers are never reissued. The LIKE filter is
+        // scoped to the mask's current-period prefix, so a different date
+        // literal (year/month rollover) or type prefix naturally starts a
+        // fresh, independent sequence.
         $lastSequence = Invoice::withoutGlobalScope('user')
             ->withTrashed()
             ->where('user_id', $userId)
-            ->where('invoice_number', 'like', "{$prefix}-{$year}-%")
+            ->where('invoice_number', 'like', addcslashes($mask->likePrefix($now), '%_').'%')
             ->pluck('invoice_number')
-            ->map(fn (string $number): int => (int) last(explode('-', $number)))
+            ->map(fn (string $number): ?int => $mask->extractSequence($number, $now))
+            ->filter(fn (?int $sequence): bool => $sequence !== null)
             ->max();
 
-        return sprintf('%s-%d-%03d', $prefix, $year, ((int) $lastSequence) + 1);
+        // $start is a floor on the sequence (e.g. to continue numbering after
+        // a migration) — it only raises the next number, never lowers it.
+        $next = max((int) $lastSequence, max(1, $start) - 1) + 1;
+
+        return $mask->format($next, $now);
     }
 }

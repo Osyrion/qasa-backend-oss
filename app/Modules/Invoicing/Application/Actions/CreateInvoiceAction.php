@@ -31,7 +31,8 @@ readonly class CreateInvoiceAction
 
             $invoiceNumber = $this->repository->nextInvoiceNumber(
                 userId: $userId,
-                prefix: $data->type->numberPrefix($user->accountOwner()->invoice_prefix),
+                mask: $data->type->numberMask($user),
+                start: $user->accountOwner()->invoice_number_start ?? 1,
             );
 
             $bankAccountId = $data->bank_account_id

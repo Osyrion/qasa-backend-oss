@@ -52,6 +52,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property int $tax_flat_rate 0-80; 0 = real expenses
  * @property Currency $default_currency
  * @property string $invoice_prefix
+ * @property string|null $invoice_number_mask
+ * @property int|null $invoice_number_start
  * @property string $locale UI language
  * @property string $country ISO 3166-1 alpha-2
  * @property string|null $address
@@ -141,7 +143,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'title', 'name', 'surname', 'email', 'phone',
         'password', 'google_id', 'avatar_path', 'color',
         'ico', 'dic', 'is_vat_payer', 'tax_flat_rate',
-        'default_currency', 'invoice_prefix', 'locale',
+        'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'clockify_api_key', 'clockify_workspace_id',
@@ -158,6 +160,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
             'tax_flat_rate' => 'integer',
+            'invoice_number_start' => 'integer',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
         ];

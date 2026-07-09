@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\DTOs;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Domain\Rules\ValidInvoiceNumberMask;
 use App\Modules\Shared\Enums\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -53,6 +54,21 @@ class UpdateProfileData extends Data
 
         #[Sometimes, Max(10)]
         public readonly ?string $invoice_prefix = null,
+
+        #[Sometimes, Max(40)]
+        public readonly ?string $invoice_number_mask = null,
+
+        /**
+         * Whether "invoice_number_mask" was present in the request at all —
+         * distinguishes "not sent" (leave unchanged) from "" (reset to the
+         * legacy default), which a plain nullable value cannot express.
+         */
+        public readonly bool $invoice_number_mask_provided = false,
+
+        #[Sometimes]
+        public readonly ?int $invoice_number_start = null,
+
+        public readonly bool $invoice_number_start_provided = false,
 
         #[Sometimes, Max(5)]
         public readonly ?string $locale = null,
@@ -103,6 +119,8 @@ class UpdateProfileData extends Data
             'tax_flat_rate' => ['sometimes', 'integer', 'between:0,80'],
             'default_currency' => ['sometimes', Rule::enum(Currency::class)],
             'invoice_prefix' => ['sometimes', 'string', 'max:10'],
+            'invoice_number_mask' => ['sometimes', 'nullable', 'string', 'max:40', new ValidInvoiceNumberMask],
+            'invoice_number_start' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:99999999'],
             'locale' => ['sometimes', 'string', 'max:5'],
             'country' => ['sometimes', 'string', 'regex:/^[A-Z]{2}$/'],
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -133,6 +151,10 @@ class UpdateProfileData extends Data
                 ? Currency::from($request->string('default_currency')->toString())
                 : Currency::EUR,
             invoice_prefix: $request->filled('invoice_prefix') ? $request->string('invoice_prefix')->toString() : null,
+            invoice_number_mask: $request->filled('invoice_number_mask') ? $request->string('invoice_number_mask')->toString() : null,
+            invoice_number_mask_provided: $request->has('invoice_number_mask'),
+            invoice_number_start: $request->filled('invoice_number_start') ? $request->integer('invoice_number_start') : null,
+            invoice_number_start_provided: $request->has('invoice_number_start'),
             locale: $request->filled('locale') ? $request->string('locale')->toString() : null,
             country: $request->filled('country') ? $request->string('country')->toString() : null,
             address: $request->filled('address') ? $request->string('address')->toString() : null,

@@ -31,6 +31,10 @@ class UpdateProfileAction
                 'default_currency' => $data->default_currency->value,
                 'invoice_prefix' => $data->invoice_prefix,
                 'locale' => $data->locale,
+                // invoice_number_mask / invoice_number_start are set below,
+                // outside the filter, so an explicit "" can clear them back
+                // to the legacy default — array_filter would otherwise drop
+                // a null value indistinguishably from a field left unsent.
                 'country' => $data->country,
                 'address' => $data->address,
                 'city' => $data->city,
@@ -41,6 +45,14 @@ class UpdateProfileAction
                 'clockify_api_key' => $data->clockify_api_key,
                 'clockify_workspace_id' => $data->clockify_workspace_id,
             ], fn ($value) => $value !== null);
+
+            if ($data->invoice_number_mask_provided) {
+                $updateData['invoice_number_mask'] = $data->invoice_number_mask;
+            }
+
+            if ($data->invoice_number_start_provided) {
+                $updateData['invoice_number_start'] = $data->invoice_number_start;
+            }
 
             // Hash password if provided
             if ($data->password !== null) {

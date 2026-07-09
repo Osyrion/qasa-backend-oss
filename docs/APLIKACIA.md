@@ -464,7 +464,8 @@ vezme a po vyfakturovaní označí `is_invoiced = true`, aby sa nedali vyfakturo
 
 Najkomplexnejší modul — životný cyklus faktúry (draft → vystavená → odoslaná → upomienka →
 zaplatená/dobropis/storno), generovanie PDF, platobné QR kódy, bankové účty, opakovaná
-fakturácia, história platieb.
+fakturácia, história platieb. Od v2.1 podporuje **konfigurovateľnú masku čísel faktúr** a
+**hromadný export do Pohoda XML / CSV** pre účtovníkov.
 
 ### Endpointy (`api/v1/invoices/*` a súvisiace)
 
@@ -483,6 +484,8 @@ fakturácia, história platieb.
 | POST | `invoices/generate-from-order` | vygenerovanie faktúry zo zákazky |
 | — | `apiResource('recurring-invoice-templates', ...)` | plné CRUD |
 | POST | `recurring-invoice-templates/{template}/pause`, `/resume` | pozastavenie/obnovenie |
+| GET | `invoices/export/pohoda` | hromadný export faktúr do Pohoda XML (s filtrom podľa obdobia) |
+| GET | `invoices/export/csv` | hromadný export faktúr do CSV (s filtrom podľa obdobia) |
 
 ### Dátové modely
 
@@ -505,6 +508,21 @@ fakturácia, história platieb.
   podporujú placeholdery `{BOM}/{EOM}/{MONTH}/{YEAR}`.
 - **`InvoiceWorkReportLine`**: druhá strana faktúry — výkaz víceprác predvyplnený z časových
   záznamov, upraviteľný kým je faktúra v stave draft.
+
+### Konfigurácia čísel faktúr — `InvoiceNumberMask`
+
+Každý používateľ môže v profile nastaviť **masku** pre číslovanie faktúr s zástupnými znakmi:
+
+- **Placeholdery**: `{YYYY}` (rok), `{YY}` (2-znakový rok), `{MM}` (mesiac), `{DD}` (deň), jeden sekvenčný token `{N}` / `{NN}` / `{NNN}` atď. (počet `N` = šírka nuly sprava).
+- **Príklady**:
+  - `{YYYY}{NNNN}` → `20260001`, `20260002`, … (ročný reset, 4-miestne poradie)
+  - `{YY}01{NNN}` → `2601001`, `2601002`, … (ročný reset, 3-miestne poradie)
+  - `{NNNNN}` → `00001`, `00002`, … (bez resetu, priebežné číslovanie)
+- **Spätná kompatibilita**: keď je maska `null`, používa sa doterajší formát `{prefix}-{YYYY}-{NNN}`.
+- **Počiatočné poradie** (`invoice_number_start`): konfigurovateľné na úrovni používateľa, umožňuje migráciu z iného systému.
+- **Nezávislé rady**: rôzne typy dokladov (`Invoice`, `Proforma`, `CreditNote`, `Storno`) majú oddelené sekvencie — typ sa mapuje cez prefix (`PF-`, `DB-`, `ST-`).
+
+Logika je zapuzdrená v `app/Modules/Invoicing/Domain/Services/InvoiceNumberMask` — service formátuje poradie na číslo, extrahuje poradie z existujúcich čísel, a generuje regex na vyhľadávanie faktúr v rovnakom období/type.
 
 ### Stavový automat faktúry
 
@@ -558,6 +576,40 @@ nikdy neprekrývajú. Proforma nie je daňový doklad (nemá DUZP, na tlačive j
 - **`VatRecapCalculator`** — DPH sa počíta **podľa sadzbovej skupiny** (rekapitulačná
   tabuľka), zľava na úrovni faktúry sa aplikuje pomerne pred výpočtom DPH (česká/slovenská
   účtovná konvencia); generuje aj CZK prepočet podľa zmrazeného kurzu.
+
+### Hromadný export faktúr — Pohoda XML a CSV
+
+Účtovníci potrebujú na konci obdobia vyviezť vydané faktúry do svojho účtovného softvéru.
+Dva independentné endpointy (`/api/v1/invoices/export/pohoda` a `/api/v1/invoices/export/csv`),
+zdieľajúce rovnaký filter DTO:
+
+- **`InvoiceExportData`** (Application/DTOs) — filtrovanie:
+  - `dateFrom`, `dateTo` — povinné (rozsah dátumov).
+  - `periodBasis` (`issue|tax`, default `issue`) — či filtrujeme podľa dátumu vystavenia alebo DUZP.
+  - `types[]` (default: `invoice, credit_note, storno`) — typ dokladu; proforma a drafty sú vylúčené.
+- **Proforma nie je daňový doklad** — nikdy sa neexportuje. Draft sa nikdy neexportuje.
+- **Dáta zo snapshoty** — export vždy čítá zo zmrazených snapshotypov (`supplier_snapshot`, `client_snapshot`, `bank_account_snapshot`), aby sa výstup zhodoval s vystavenými PDF.
+
+#### Pohoda XML export — `PohodaXmlBuilder`
+
+- **`app/Modules/Invoicing/Domain/Services/PohodaXmlBuilder`** — buduje `DOMDocument`
+  (nie ručné skladanie XML — zabraňuje SSRF/injection, zaručuje korektné XML escapovanie).
+- **Formát**: Stormware Pohoda `dataPack` (verzia 2.0) s `ico` dodávateľa v root elemente.
+- **Jednotlivé faktúry** → `<dat:dataPackItem>/<inv:invoice>`:
+  - `invoiceHeader` — typ (`issuedInvoice` / `issuedCreditNotice` / vrátka), číslo, variabilný symbol, dátumy (issued, tax, due).
+  - `partnerIdentity` — klient (zo snapshoty): názov, adresa, IČO, DIČ.
+  - `invoiceDetail` — položky faktúry s mapovanou DPH sadzbou (`none/low/high/third`).
+  - `invoiceSummary` — summary per sadzbu DPH + cudzia mena (ak je).
+- **DPH mapovanie**: `PohodaVatRate` mapuje sadzby → `rateVAT` s konfigurovanými prahmi (default CZ: `high=21%, low=12%`).
+- **Cudzia mena**: EUR/USD → `foreignCurrency` blok s `rate` zo snapshoty; home ekvivalent cez `czkRecap()`.
+
+#### CSV export — `InvoiceCsvBuilder`
+
+- **`app/Modules/Invoicing/Application/Services/InvoiceCsvBuilder`** — League/Csv Writer.
+- **Formát**: UTF-8 BOM + `;` delimiter (Excel kompatibilita v CZ/SK locales).
+- **Granularita**: jeden riadok = jedna faktúra (hlavičková úroveň — jednoduchá importovateľnosť).
+- **Stĺpce** (lokalizované): `invoice_number`, `type`, `status`, `issued_at`, `taxable_supply_at`, `due_at`, `client_name`, `client_ico`, `client_dic`, `client_vat_id`, `currency`, `subtotal`, `discount_amount`, `vat_amount`, `total`, `paid_amount`, `balance`, `variable_symbol`, `exchange_rate`.
+- **Sumárne hodnoty**: zo snapshoty / `VatRecapCalculator` (aby sa zhodovali s PDF).
 
 ---
 
@@ -672,3 +724,10 @@ Nedávno doplnené (predtým uvádzané ako medzery, dnes už zapojené):
   `GET /api/v1/dashboard` (`auth.php`, middleware `auth:sanctum`).
 - **Google OAuth konfigurácia** — `config/services.php` obsahuje kľúč `google` a
   `.env.example` má `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`.
+- **Invoice number mask** — používatelia si môžu definovať vlastnú masku číslovania faktúr
+  (napr. `{YYYY}{NNNN}`), podporuje reset podľa roku/mesiaca, spätne kompatibilný (null maska
+  = doterajší formát).
+- **Hromadný export faktúr** — endpointy `invoices/export/pohoda` (Stormware XML) a
+  `invoices/export/csv` s filtrom podľa obdobia a typu dokladu — určeno pre účtovníkov.
+- **Exports pre Pohodu** — mapovanie DPH sadzieb na `rateVAT`, zmrazené snapshoty,
+  CZK prepočet cez `czkRecap()` pre cudzie meny.
