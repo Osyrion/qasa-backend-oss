@@ -11,4 +11,5 @@ return [
     'registry_unsupported_country' => 'Vyhľadanie firmy nie je podporované pre krajinu :country.',
     'company_not_found' => 'Pre IČO :ico sa nenašla žiadna firma.',
     'vat_check_unavailable' => 'IČ DPH sa nepodarilo overiť, pretože služba VIES je momentálne nedostupná.',
+    'role_required' => 'Klient musí byť odberateľ, dodávateľ alebo oboje.',
 ];

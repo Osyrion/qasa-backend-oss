@@ -17,6 +17,14 @@ class EloquentClientRepository implements ClientRepositoryInterface
     {
         $query = Client::query()->with('contactPersons');
 
+        $role = isset($filters['role']) && is_string($filters['role']) ? $filters['role'] : 'customer';
+
+        match ($role) {
+            'vendor' => $query->where('is_vendor', true),
+            'all' => null,
+            default => $query->where('is_customer', true),
+        };
+
         if (! empty($filters['client_type'])) {
             $query->where('client_type', $filters['client_type']);
         }

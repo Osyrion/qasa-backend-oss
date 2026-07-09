@@ -51,6 +51,13 @@ class ClientController extends Controller
                 schema: new OA\Schema(type: 'integer', default: 20)
             ),
             new OA\Parameter(
+                name: 'role',
+                description: 'Filter by role',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['customer', 'vendor', 'all'], default: 'customer')
+            ),
+            new OA\Parameter(
                 name: 'client_type',
                 description: 'Filter by client type',
                 in: 'query',
@@ -104,7 +111,7 @@ class ClientController extends Controller
     {
         $clients = $this->repository->paginate(
             perPage: (int) $request->input('per_page', 20),
-            filters: $request->only(['client_type', 'search', 'currency', 'sort', 'direction']),
+            filters: $request->only(['role', 'client_type', 'search', 'currency', 'sort', 'direction']),
         );
 
         return ClientResource::collection($clients);
@@ -160,6 +167,8 @@ class ClientController extends Controller
                     new OA\Property(property: 'vat_id', type: 'string', nullable: true, maxLength: 20),
                     new OA\Property(property: 'company_name', type: 'string', nullable: true, maxLength: 200),
                     new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                    new OA\Property(property: 'is_customer', type: 'boolean', default: true),
+                    new OA\Property(property: 'is_vendor', type: 'boolean', default: false),
                     new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, maxLength: 255),
                     new OA\Property(property: 'phone', type: 'string', nullable: true, maxLength: 30),
                     new OA\Property(property: 'address', type: 'string', nullable: true, maxLength: 255),
@@ -217,6 +226,8 @@ class ClientController extends Controller
                     new OA\Property(property: 'dic', type: 'string', nullable: true, maxLength: 20),
                     new OA\Property(property: 'vat_id', type: 'string', nullable: true, maxLength: 20),
                     new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                    new OA\Property(property: 'is_customer', type: 'boolean', default: true),
+                    new OA\Property(property: 'is_vendor', type: 'boolean', default: false),
                     new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, maxLength: 255),
                     new OA\Property(property: 'phone', type: 'string', nullable: true, maxLength: 30),
                     new OA\Property(property: 'address', type: 'string', nullable: true, maxLength: 255),

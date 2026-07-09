@@ -37,6 +37,8 @@ readonly class UpdateClientAction
                 'dic' => $data->dic,
                 'vat_id' => $data->vat_id,
                 'is_vat_payer' => $data->is_vat_payer,
+                'is_customer' => $data->is_customer,
+                'is_vendor' => $data->is_vendor,
                 'email' => $data->email,
                 'phone' => $data->phone,
                 'address' => $data->address,
@@ -70,6 +72,10 @@ readonly class UpdateClientAction
 
         if ($data->client_type->requiresCompanyName() && empty($data->company_name)) {
             throw DomainException::because(__('clients.company_name_required'));
+        }
+
+        if (! $data->is_customer && ! $data->is_vendor) {
+            throw DomainException::because(__('clients.role_required'));
         }
     }
 }

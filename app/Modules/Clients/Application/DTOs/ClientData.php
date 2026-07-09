@@ -67,6 +67,10 @@ class ClientData extends Data
 
         #[Nullable]
         public readonly ?string $note,
+
+        public readonly bool $is_customer = true,
+
+        public readonly bool $is_vendor = false,
     ) {}
 
     /**
@@ -81,6 +85,8 @@ class ClientData extends Data
             'company_name' => ['required_if:client_type,company', 'nullable', 'string'],
             'email' => ['nullable', 'email'],
             'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'is_customer' => ['boolean'],
+            'is_vendor' => ['boolean'],
         ];
     }
 }

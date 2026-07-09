@@ -10,7 +10,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 interface ClientRepositoryInterface
 {
     /**
-     * @param  array<string, mixed>  $filters
+     * @param  array<string, mixed>  $filters  Supports 'role' => 'customer'|'vendor'|'all' (default 'customer').
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 
