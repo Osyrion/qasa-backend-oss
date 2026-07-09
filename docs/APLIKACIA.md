@@ -308,7 +308,19 @@ Správu admin účtov môže robiť **len `super_admin`** — role `support`/`bi
 Plný REST (`apiResource`) pre `clients`, plus vnorené `clients/{client}/contact-persons`
 (GET/POST/PUT/DELETE).
 
-Navyše dva **pomocné (needukladajúce) lookup endpointy** na predvyplnenie a overenie údajov
+| Metóda | URI | Parametry | Účel |
+|---|---|---|---|
+| GET/POST/PUT/DELETE | `/clients[/{client}]` | `role=customer\|vendor\|all` (default `customer`) | CRUD |
+| GET | `/clients/lookup?country=&ico=` | — | vytiahne firemné údaje z registra |
+| GET | `/clients/verify-vat?country=&vat_id=` | — | overí platnosť IČ DPH cez VIES |
+| GET/POST/PUT/DELETE | `/clients/{client}/contact-persons[/{contact}]` | — | vnorené kontaktné osoby |
+
+Príklady filtrovania podľa roly:
+- `GET /api/v1/clients` (default) — len zákazníci (`is_customer=true`)
+- `GET /api/v1/clients?role=vendor` — len dodávateľi
+- `GET /api/v1/clients?role=all` — bez ohľadu na rolu
+
+Dva **pomocné (needukladajúce) lookup endpointy** na predvyplnenie a overenie údajov
 pri zakladaní klienta. Obidva vyžadujú `auth:sanctum` + oprávnenie `clients.manage`
 (`authorize('create', Client::class)`) a sú registrované **pred** `apiResource`, aby ich
 nezachytil parameter `clients/{client}`:
@@ -318,7 +330,7 @@ nezachytil parameter `clients/{client}`:
 | GET | `/clients/lookup?country=&ico=` | vytiahne firemné údaje z verejného registra podľa IČO (ARES pre CZ, RPO pre SK) |
 | GET | `/clients/verify-vat?country=&vat_id=` | overí platnosť IČ DPH cez EU VIES |
 
-Obsluhuje ich `CompanyLookupController`; výsledok sa **neukladá** — frontend ním len
+Obsluhuje ich `CompanyLookupController`; výsledok sa **neuloadá** — frontend ním len
 predvyplní/zvaliduje formulár a klient sa uloží až bežným `POST /clients`.
 
 ### Integrácia registrov (ARES / RPO / VIES)
@@ -346,11 +358,15 @@ registrov sú v `config/services.php` (`services.ares|rpo|vies`, env `ARES_API_U
 
 - **`Client`**: `user_id` (scoped), `client_type` (`individual | self_employed | company`),
   `title, name, surname, company_name, avatar_path, color, ico, dic, vat_id, is_vat_payer,
-  email, phone, address, city, postal_code, country, currency, locale, note`.
+  email, phone, address, city, postal_code, country, currency, locale, note`,
+  **`is_customer` (default `true`), `is_vendor` (default `false`)** — duálne roly klienta.
   Vypočítané `display_name` sa líši podľa typu klienta (firma → `company_name`; SZČO →
   `company_name (meno priezvisko)`; fyzická osoba → `titul meno priezvisko`).
   `vat_id` (IČ DPH) je editovateľné cez create/update (`ClientData`) a práve toto pole
   overuje VIES.
+  **Validácia roly**: aspoň jedna z (`is_customer`, `is_vendor`) musí byť `true` — pri porušení
+  sa hodí `DomainException` s kľúčom `clients.role_required` (SK/EN lokalizácia).
+  **Helpers**: `isCustomer()`, `isVendor()` — typované getters.
 - **`ContactPerson`**: `client_id, title, name, surname, email, phone, role, is_primary`.
 
 Autorizácia (`ClientPolicy`): rovnaký vzorec ako všade — `sameAccount()` + `clients.view`/`clients.manage`.
