@@ -28,6 +28,8 @@ class ContactPerson extends Model
     use HasFactory;
     use HasUuids;
 
+    protected $table = 'contact_persons';
+
     protected $fillable = [
         'client_id',
         'title',

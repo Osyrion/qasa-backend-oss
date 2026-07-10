@@ -14,4 +14,36 @@ return [
 
     'reminder_cooldown_days' => env('INVOICING_REMINDER_COOLDOWN_DAYS', 3),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Supplier invoice number mask fallback
+    |--------------------------------------------------------------------------
+    |
+    | Used when a user has not configured their own supplier_invoice_number_mask.
+    | Kept distinct from the outgoing Proforma prefix (PF) purely for visual
+    | clarity — the two live in separate tables with independent sequences.
+    |
+    */
+
+    'supplier_invoice_number_mask' => env('INVOICING_SUPPLIER_INVOICE_NUMBER_MASK', 'DF-{YYYY}-{NNNN}'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Invoice inbox scanner
+    |--------------------------------------------------------------------------
+    |
+    | Watched folder for the qasa:invoices:scan-inbox command. Each account's
+    | documents live in a subfolder keyed by its user id: {path}/{account_id}.
+    | Stored inbox items themselves always live on the "local" disk,
+    | independent of where the watched folder is.
+    |
+    */
+
+    'inbox' => [
+        'disk' => env('INVOICING_INBOX_DISK', 'local'),
+        'path' => env('INVOICING_INBOX_PATH', 'inbox'),
+        'ocr_languages' => env('INVOICING_INBOX_OCR_LANGS', 'slk+ces+eng'),
+        'max_bytes' => env('INVOICING_INBOX_MAX_BYTES', 20 * 1024 * 1024),
+    ],
+
 ];

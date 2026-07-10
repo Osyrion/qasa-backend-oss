@@ -35,6 +35,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $dic
  * @property string|null $vat_id IČ DPH / VAT ID
  * @property bool $is_vat_payer
+ * @property bool $is_customer
+ * @property bool $is_vendor
  * @property string|null $email
  * @property string|null $phone
  * @property string|null $address
@@ -78,7 +80,9 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Client whereEmail($value)
  * @method static Builder<static>|Client whereIco($value)
  * @method static Builder<static>|Client whereId($value)
+ * @method static Builder<static>|Client whereIsCustomer($value)
  * @method static Builder<static>|Client whereIsVatPayer($value)
+ * @method static Builder<static>|Client whereIsVendor($value)
  * @method static Builder<static>|Client whereLocale($value)
  * @method static Builder<static>|Client whereName($value)
  * @method static Builder<static>|Client whereNote($value)
@@ -113,6 +117,8 @@ class Client extends Model
         'dic',
         'vat_id',
         'is_vat_payer',
+        'is_customer',
+        'is_vendor',
         'email',
         'phone',
         'address',
@@ -128,6 +134,8 @@ class Client extends Model
     {
         return [
             'is_vat_payer' => 'boolean',
+            'is_customer' => 'boolean',
+            'is_vendor' => 'boolean',
             'currency' => Currency::class,
         ];
     }
@@ -168,6 +176,16 @@ class Client extends Model
     public function canHaveContactPersons(): bool
     {
         return $this->isCompany();
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->is_customer;
+    }
+
+    public function isVendor(): bool
+    {
+        return $this->is_vendor;
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────

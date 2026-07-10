@@ -11,6 +11,24 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Pridané (Added)
 
+#### Role klientov — Customer / Vendor flagy
+- **Duálny model roly klienta**: každý klient môže mať alebo nemať rolu ako **zákazníka** (predvolene `true`) a/alebo **dodávateľa** (`is_customer` a `is_vendor` flagy)
+  - `is_customer` — klient, od ktorého se vytvoria faktúry (bežná úroveň — prijímame platby)
+  - `is_vendor` — dodávateľ/subdodávateľ (budúca funkcia — registrujeme vstupné faktúry)
+  - Validácia: aspoň jedna rola musí byť nastavená (`clients.role_required` — domeno-domínová výnimka)
+- **Filtrovanie v API**: endpointy `/api/v1/clients` a `/api/v1/clients/{client}` podporujú query parameter `role` (`customer` / `vendor` / `all`, default `customer`)
+  - `GET /api/v1/clients?role=customer` — len aktívnych zákazníkov
+  - `GET /api/v1/clients?role=vendor` — len dodávateľov
+  - `GET /api/v1/clients?role=all` — všetci nezávisle na roli
+- **Dátový model**:
+  - Nový stĺpec v tabuľke `clients`: `is_customer BOOL DEFAULT TRUE`, `is_vendor BOOL DEFAULT FALSE`
+  - Nové indexy: `(user_id, is_customer)` a `(user_id, is_vendor)` pre rýchle filtrovanie
+  - Migracia: `2026_07_09_000001_add_customer_vendor_flags_to_clients.php`
+- **DTO ClientData**: nové properties `is_customer` (default `true`), `is_vendor` (default `false`)
+- **Model helpers**: `Client::isCustomer()`, `Client::isVendor()` — typované getters
+- **Repository filtrovanie**: `EloquentClientRepository::paginate()` s kľúčom `role` v Query Builder filtri
+- **OpenAPI dokumentácia**: aktualizované schémy na `GET /clients`, `POST /clients`, `PUT /clients/{client}` s novými polami
+
 #### Konfigurácia číslovania faktúr
 - **Invoice Number Mask** — používatelia si teraz môžu v profile nastaviť vlastnú masku číslovania faktúr namiesto pevného formátu
   - Podporované placeholdery: `{YYYY}` (rok), `{YY}` (2-znakový rok), `{MM}` (mesiac), `{DD}` (deň), `{N}`/`{NN}`/`{NNN}` atď. (sekvenčný token s variabilnou šírkou)

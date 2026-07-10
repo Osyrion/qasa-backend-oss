@@ -5,18 +5,29 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Infrastructure\Providers;
 
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
+use App\Modules\Invoicing\Domain\Contracts\InvoiceTextExtractor;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Invoicing\Infrastructure\Ocr\CompositeExtractor;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentBankAccountRepository;
+use App\Modules\Invoicing\Infrastructure\Repositories\EloquentInvoiceInboxRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentInvoiceRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentRecurringInvoiceTemplateRepository;
+use App\Modules\Invoicing\Infrastructure\Repositories\EloquentSupplierInvoiceRepository;
 use App\Modules\Invoicing\Presentation\Console\GenerateRecurringInvoicesCommand;
+use App\Modules\Invoicing\Presentation\Console\ScanInboxCommand;
 use App\Modules\Invoicing\Presentation\Policies\BankAccountPolicy;
+use App\Modules\Invoicing\Presentation\Policies\InvoiceInboxItemPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoicePolicy;
 use App\Modules\Invoicing\Presentation\Policies\RecurringInvoiceTemplatePolicy;
+use App\Modules\Invoicing\Presentation\Policies\SupplierInvoicePolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -41,6 +52,21 @@ class InvoicingServiceProvider extends ServiceProvider
             RecurringInvoiceTemplateRepositoryInterface::class,
             EloquentRecurringInvoiceTemplateRepository::class,
         );
+
+        $this->app->bind(
+            SupplierInvoiceRepositoryInterface::class,
+            EloquentSupplierInvoiceRepository::class,
+        );
+
+        $this->app->bind(
+            InvoiceInboxRepositoryInterface::class,
+            EloquentInvoiceInboxRepository::class,
+        );
+
+        $this->app->bind(
+            InvoiceTextExtractor::class,
+            CompositeExtractor::class,
+        );
     }
 
     public function boot(): void
@@ -63,9 +89,11 @@ class InvoicingServiceProvider extends ServiceProvider
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(BankAccount::class, BankAccountPolicy::class);
         Gate::policy(RecurringInvoiceTemplate::class, RecurringInvoiceTemplatePolicy::class);
+        Gate::policy(SupplierInvoice::class, SupplierInvoicePolicy::class);
+        Gate::policy(InvoiceInboxItem::class, InvoiceInboxItemPolicy::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([GenerateRecurringInvoicesCommand::class]);
+            $this->commands([GenerateRecurringInvoicesCommand::class, ScanInboxCommand::class]);
         }
     }
 }

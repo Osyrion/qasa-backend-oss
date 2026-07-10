@@ -33,6 +33,8 @@ class ClientFactory extends Factory
             'ico' => fake()->optional()->numerify('########'),
             'dic' => fake()->optional()->numerify('##########'),
             'is_vat_payer' => fake()->boolean(35),
+            'is_customer' => true,
+            'is_vendor' => false,
             'email' => fake()->safeEmail(),
             'phone' => fake()->optional()->phoneNumber(),
             'address' => fake()->streetAddress(),
@@ -63,6 +65,22 @@ class ClientFactory extends Factory
             'name' => fake()->firstName(),
             'surname' => fake()->lastName(),
             'company_name' => null,
+        ]);
+    }
+
+    public function vendor(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_customer' => false,
+            'is_vendor' => true,
+        ]);
+    }
+
+    public function both(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_customer' => true,
+            'is_vendor' => true,
         ]);
     }
 }

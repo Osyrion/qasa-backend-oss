@@ -17,3 +17,9 @@ Schedule::command('qasa:invoices:generate-recurring')
     ->timezone((string) config('qasa.schedule_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
+
+Schedule::command('qasa:invoices:scan-inbox')
+    ->everyFifteenMinutes()
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();

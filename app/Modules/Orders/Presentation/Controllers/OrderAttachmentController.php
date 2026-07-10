@@ -13,7 +13,12 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(
+    name: 'Order Attachments',
+    description: 'Manage file attachments on orders'
+)]
 class OrderAttachmentController extends Controller
 {
     use AuthorizesRequests;
@@ -30,6 +35,24 @@ class OrderAttachmentController extends Controller
 
     private const int|float MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 
+    #[OA\Get(
+        path: '/api/v1/orders/{order}/attachments',
+        summary: 'List order attachments',
+        security: [['sanctum' => []]],
+        tags: ['Order Attachments'],
+        parameters: [
+            new OA\Parameter(name: 'order', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of order attachments',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/OrderAttachment'))
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+        ]
+    )]
     public function index(Order $order): AnonymousResourceCollection
     {
         $this->authorize('view', $order);
@@ -39,6 +62,39 @@ class OrderAttachmentController extends Controller
         );
     }
 
+    #[OA\Post(
+        path: '/api/v1/orders/{order}/attachments',
+        summary: 'Upload order attachment',
+        security: [['sanctum' => []]],
+        tags: ['Order Attachments'],
+        parameters: [
+            new OA\Parameter(name: 'order', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['file'],
+                    properties: [
+                        new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'File to upload (max 20MB)'),
+                        new OA\Property(property: 'label', type: 'string', description: 'Optional label for the attachment', maxLength: 255),
+                    ]
+                )
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Attachment uploaded',
+                content: new OA\JsonContent(ref: '#/components/schemas/OrderAttachment')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 422, description: 'Invalid file type, too large, or upload failed'),
+            new OA\Response(response: 500, description: 'File storage failed'),
+        ]
+    )]
     public function store(Request $request, Order $order): JsonResponse
     {
         $this->authorize('update', $order);
@@ -86,6 +142,21 @@ class OrderAttachmentController extends Controller
         return response()->json(OrderAttachmentResource::make($attachment), 201);
     }
 
+    #[OA\Delete(
+        path: '/api/v1/orders/{order}/attachments/{attachment}',
+        summary: 'Delete order attachment',
+        security: [['sanctum' => []]],
+        tags: ['Order Attachments'],
+        parameters: [
+            new OA\Parameter(name: 'order', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'attachment', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Attachment deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+        ]
+    )]
     public function destroy(Order $order, OrderAttachment $attachment): JsonResponse
     {
         $this->authorize('update', $order);

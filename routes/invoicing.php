@@ -5,9 +5,11 @@ declare(strict_types=1);
 use App\Modules\Invoicing\Presentation\Controllers\BankAccountController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoiceController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoiceExportController;
+use App\Modules\Invoicing\Presentation\Controllers\InvoiceInboxController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePaymentController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePdfController;
 use App\Modules\Invoicing\Presentation\Controllers\RecurringInvoiceTemplateController;
+use App\Modules\Invoicing\Presentation\Controllers\SupplierInvoiceController;
 use App\Modules\Invoicing\Presentation\Controllers\WorkReportController;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +23,23 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
 
     Route::apiResource('bank-accounts', BankAccountController::class)
         ->parameters(['bank-accounts' => 'bank_account']);
+
+    Route::apiResource('supplier-invoices', SupplierInvoiceController::class)
+        ->parameters(['supplier-invoices' => 'supplier_invoice']);
+
+    Route::post('supplier-invoices/{supplier_invoice}/status', [SupplierInvoiceController::class, 'updateStatus'])
+        ->name('supplier-invoices.status');
+
+    Route::apiResource('invoice-inbox', InvoiceInboxController::class)
+        ->parameters(['invoice-inbox' => 'inbox_item'])
+        ->only(['index', 'show', 'destroy']);
+
+    Route::get('invoice-inbox/{inbox_item}/download', [InvoiceInboxController::class, 'download'])
+        ->name('invoice-inbox.download');
+    Route::post('invoice-inbox/{inbox_item}/convert', [InvoiceInboxController::class, 'convert'])
+        ->name('invoice-inbox.convert');
+    Route::post('invoice-inbox/{inbox_item}/ignore', [InvoiceInboxController::class, 'ignore'])
+        ->name('invoice-inbox.ignore');
 
     Route::prefix('invoices/{invoice}')->scopeBindings()->group(function (): void {
         Route::post('status', [InvoiceController::class, 'updateStatus'])->name('invoices.status');

@@ -10,7 +10,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 interface ClientRepositoryInterface
 {
     /**
-     * @param  array<string, mixed>  $filters
+     * @param  array<string, mixed>  $filters  Supports 'role' => 'customer'|'vendor'|'all' (default 'customer').
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 
@@ -31,4 +31,10 @@ interface ClientRepositoryInterface
     public function delete(Client $client): void;
 
     public function countForUser(string $userId): int;
+
+    /**
+     * Auto-match a vendor by IČO for the invoice inbox scanner, which runs
+     * without an authenticated user.
+     */
+    public function findVendorByIco(string $userId, string $ico): ?Client;
 }

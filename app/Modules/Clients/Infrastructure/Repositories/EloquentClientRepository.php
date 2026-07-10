@@ -17,6 +17,14 @@ class EloquentClientRepository implements ClientRepositoryInterface
     {
         $query = Client::query()->with('contactPersons');
 
+        $role = isset($filters['role']) && is_string($filters['role']) ? $filters['role'] : 'customer';
+
+        match ($role) {
+            'vendor' => $query->where('is_vendor', true),
+            'all' => null,
+            default => $query->where('is_customer', true),
+        };
+
         if (! empty($filters['client_type'])) {
             $query->where('client_type', $filters['client_type']);
         }
@@ -85,5 +93,15 @@ class EloquentClientRepository implements ClientRepositoryInterface
         return Client::withoutGlobalScope('user')
             ->where('user_id', $userId)
             ->count();
+    }
+
+    public function findVendorByIco(string $userId, string $ico): ?Client
+    {
+        /** @var Client|null */
+        return Client::withoutGlobalScope('user')
+            ->where('user_id', $userId)
+            ->where('ico', $ico)
+            ->where('is_vendor', true)
+            ->first();
     }
 }

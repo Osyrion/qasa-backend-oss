@@ -54,6 +54,9 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string $invoice_prefix
  * @property string|null $invoice_number_mask
  * @property int|null $invoice_number_start
+ * @property string|null $supplier_invoice_number_mask
+ * @property int|null $supplier_invoice_number_start
+ * @property bool $invoice_inbox_enabled
  * @property string $locale UI language
  * @property string $country ISO 3166-1 alpha-2
  * @property string|null $address
@@ -144,6 +147,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'password', 'google_id', 'avatar_path', 'color',
         'ico', 'dic', 'is_vat_payer', 'tax_flat_rate',
         'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
+        'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'clockify_api_key', 'clockify_workspace_id',
@@ -161,6 +165,8 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'is_vat_payer' => 'boolean',
             'tax_flat_rate' => 'integer',
             'invoice_number_start' => 'integer',
+            'supplier_invoice_number_start' => 'integer',
+            'invoice_inbox_enabled' => 'boolean',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
         ];

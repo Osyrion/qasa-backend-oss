@@ -27,6 +27,24 @@ return [
     'status_transition_not_allowed' => "The invoice cannot be changed from ':from' to ':to'.",
     'invalid_number_mask' => 'The mask must contain exactly one sequence token ({N}, {NN}, ...) and only the {YYYY}, {YY}, {MM}, {DD} placeholders.',
 
+    'supplier_invoice' => [
+        'client_must_be_vendor' => 'The selected client is not marked as a vendor.',
+        'only_draft_editable' => 'Only a draft supplier invoice can be edited or deleted.',
+        'status_transition_not_allowed' => "The supplier invoice cannot be changed from ':from' to ':to'.",
+    ],
+
+    'inbox' => [
+        'already_processed' => 'This item has already been processed.',
+        'unsupported_file' => 'Unsupported file type.',
+        'extraction_failed' => 'Could not extract text from the document.',
+        'status' => [
+            'pending' => 'Pending',
+            'imported' => 'Imported',
+            'ignored' => 'Ignored',
+            'failed' => 'Processing failed',
+        ],
+    ],
+
     'export' => [
         'csv_headers' => [
             'invoice_number' => 'Invoice number',
