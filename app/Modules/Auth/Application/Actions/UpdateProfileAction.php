@@ -42,6 +42,7 @@ class UpdateProfileAction
                 'vat_id' => $data->vat_id,
                 'website' => $data->website,
                 'invoice_footer_text' => $data->invoice_footer_text,
+                'overdue_reminder_days' => $data->overdue_reminder_days,
                 'clockify_api_key' => $data->clockify_api_key,
                 'clockify_workspace_id' => $data->clockify_workspace_id,
             ], fn ($value) => $value !== null);

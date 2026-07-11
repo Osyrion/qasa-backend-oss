@@ -16,6 +16,8 @@
 
                             <p style="margin: 0 0 16px;">{{ __('invoices::emails.reminder_intro', ['number' => $invoice->invoice_number]) }}</p>
 
+                            <p style="margin: 0 0 8px; font-weight: bold;">{{ __('invoices::emails.payment_details') }}</p>
+
                             <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 16px; font-size: 15px; line-height: 1.8;">
                                 <tr>
                                     <td style="padding-right: 16px; color: #71717a;">{{ __('invoices::emails.total_due') }}:</td>
@@ -31,7 +33,29 @@
                                         <td>{{ $invoice->variable_symbol }}</td>
                                     </tr>
                                 @endif
+                                @if (($iban ?? null) !== null)
+                                    <tr>
+                                        <td style="padding-right: 16px; color: #71717a;">{{ __('invoices::emails.iban') }}:</td>
+                                        <td>{{ $iban }}</td>
+                                    </tr>
+                                @endif
+                                @if (($bic ?? null) !== null)
+                                    <tr>
+                                        <td style="padding-right: 16px; color: #71717a;">{{ __('invoices::emails.bic') }}:</td>
+                                        <td>{{ $bic }}</td>
+                                    </tr>
+                                @endif
                             </table>
+
+                            {{-- $message (the Symfony message for CID embeds) is only injected
+                                 when actually sending — absent in render()/previews. --}}
+                            @if (($qrPng ?? null) !== null && isset($message))
+                                <p style="margin: 0 0 8px; color: #71717a; font-size: 13px;">{{ __('invoices::emails.qr_hint') }}</p>
+                                <img src="{{ $message->embedData($qrPng, 'payment-qr.png', 'image/png') }}"
+                                     alt="{{ __('invoices::emails.qr_alt') }}"
+                                     width="180" height="180"
+                                     style="display: block; margin: 0 0 24px; width: 180px; height: 180px;">
+                            @endif
 
                             <p style="margin: 0 0 24px; color: #71717a; font-size: 13px;">{{ __('invoices::emails.attachment_note') }}</p>
 

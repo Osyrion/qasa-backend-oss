@@ -13,9 +13,8 @@ return new class extends Migration
     {
         // Widen the status check — the InvoiceStatus enum already models
         // issued/reminded/credited, but the column has only ever allowed
-        // draft/sent/paid/cancelled. On SQLite (tests) the string()->change()
-        // below rebuilds the table, which drops the inline enum CHECK; the
-        // named constraint only exists on pgsql.
+        // draft/sent/paid/cancelled. The named CHECK constraint is dropped
+        // and re-created with the full status list below.
         if (DB::getDriverName() === 'pgsql') {
             DB::statement('ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_status_check');
         }

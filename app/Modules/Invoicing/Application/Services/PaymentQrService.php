@@ -9,6 +9,8 @@ use App\Modules\Invoicing\Domain\Services\EpcQrBuilder;
 use App\Modules\Invoicing\Domain\Services\SpaydBuilder;
 use App\Modules\Shared\Enums\Currency;
 use chillerlan\QRCode\Common\EccLevel;
+use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\Output\QRImagick;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -50,9 +52,49 @@ class PaymentQrService
         }
     }
 
-    public function payload(Invoice $invoice): ?string
+    /**
+     * Binary PNG payment QR for embedding in HTML emails — mail clients do
+     * not render the SVG data URIs used on the PDF. Prefers imagick (the
+     * production image), falls back to gd; returns null when neither
+     * extension is loaded or the invoice has no QR payload, so callers
+     * must degrade gracefully.
+     */
+    public function png(Invoice $invoice, ?float $amountOverride = null): ?string
     {
-        $bank = $this->bankData($invoice);
+        $payload = $this->payload($invoice, $amountOverride);
+
+        if ($payload === null) {
+            return null;
+        }
+
+        $outputInterface = match (true) {
+            extension_loaded('imagick') => QRImagick::class,
+            extension_loaded('gd') => QRGdImagePNG::class,
+            default => null,
+        };
+
+        if ($outputInterface === null) {
+            return null;
+        }
+
+        try {
+            $options = new QROptions([
+                'outputInterface' => $outputInterface,
+                'outputBase64' => false,
+                'eccLevel' => EccLevel::M,
+                'scale' => 6,
+                'imagickFormat' => 'png',
+            ]);
+
+            return (string) (new QRCode($options))->render($payload);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    public function payload(Invoice $invoice, ?float $amountOverride = null): ?string
+    {
+        $bank = $this->bankDetails($invoice);
 
         if ($bank === null || empty($bank['iban'])) {
             return null;
@@ -60,12 +102,13 @@ class PaymentQrService
 
         $iban = (string) $bank['iban'];
         $bic = isset($bank['bic']) && $bank['bic'] !== '' ? (string) $bank['bic'] : null;
+        $amount = $amountOverride ?? (float) $invoice->total;
 
         return match ($invoice->currency) {
             Currency::CZK => $this->spaydBuilder->build(
                 iban: $iban,
                 bic: $bic,
-                amount: (float) $invoice->total,
+                amount: $amount,
                 currency: Currency::CZK,
                 variableSymbol: $invoice->variable_symbol,
                 message: $invoice->invoice_number,
@@ -75,7 +118,7 @@ class PaymentQrService
                 iban: $iban,
                 bic: $bic,
                 beneficiaryName: $this->supplierName($invoice),
-                amount: (float) $invoice->total,
+                amount: $amount,
                 remittanceText: trim($invoice->invoice_number.' VS '.($invoice->variable_symbol ?? '')),
             ),
             default => null,
@@ -85,7 +128,7 @@ class PaymentQrService
     /**
      * @return array<string, mixed>|null issued snapshot first, live relation for draft previews
      */
-    private function bankData(Invoice $invoice): ?array
+    public function bankDetails(Invoice $invoice): ?array
     {
         if ($invoice->bank_account_snapshot !== null) {
             return $invoice->bank_account_snapshot;

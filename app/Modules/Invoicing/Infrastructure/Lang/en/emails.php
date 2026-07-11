@@ -13,4 +13,9 @@ return [
     'regards' => 'Kind regards',
     'reminder_subject' => 'Reminder — invoice :number is overdue',
     'reminder_intro' => 'this is a friendly reminder that invoice no. :number is now overdue.',
+    'payment_details' => 'Payment details',
+    'iban' => 'IBAN',
+    'bic' => 'SWIFT/BIC',
+    'qr_hint' => 'You can pay by scanning the QR code below.',
+    'qr_alt' => 'Payment QR code',
 ];

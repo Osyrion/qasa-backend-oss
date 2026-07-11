@@ -26,7 +26,7 @@ class DashboardService
             'clients' => $this->clientStats($userId),
             'orders' => $this->orderStats($userId),
             'time' => $this->timeStats($userId, $year, $month),
-            'invoices' => $this->invoiceStats($userId, $year),
+            'invoices' => $this->invoiceStats($user, $year),
             'income_trend' => $this->incomeTrend($userId),
             'running_timer' => $this->runningTimer($userId),
         ];
@@ -105,8 +105,10 @@ class DashboardService
     /**
      * @return array<string, mixed>
      */
-    private function invoiceStats(string $userId, int $year): array
+    private function invoiceStats(User $user, int $year): array
     {
+        $userId = $user->accountOwnerId();
+
         $stats = Invoice::withoutGlobalScope('user')
             ->where('user_id', $userId)
             ->whereYear('issued_at', $year)
@@ -129,6 +131,7 @@ class DashboardService
             'revenue_pending' => (float) ($stats?->revenue_pending ?? 0),
             'volume' => $this->invoicingVolume($userId),
             'overdue' => $this->overdueStats($userId),
+            'overdue_reminders' => $this->overdueReminders($user),
         ];
     }
 
@@ -189,6 +192,76 @@ class DashboardService
     }
 
     /**
+     * Overdue invoices past the user's reminder threshold, with a per-item
+     * can_remind flag mirroring RemindInvoiceAction's guards so the frontend
+     * can render "send reminder" buttons without a round trip.
+     *
+     * @return array{threshold_days: int, items: array<int, array<string, mixed>>}
+     */
+    private function overdueReminders(User $user): array
+    {
+        $threshold = $user->overdue_reminder_days;
+        $cutoff = now()->startOfDay()->subDays($threshold)->toDateString();
+        $cooldownDays = (int) config('invoicing.reminder_cooldown_days', 3);
+
+        $invoices = Invoice::withoutGlobalScope('user')
+            ->where('user_id', $user->accountOwnerId())
+            ->whereIn('status', ['issued', 'sent', 'reminded'])
+            ->where('due_at', '<', $cutoff)
+            ->withSum('payments as payments_sum_amount', 'amount')
+            ->with('client:id,client_type,title,name,surname,company_name,email')
+            ->orderBy('due_at')
+            ->limit(20)
+            ->get();
+
+        return [
+            'threshold_days' => $threshold,
+            'items' => $invoices
+                ->map(fn (Invoice $invoice): array => $this->overdueReminderItem($invoice, $cooldownDays))
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function overdueReminderItem(Invoice $invoice, int $cooldownDays): array
+    {
+        $email = $invoice->client_snapshot['email'] ?? $invoice->client?->email;
+        $nextAllowed = $invoice->last_reminded_at?->copy()->addDays($cooldownDays);
+
+        [$canRemind, $reason] = match (true) {
+            ! in_array($invoice->status, ['sent', 'reminded'], true) => [
+                false,
+                __('invoicing.reminder_only_for_sent', ['status' => $invoice->statusEnum()->label()]),
+            ],
+            $nextAllowed !== null && $nextAllowed->isFuture() => [
+                false,
+                __('invoicing.reminder_cooldown', ['next_allowed' => $nextAllowed->format('d.m.Y H:i')]),
+            ],
+            $email === null || $email === '' => [
+                false,
+                __('invoicing.client_email_missing_for_reminder'),
+            ],
+            default => [true, null],
+        };
+
+        return [
+            'id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'client_name' => $invoice->client_snapshot['name'] ?? $invoice->client?->display_name,
+            'currency' => $invoice->currency->value,
+            'balance' => round((float) $invoice->total - (float) $invoice->getAttribute('payments_sum_amount'), 2),
+            'due_at' => $invoice->due_at->toDateString(),
+            'days_overdue' => (int) $invoice->due_at->diffInDays(now()->startOfDay()),
+            'last_reminded_at' => $invoice->last_reminded_at?->toISOString(),
+            'reminder_count' => $invoice->reminder_count,
+            'can_remind' => $canRemind,
+            'can_remind_reason' => $reason,
+        ];
+    }
+
+    /**
      * Twelve-month income timeline (cash-in): actually collected amounts from
      * the payment ledger, grouped by payment month, gaps filled with zero.
      *
@@ -198,9 +271,8 @@ class DashboardService
     {
         $start = now()->startOfMonth()->subMonths(11);
 
-        // Grouped in PHP (not SQL) so the month bucketing stays portable across
-        // Postgres and the SQLite test connection. One user's 12-month payment
-        // set is small, so a single query plus in-memory grouping is cheap.
+        // Grouped in PHP (not SQL): one user's 12-month payment set is small,
+        // so a single query plus in-memory grouping is cheap.
         $sums = InvoicePayment::query()
             ->join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
             ->where('invoices.user_id', $userId)

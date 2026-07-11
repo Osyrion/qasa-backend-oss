@@ -13,4 +13,9 @@ return [
     'regards' => 'S pozdravom',
     'reminder_subject' => 'Upomienka — faktúra :number po splatnosti',
     'reminder_intro' => 'radi by sme Vám pripomenuli, že faktúra č. :number je po splatnosti.',
+    'payment_details' => 'Platobné údaje',
+    'iban' => 'IBAN',
+    'bic' => 'SWIFT/BIC',
+    'qr_hint' => 'Zaplatiť môžete naskenovaním QR kódu nižšie.',
+    'qr_alt' => 'Platobný QR kód',
 ];

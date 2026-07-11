@@ -66,6 +66,7 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $vat_id IČ DPH / VAT ID
  * @property string|null $website
  * @property string|null $invoice_footer_text
+ * @property int $overdue_reminder_days Dashboard overdue-reminder threshold in days
  * @property string|null $clockify_api_key
  * @property string|null $clockify_workspace_id
  * @property Carbon|null $email_verified_at
@@ -150,11 +151,17 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
-        'clockify_api_key', 'clockify_workspace_id',
+        'overdue_reminder_days', 'clockify_api_key', 'clockify_workspace_id',
     ];
 
     protected $hidden = [
         'password', 'remember_token', 'google_id', 'clockify_api_key',
+    ];
+
+    // Mirrors the DB default so freshly created (not yet re-fetched)
+    // instances carry the threshold too.
+    protected $attributes = [
+        'overdue_reminder_days' => 14,
     ];
 
     protected function casts(): array
@@ -167,6 +174,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'invoice_number_start' => 'integer',
             'supplier_invoice_number_start' => 'integer',
             'invoice_inbox_enabled' => 'boolean',
+            'overdue_reminder_days' => 'integer',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
         ];

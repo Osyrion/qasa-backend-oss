@@ -94,6 +94,9 @@ class UpdateProfileData extends Data
         #[Sometimes, Max(1000)]
         public readonly ?string $invoice_footer_text = null,
 
+        #[Sometimes]
+        public readonly ?int $overdue_reminder_days = null,
+
         #[Sometimes, Max(100)]
         public readonly ?string $clockify_api_key = null,
 
@@ -129,6 +132,7 @@ class UpdateProfileData extends Data
             'vat_id' => ['sometimes', 'nullable', 'string', 'max:20'],
             'website' => ['sometimes', 'nullable', 'string', 'max:150'],
             'invoice_footer_text' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'overdue_reminder_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
             'clockify_api_key' => ['sometimes', 'nullable', 'string', 'max:100'],
             'clockify_workspace_id' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
@@ -163,6 +167,7 @@ class UpdateProfileData extends Data
             vat_id: $request->filled('vat_id') ? $request->string('vat_id')->toString() : null,
             website: $request->filled('website') ? $request->string('website')->toString() : null,
             invoice_footer_text: $request->filled('invoice_footer_text') ? $request->string('invoice_footer_text')->toString() : null,
+            overdue_reminder_days: $request->filled('overdue_reminder_days') ? $request->integer('overdue_reminder_days') : null,
             clockify_api_key: $request->filled('clockify_api_key') ? $request->string('clockify_api_key')->toString() : null,
             clockify_workspace_id: $request->filled('clockify_workspace_id') ? $request->string('clockify_workspace_id')->toString() : null,
         );

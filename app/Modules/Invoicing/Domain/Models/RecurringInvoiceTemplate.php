@@ -129,8 +129,8 @@ class RecurringInvoiceTemplate extends Model
     {
         return $query
             ->where('status', RecurringTemplateStatus::Active->value)
-            // whereDate, not a raw string comparison: SQLite stores date
-            // columns with a time suffix, which breaks `<=` on equality.
+            // whereDate: compare by calendar date regardless of any time
+            // component stored on the column.
             ->whereDate('next_run_date', '<=', $today->toDateString());
     }
 

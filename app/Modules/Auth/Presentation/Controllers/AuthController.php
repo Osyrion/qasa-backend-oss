@@ -216,6 +216,7 @@ class AuthController extends Controller
                 new OA\Property(property: 'vat_id', type: 'string', example: 'SK1234567890', nullable: true, maxLength: 20),
                 new OA\Property(property: 'website', type: 'string', example: 'https://example.com', nullable: true, maxLength: 150),
                 new OA\Property(property: 'invoice_footer_text', type: 'string', nullable: true, maxLength: 1000),
+                new OA\Property(property: 'overdue_reminder_days', type: 'integer', example: 14, nullable: true, minimum: 1, maximum: 365),
                 new OA\Property(property: 'clockify_api_key', type: 'string', nullable: true, maxLength: 100),
                 new OA\Property(property: 'clockify_workspace_id', type: 'string', nullable: true, maxLength: 50),     ])
         ),
