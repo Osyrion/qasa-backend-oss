@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Domain\Models;
 
 use App\Modules\Auth\Domain\Contracts\ProvidesAccountMeta;
+use App\Modules\Calendar\Domain\Models\Event;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Orders\Domain\Models\Order;
@@ -76,6 +77,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property Carbon|null $deleted_at
  * @property-read Collection<int, Client> $clients
  * @property-read int|null $clients_count
+ * @property-read Collection<int, Event> $events
+ * @property-read int|null $events_count
  * @property-read Collection<int, ExchangeRate> $exchangeRates
  * @property-read int|null $exchange_rates_count
  * @property-read Collection<int, Expense> $expenses
@@ -322,5 +325,13 @@ class User extends Authenticatable implements ProvidesAccountMeta
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<Event, $this>
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
     }
 }

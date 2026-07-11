@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Auth\Infrastructure\Providers\AuthServiceProvider;
+use App\Modules\Calendar\Infrastructure\Providers\CalendarServiceProvider;
 use App\Modules\Clients\Infrastructure\Providers\ClientsServiceProvider;
 use App\Modules\Invoicing\Infrastructure\Providers\InvoicingServiceProvider;
 use App\Modules\Orders\Infrastructure\Providers\OrdersServiceProvider;
@@ -16,6 +17,7 @@ $providers = [
     InvoicingServiceProvider::class,
     PricingServiceProvider::class,
     TimeTrackingServiceProvider::class,
+    CalendarServiceProvider::class,
 ];
 
 // Edition overlay (SaaS repo only) — contributes the Saas/Team/Admin

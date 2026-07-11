@@ -23,3 +23,9 @@ Schedule::command('qasa:invoices:scan-inbox')
     ->timezone((string) config('qasa.schedule_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
+
+Schedule::command('qasa:calendar:purge-past')
+    ->dailyAt('04:30')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
