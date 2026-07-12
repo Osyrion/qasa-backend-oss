@@ -13,4 +13,5 @@ return [
     'password_reset_link_sent' => 'Ak účet existuje, poslali sme naň odkaz na obnovenie hesla.',
     'password_reset_success' => 'Heslo bolo úspešne zmenené.',
     'logout_success' => 'Odhlásenie úspešné.',
+    'legacy_vat_payer_conflicts_with_identified' => 'Tento účet je vedený ako identifikovaná osoba; na zmenu daňového statusu použite pole "vat_status" namiesto zastaraného príznaku "is_vat_payer".',
 ];

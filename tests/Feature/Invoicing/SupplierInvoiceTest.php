@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use Illuminate\Support\Str;
 
@@ -19,7 +20,7 @@ function supplierInvoicePayload(string $clientId, array $overrides = []): array
         'issued_at' => now()->toDateString(),
         'currency' => 'EUR',
         'vat_lines' => [
-            ['vat_rate' => 20, 'base' => 100, 'vat_amount' => 20],
+            ['vat_rate' => 23, 'base' => 100, 'vat_amount' => 23],
         ],
     ], $overrides);
 }
@@ -29,8 +30,19 @@ function vendorClientFor(User $user): Client
     return Client::factory()->vendor()->create(['user_id' => $user->id]);
 }
 
+/**
+ * @param  array<string, mixed>  $attributes
+ */
+function createSupplierInvoiceOwner(array $attributes = []): User
+{
+    $user = createUser(array_merge(['country' => 'SK'], $attributes));
+    app(VatRateSeederService::class)->seedFor($user);
+
+    return $user;
+}
+
 it('creates a supplier invoice with a generated internal number and totals from vat lines', function (): void {
-    $user = createUser();
+    $user = createSupplierInvoiceOwner();
     $vendor = vendorClientFor($user);
 
     $response = $this->actingAs($user)->postJson(
@@ -43,8 +55,8 @@ it('creates a supplier invoice with a generated internal number and totals from 
     expect($response->json('status'))->toBe('draft')
         ->and($response->json('internal_number'))->toStartWith('DF-'.now()->format('Y').'-')
         ->and((float) $response->json('subtotal'))->toBe(100.0)
-        ->and((float) $response->json('vat_amount'))->toBe(20.0)
-        ->and((float) $response->json('total'))->toBe(120.0);
+        ->and((float) $response->json('vat_amount'))->toBe(23.0)
+        ->and((float) $response->json('total'))->toBe(123.0);
 
     $this->assertDatabaseHas('supplier_invoices', [
         'id' => $response->json('id'),
@@ -54,7 +66,7 @@ it('creates a supplier invoice with a generated internal number and totals from 
 });
 
 it('generates sequential internal numbers for consecutive creates', function (): void {
-    $user = createUser();
+    $user = createSupplierInvoiceOwner();
     $vendor = vendorClientFor($user);
 
     $first = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id));
@@ -83,7 +95,7 @@ it('rejects a client that is not a vendor', function (): void {
 });
 
 it('only allows updating a draft supplier invoice', function (): void {
-    $user = createUser();
+    $user = createSupplierInvoiceOwner();
     $vendor = vendorClientFor($user);
 
     $supplierInvoice = SupplierInvoice::factory()->draft()->create([
@@ -93,7 +105,7 @@ it('only allows updating a draft supplier invoice', function (): void {
 
     $updateOk = $this->actingAs($user)->putJson(
         "/api/v1/supplier-invoices/{$supplierInvoice->id}",
-        supplierInvoicePayload($vendor->id, ['vat_lines' => [['vat_rate' => 10, 'base' => 200, 'vat_amount' => 20]]]),
+        supplierInvoicePayload($vendor->id, ['vat_lines' => [['vat_rate' => 19, 'base' => 200, 'vat_amount' => 20]]]),
     );
 
     $updateOk->assertOk();

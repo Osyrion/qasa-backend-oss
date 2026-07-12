@@ -239,7 +239,12 @@ class AuthController extends Controller
         $request->validate(UpdateProfileData::rules($user));
 
         $data = UpdateProfileData::fromRequest($request);
-        $user = $this->updateProfileAction->execute($user, $data);
+
+        try {
+            $user = $this->updateProfileAction->execute($user, $data);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(UserResource::make($user));
     }

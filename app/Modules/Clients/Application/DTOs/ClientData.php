@@ -71,6 +71,8 @@ class ClientData extends Data
         public readonly bool $is_customer = true,
 
         public readonly bool $is_vendor = false,
+
+        public readonly bool $reverse_charge_allowed = false,
     ) {}
 
     /**
@@ -87,6 +89,7 @@ class ClientData extends Data
             'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'is_customer' => ['boolean'],
             'is_vendor' => ['boolean'],
+            'reverse_charge_allowed' => ['sometimes', 'boolean'],
         ];
     }
 }

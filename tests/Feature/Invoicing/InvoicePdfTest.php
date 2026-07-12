@@ -20,6 +20,7 @@ function pdfScope(array $invoiceAttributes = [], array $clientAttributes = [], b
         'ico' => '12345678',
         'dic' => 'CZ12345678',
         'is_vat_payer' => true,
+        'vat_status' => 'payer',
         'country' => 'CZ',
         'invoice_footer_text' => 'Děkujeme za spolupráci.',
     ]);

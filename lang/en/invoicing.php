@@ -26,11 +26,18 @@ return [
     'client_email_missing_for_reminder' => 'The client has no email address on file.',
     'status_transition_not_allowed' => "The invoice cannot be changed from ':from' to ':to'.",
     'invalid_number_mask' => 'The mask must contain exactly one sequence token ({N}, {NN}, ...) and only the {YYYY}, {YY}, {MM}, {DD} placeholders.',
+    'vat_rate_not_in_catalog' => 'VAT rate :rate% is not in your VAT rate catalog for this country and date.',
+    'vat_rate_default_already_set' => 'This VAT rate is already the default for its country.',
+    'reverse_charge_requires_vat_status' => 'Reverse charge requires the supplier to be a VAT payer or an identified person.',
+    'reverse_charge_not_allowed_for_client' => 'This client does not allow domestic reverse charge on their invoices.',
+    'eu_rc_requires_vies' => "The client's EU VAT ID could not be verified via VIES. Verify it before issuing an intra-EU reverse-charge invoice.",
+    'non_payer_cannot_charge_vat' => 'The supplier is not a VAT payer and cannot charge VAT — use a 0% rate.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'The selected client is not marked as a vendor.',
         'only_draft_editable' => 'Only a draft supplier invoice can be edited or deleted.',
         'status_transition_not_allowed' => "The supplier invoice cannot be changed from ':from' to ':to'.",
+        'self_assessment_requires_vat_status' => 'Self-assessed VAT (EU reverse charge or import) requires you to be a VAT payer or an identified person.',
     ],
 
     'inbox' => [
@@ -66,6 +73,7 @@ return [
             'balance' => 'Balance',
             'variable_symbol' => 'Variable symbol',
             'exchange_rate' => 'Exchange rate',
+            'reverse_charge' => 'Reverse charge',
         ],
     ],
 ];

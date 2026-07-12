@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateReposito
 use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Enums\RecurringTemplateStatus;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -19,10 +20,15 @@ readonly class CreateRecurringTemplateAction
     ) {}
 
     /**
+     * @throws DomainException
      * @throws Throwable
      */
     public function execute(RecurringTemplateData $data, User $user): RecurringInvoiceTemplate
     {
+        if (! $user->accountOwner()->vat_status->canChargeVat() && $data->items !== [] && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+            throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
+        }
+
         return DB::transaction(function () use ($data, $user): RecurringInvoiceTemplate {
             $template = $this->repository->create([
                 'user_id' => $user->accountOwnerId(),
@@ -39,6 +45,7 @@ readonly class CreateRecurringTemplateAction
                 'currency' => $data->currency->value,
                 'due_days' => $data->due_days,
                 'discount_percent' => $data->discount_percent,
+                'reverse_charge' => $data->reverse_charge,
                 'tax_date_mode' => $data->tax_date_mode->value,
                 'auto_send' => $data->auto_send,
                 'note_above' => $data->note_above,

@@ -7,7 +7,9 @@ namespace App\Modules\Invoicing\Application\Actions;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
+use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -35,11 +37,19 @@ readonly class UpdateSupplierInvoiceAction
             throw DomainException::because(__('invoicing.supplier_invoice.client_must_be_vendor'));
         }
 
+        $owner = $supplierInvoice->user;
+        assert($owner !== null);
+
+        if ($data->vat_regime !== SupplierVatRegime::Domestic && $owner->accountOwner()->vat_status === VatStatus::NonPayer) {
+            throw DomainException::because(__('invoicing.supplier_invoice.self_assessment_requires_vat_status'));
+        }
+
         return DB::transaction(function () use ($supplierInvoice, $data): SupplierInvoice {
             $updated = $this->repository->update($supplierInvoice, [
                 'client_id' => $data->client_id,
                 'supplier_invoice_number' => $data->supplier_invoice_number,
                 'variable_symbol' => $data->variable_symbol,
+                'vat_regime' => $data->vat_regime->value,
                 'issued_at' => $data->issued_at,
                 'taxable_supply_at' => $data->taxable_supply_at,
                 'due_at' => $data->due_at,

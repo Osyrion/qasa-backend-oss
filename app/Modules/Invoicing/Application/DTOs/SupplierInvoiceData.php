@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\DTOs;
 
+use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
+use App\Modules\Invoicing\Domain\Rules\VatRateInCatalog;
 use App\Modules\Shared\Enums\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -39,13 +41,22 @@ class SupplierInvoiceData extends Data
 
         #[Nullable]
         public readonly ?string $note = null,
+
+        public readonly SupplierVatRegime $vat_regime = SupplierVatRegime::Domestic,
     ) {}
 
     /**
+     * Import is self-assessed at whatever rate customs determined — it may
+     * not match the tenant's own catalog, so only domestic and
+     * eu_reverse_charge (self-assessed at our own domestic rate) are
+     * checked against it.
+     *
      * @return array<string, mixed>
      */
-    public static function rules(): array
+    public static function rules(?string $userId = null, ?string $country = null, ?string $onDate = null, ?string $vatRegime = null): array
     {
+        $isImport = $vatRegime === SupplierVatRegime::Import->value;
+
         return [
             'client_id' => ['required', 'uuid'],
             'supplier_invoice_number' => ['required', 'string', 'max:60'],
@@ -57,8 +68,12 @@ class SupplierInvoiceData extends Data
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
             'variable_symbol' => ['nullable', 'string', 'regex:/^\d{1,10}$/'],
             'note' => ['nullable', 'string', 'max:2000'],
+            'vat_regime' => ['sometimes', Rule::enum(SupplierVatRegime::class)],
             'vat_lines' => ['required', 'array', 'min:1'],
-            'vat_lines.*.vat_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'vat_lines.*.vat_rate' => [
+                'required', 'numeric', 'min:0', 'max:100',
+                ...($userId !== null && $country !== null && ! $isImport ? [new VatRateInCatalog($userId, $country, $onDate)] : []),
+            ],
             'vat_lines.*.base' => ['required', 'numeric', 'min:0'],
             'vat_lines.*.vat_amount' => ['required', 'numeric', 'min:0'],
             'vat_lines.*.sort_order' => ['sometimes', 'integer', 'min:0'],
@@ -82,6 +97,9 @@ class SupplierInvoiceData extends Data
             exchange_rate: $request->filled('exchange_rate') ? (float) $request->input('exchange_rate') : null,
             variable_symbol: $request->filled('variable_symbol') ? $request->string('variable_symbol')->toString() : null,
             note: $request->filled('note') ? $request->string('note')->toString() : null,
+            vat_regime: $request->filled('vat_regime')
+                ? SupplierVatRegime::from($request->string('vat_regime')->toString())
+                : SupplierVatRegime::Domestic,
         );
     }
 }

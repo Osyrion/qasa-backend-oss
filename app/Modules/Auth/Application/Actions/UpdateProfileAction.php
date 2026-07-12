@@ -6,6 +6,8 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Enums\VatStatus;
+use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
@@ -18,6 +20,8 @@ class UpdateProfileAction
     public function execute(User $user, UpdateProfileData $data): User
     {
         return DB::transaction(function () use ($user, $data): User {
+            $vatStatus = $this->resolveVatStatus($user, $data);
+
             $updateData = array_filter([
                 'title' => $data->title,
                 'name' => $data->name,
@@ -26,7 +30,7 @@ class UpdateProfileAction
                 'phone' => $data->phone,
                 'ico' => $data->ico,
                 'dic' => $data->dic,
-                'is_vat_payer' => $data->is_vat_payer,
+                'vat_status' => $vatStatus?->value,
                 'tax_flat_rate' => $data->tax_flat_rate,
                 'default_currency' => $data->default_currency->value,
                 'invoice_prefix' => $data->invoice_prefix,
@@ -64,5 +68,29 @@ class UpdateProfileAction
 
             return $user->fresh();
         });
+    }
+
+    /**
+     * vat_status wins whenever both fields are sent. The legacy boolean alone
+     * can't express the "identified" status, so applying it to an identified
+     * user would silently downgrade/upgrade them — reject instead.
+     *
+     * @throws DomainException
+     */
+    private function resolveVatStatus(User $user, UpdateProfileData $data): ?VatStatus
+    {
+        if ($data->vat_status !== null) {
+            return $data->vat_status;
+        }
+
+        if ($data->is_vat_payer === null) {
+            return null;
+        }
+
+        if ($user->vat_status === VatStatus::Identified) {
+            throw DomainException::validation(__('auth.legacy_vat_payer_conflicts_with_identified'));
+        }
+
+        return VatStatus::fromLegacyBool($data->is_vat_payer);
     }
 }

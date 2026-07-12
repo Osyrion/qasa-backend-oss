@@ -215,7 +215,7 @@ class SupplierInvoiceController extends Controller
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules(),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')
@@ -301,7 +301,7 @@ class SupplierInvoiceController extends Controller
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules(),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')

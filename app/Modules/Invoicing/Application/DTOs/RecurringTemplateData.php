@@ -31,6 +31,7 @@ class RecurringTemplateData extends Data
         public readonly InvoiceType $type = InvoiceType::Invoice,
         public readonly int $due_days = 14,
         public readonly ?float $discount_percent = null,
+        public readonly bool $reverse_charge = false,
         public readonly TaxDateMode $tax_date_mode = TaxDateMode::IssueDate,
         public readonly bool $auto_send = false,
         public readonly ?string $note_above = null,
@@ -40,10 +41,10 @@ class RecurringTemplateData extends Data
     /**
      * @return array<string, mixed>
      */
-    public static function rules(): array
+    public static function rules(?string $userId = null, ?string $country = null): array
     {
         $itemRules = [];
-        foreach (RecurringTemplateItemData::rules() as $field => $rule) {
+        foreach (RecurringTemplateItemData::rules($userId, $country) as $field => $rule) {
             $itemRules["items.*.{$field}"] = $rule;
         }
 
@@ -59,6 +60,7 @@ class RecurringTemplateData extends Data
             'currency' => ['required', Rule::enum(Currency::class)],
             'due_days' => ['required', 'integer', 'between:0,365'],
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'reverse_charge' => ['sometimes', 'boolean'],
             'tax_date_mode' => ['sometimes', Rule::enum(TaxDateMode::class)],
             'auto_send' => ['sometimes', 'boolean'],
             'note_above' => ['nullable', 'string', 'max:2000'],
@@ -88,6 +90,7 @@ class RecurringTemplateData extends Data
                 : InvoiceType::Invoice,
             due_days: $request->integer('due_days', 14),
             discount_percent: $request->filled('discount_percent') ? (float) $request->input('discount_percent') : null,
+            reverse_charge: $request->boolean('reverse_charge'),
             tax_date_mode: $request->filled('tax_date_mode')
                 ? TaxDateMode::from($request->string('tax_date_mode')->toString())
                 : TaxDateMode::IssueDate,

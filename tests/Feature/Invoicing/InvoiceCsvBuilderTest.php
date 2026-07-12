@@ -6,7 +6,10 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\InvoiceCsvBuilder;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 
-function csvExportInvoice(): Invoice
+/**
+ * @param  array<string, mixed>  $invoiceAttributes
+ */
+function csvExportInvoice(array $invoiceAttributes = []): Invoice
 {
     $user = createUser(['country' => 'SK']);
 
@@ -34,6 +37,7 @@ function csvExportInvoice(): Invoice
             'dic' => $client->dic,
             'vat_id' => $client->vat_id,
         ],
+        ...$invoiceAttributes,
     ]);
 
     $invoice->items()->create([
@@ -91,4 +95,15 @@ it('reports paid amount and balance from recorded payments', function (): void {
 
     expect($csv)->toContain('200.00')
         ->toContain(number_format($invoice->balance(), 2, '.', ''));
+});
+
+it('includes the reverse_charge column with the mode value, blank when not reverse-charged', function (): void {
+    $plain = csvExportInvoice();
+    $rc = csvExportInvoice(['reverse_charge' => true, 'reverse_charge_mode' => 'eu']);
+
+    $plainRow = explode(';', explode("\n", trim(substr(app(InvoiceCsvBuilder::class)->build([$plain]), 3)))[1]);
+    $rcRow = explode(';', explode("\n", trim(substr(app(InvoiceCsvBuilder::class)->build([$rc]), 3)))[1]);
+
+    expect(trim(end($plainRow)))->toBe('')
+        ->and(trim(end($rcRow)))->toBe('eu');
 });

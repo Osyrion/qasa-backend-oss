@@ -7,6 +7,7 @@ namespace App\Modules\Auth\Application\DTOs;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Rules\ValidInvoiceNumberMask;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\LaravelData\Attributes\Validation\Email;
@@ -43,8 +44,15 @@ class UpdateProfileData extends Data
         #[Sometimes, Max(20)]
         public readonly ?string $dic = null,
 
+        /**
+         * Deprecated. Kept for backwards compatibility with older clients;
+         * vat_status wins whenever both are sent.
+         */
         #[Sometimes]
         public readonly ?bool $is_vat_payer = null,
+
+        #[Sometimes]
+        public readonly ?VatStatus $vat_status = null,
 
         #[Sometimes]
         public readonly ?int $tax_flat_rate = null,
@@ -119,6 +127,7 @@ class UpdateProfileData extends Data
             'ico' => ['sometimes', 'nullable', 'string', 'max:20'],
             'dic' => ['sometimes', 'nullable', 'string', 'max:20'],
             'is_vat_payer' => ['sometimes', 'boolean'],
+            'vat_status' => ['sometimes', Rule::enum(VatStatus::class)],
             'tax_flat_rate' => ['sometimes', 'integer', 'between:0,80'],
             'default_currency' => ['sometimes', Rule::enum(Currency::class)],
             'invoice_prefix' => ['sometimes', 'string', 'max:10'],
@@ -150,6 +159,7 @@ class UpdateProfileData extends Data
             ico: $request->filled('ico') ? $request->string('ico')->toString() : null,
             dic: $request->filled('dic') ? $request->string('dic')->toString() : null,
             is_vat_payer: $request->filled('is_vat_payer') ? $request->boolean('is_vat_payer') : null,
+            vat_status: $request->filled('vat_status') ? VatStatus::from($request->string('vat_status')->toString()) : null,
             tax_flat_rate: $request->filled('tax_flat_rate') ? $request->integer('tax_flat_rate') : null,
             default_currency: $request->filled('default_currency')
                 ? Currency::from($request->string('default_currency')->toString())

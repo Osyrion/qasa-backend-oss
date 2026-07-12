@@ -400,7 +400,7 @@ class InvoiceController extends Controller
         // their parent (orders / price_lists) so a caller cannot pin a foreign
         // account's record onto their own invoice item.
         $request->validate([
-            ...InvoiceItemData::rules(),
+            ...InvoiceItemData::rules($ownerId, $user->accountOwner()->country, $invoice->issued_at->toDateString()),
             'time_entry_id' => [
                 'nullable', 'uuid',
                 Rule::exists('time_entries', 'id')->where('user_id', $ownerId),

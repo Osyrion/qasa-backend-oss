@@ -40,7 +40,7 @@ it('only lists the account\'s own inbox items', function (): void {
 });
 
 it('converts a pending inbox item into a supplier invoice', function (): void {
-    $user = createUser();
+    $user = createSupplierInvoiceOwner();
     $vendor = vendorClientFor($user);
     $item = inboxItemFor($user);
 

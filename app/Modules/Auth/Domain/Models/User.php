@@ -13,6 +13,7 @@ use App\Modules\Orders\Domain\Models\OrderAttachment;
 use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
 use App\Modules\TimeTracking\Domain\Models\Expense;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
@@ -49,7 +50,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $color Hex, e.g. #3B82F6
  * @property string|null $ico
  * @property string|null $dic
- * @property bool $is_vat_payer
+ * @property bool $is_vat_payer Deprecated, kept in sync with vat_status; vat_status is the source of truth
+ * @property VatStatus $vat_status
  * @property int $tax_flat_rate 0-80; 0 = real expenses
  * @property Currency $default_currency
  * @property string $invoice_prefix
@@ -149,7 +151,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
     protected $fillable = [
         'title', 'name', 'surname', 'email', 'phone',
         'password', 'google_id', 'avatar_path', 'color',
-        'ico', 'dic', 'is_vat_payer', 'tax_flat_rate',
+        'ico', 'dic', 'is_vat_payer', 'vat_status', 'tax_flat_rate',
         'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
         'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
         'country', 'address', 'city', 'postal_code',
@@ -161,10 +163,11 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'password', 'remember_token', 'google_id', 'clockify_api_key',
     ];
 
-    // Mirrors the DB default so freshly created (not yet re-fetched)
-    // instances carry the threshold too.
+    // Mirrors the DB defaults so freshly created (not yet re-fetched)
+    // instances carry them too.
     protected $attributes = [
         'overdue_reminder_days' => 14,
+        'vat_status' => 'non_payer',
     ];
 
     protected function casts(): array
@@ -173,6 +176,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
+            'vat_status' => VatStatus::class,
             'tax_flat_rate' => 'integer',
             'invoice_number_start' => 'integer',
             'supplier_invoice_number_start' => 'integer',
@@ -181,6 +185,19 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
         ];
+    }
+
+    /**
+     * is_vat_payer is deprecated but still read by old snapshots and the SaaS
+     * overlay; keep it mirroring vat_status until it's dropped.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $user): void {
+            if ($user->isDirty('vat_status')) {
+                $user->is_vat_payer = $user->vat_status === VatStatus::Payer;
+            }
+        });
     }
 
     // ── Computed ──────────────────────────────────────────────────────────────

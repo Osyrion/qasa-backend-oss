@@ -35,6 +35,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $dic
  * @property string|null $vat_id IČ DPH / VAT ID
  * @property bool $is_vat_payer
+ * @property bool $reverse_charge_allowed Domestic reverse charge opt-in
+ * @property Carbon|null $vat_verified_at Last successful VIES check
  * @property bool $is_customer
  * @property bool $is_vendor
  * @property string|null $email
@@ -117,6 +119,8 @@ class Client extends Model
         'dic',
         'vat_id',
         'is_vat_payer',
+        'reverse_charge_allowed',
+        'vat_verified_at',
         'is_customer',
         'is_vendor',
         'email',
@@ -134,6 +138,8 @@ class Client extends Model
     {
         return [
             'is_vat_payer' => 'boolean',
+            'reverse_charge_allowed' => 'boolean',
+            'vat_verified_at' => 'datetime',
             'is_customer' => 'boolean',
             'is_vendor' => 'boolean',
             'currency' => Currency::class,

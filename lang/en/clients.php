@@ -12,4 +12,5 @@ return [
     'company_not_found' => 'No company was found for IČO :ico.',
     'vat_check_unavailable' => 'The VAT number could not be verified because the VIES service is currently unavailable.',
     'role_required' => 'A client must be a customer, a vendor, or both.',
+    'reverse_charge_requires_vat_id' => 'Domestic reverse charge requires the client to have a VAT ID.',
 ];

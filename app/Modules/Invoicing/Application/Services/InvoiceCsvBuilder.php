@@ -18,7 +18,7 @@ final class InvoiceCsvBuilder
         'invoice_number', 'type', 'status', 'issued_at', 'taxable_supply_at', 'due_at',
         'client_name', 'client_ico', 'client_dic', 'client_vat_id', 'currency',
         'subtotal', 'discount_amount', 'vat_amount', 'total', 'paid_amount', 'balance',
-        'variable_symbol', 'exchange_rate',
+        'variable_symbol', 'exchange_rate', 'reverse_charge',
     ];
 
     /**
@@ -69,6 +69,7 @@ final class InvoiceCsvBuilder
             $this->money($invoice->balance()),
             $invoice->variable_symbol ?? '',
             $invoice->exchange_rate_snapshot !== null ? $this->money((float) $invoice->exchange_rate_snapshot, 6) : '',
+            $invoice->reverse_charge_mode !== null ? $invoice->reverse_charge_mode->value : '',
         ];
     }
 

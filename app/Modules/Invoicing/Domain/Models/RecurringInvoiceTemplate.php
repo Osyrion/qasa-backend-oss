@@ -42,6 +42,7 @@ use Illuminate\Support\Carbon;
  * @property Currency $currency
  * @property int $due_days
  * @property numeric|null $discount_percent
+ * @property bool $reverse_charge Intent only — re-resolved from the current client at each generation
  * @property TaxDateMode $tax_date_mode
  * @property bool $auto_send Issue and email generated invoices automatically
  * @property string|null $note_above
@@ -93,6 +94,7 @@ class RecurringInvoiceTemplate extends Model
         'currency',
         'due_days',
         'discount_percent',
+        'reverse_charge',
         'tax_date_mode',
         'auto_send',
         'note_above',
@@ -115,6 +117,7 @@ class RecurringInvoiceTemplate extends Model
             'last_generated_at' => 'immutable_date',
             'due_days' => 'integer',
             'discount_percent' => 'decimal:2',
+            'reverse_charge' => 'boolean',
             'auto_send' => 'boolean',
         ];
     }

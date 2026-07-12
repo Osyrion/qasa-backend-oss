@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Mail;
  */
 function autoSendTemplate(array $templateAttributes = [], array $clientAttributes = []): RecurringInvoiceTemplate
 {
-    $user = createUser(['invoice_prefix' => 'FA']);
+    $user = createUser(['invoice_prefix' => 'FA', 'vat_status' => 'payer']);
     $client = Client::factory()->create([
         'user_id' => $user->id,
         'email' => 'klient@example.com',

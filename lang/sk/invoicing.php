@@ -26,11 +26,18 @@ return [
     'client_email_missing_for_reminder' => 'Klient nemá vyplnenú e-mailovú adresu.',
     'status_transition_not_allowed' => "Faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
     'invalid_number_mask' => 'Maska musí obsahovať práve jeden sekvenčný token ({N}, {NN}, ...) a len povolené polia {YYYY}, {YY}, {MM}, {DD}.',
+    'vat_rate_not_in_catalog' => 'Sadzba DPH :rate% nie je vo vašom číselníku sadzieb pre túto krajinu a dátum.',
+    'vat_rate_default_already_set' => 'Táto sadzba DPH je už predvolená pre svoju krajinu.',
+    'reverse_charge_requires_vat_status' => 'Prenesenie daňovej povinnosti vyžaduje, aby bol dodávateľ platiteľom DPH alebo identifikovanou osobou.',
+    'reverse_charge_not_allowed_for_client' => 'Tento klient nepovoľuje tuzemské prenesenie daňovej povinnosti na svojich faktúrach.',
+    'eu_rc_requires_vies' => 'IČ DPH klienta sa nepodarilo overiť cez VIES. Overte ho pred vystavením faktúry s prenesením daňovej povinnosti v rámci EÚ.',
+    'non_payer_cannot_charge_vat' => 'Dodávateľ nie je platiteľom DPH a nemôže účtovať DPH — použite sadzbu 0 %.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'Vybraný klient nie je označený ako dodávateľ.',
         'only_draft_editable' => 'Upravovať alebo zmazať je možné len koncept prijatej faktúry.',
         'status_transition_not_allowed' => "Prijatú faktúru nie je možné zmeniť zo stavu ':from' na ':to'.",
+        'self_assessment_requires_vat_status' => 'Samozdanenie DPH (prenesenie daňovej povinnosti v EÚ alebo dovoz) vyžaduje, aby ste boli platiteľom DPH alebo identifikovanou osobou.',
     ],
 
     'inbox' => [
@@ -66,6 +73,7 @@ return [
             'balance' => 'Zostatok',
             'variable_symbol' => 'Variabilný symbol',
             'exchange_rate' => 'Kurz',
+            'reverse_charge' => 'Prenesenie daňovej povinnosti',
         ],
     ],
 ];

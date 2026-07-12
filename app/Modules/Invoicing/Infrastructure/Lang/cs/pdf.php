@@ -38,4 +38,11 @@ return [
     'hours' => 'Hodiny',
     'total_hours' => 'Celkem hodin',
     'generated' => 'Vygenerováno',
+    'title_tax_document' => 'Faktura – daňový doklad',
+    'title_invoice' => 'Faktura',
+    'not_vat_payer' => 'Dodavatel není plátcem DPH.',
+    'total_excl_vat' => 'Celkem bez DPH',
+    'reverse_charge_clause_domestic_sk' => 'Přenesení daňové povinnosti — toto plnění podléhá přenesení daňové povinnosti podle § 69 odst. 12 zákona č. 222/2004 Z. z. (SR).',
+    'reverse_charge_clause_domestic_cz' => 'Přenesení daňové povinnosti — toto plnění podléhá přenesení daňové povinnosti podle § 92a zákona č. 235/2004 Sb.',
+    'reverse_charge_clause_eu' => 'Přenesení daňové povinnosti — čl. 196 směrnice Rady 2006/112/ES.',
 ];

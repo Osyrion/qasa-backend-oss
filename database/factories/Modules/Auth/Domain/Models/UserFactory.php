@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories\Modules\Auth\Domain\Models;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -40,7 +41,7 @@ class UserFactory extends Factory
             'color' => fake()->hexColor(),
             'ico' => fake()->optional()->numerify('########'),
             'dic' => fake()->optional()->numerify('##########'),
-            'is_vat_payer' => fake()->boolean(35),
+            'vat_status' => fake()->randomElement(VatStatus::cases())->value,
             'tax_flat_rate' => fake()->randomElement([0, 40, 60]),
             'default_currency' => fake()->randomElement(['CZK', 'EUR', 'USD']),
             'invoice_prefix' => 'FA',
@@ -60,6 +61,30 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function payer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vat_status' => VatStatus::Payer->value,
+            'is_vat_payer' => true,
+        ]);
+    }
+
+    public function identified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vat_status' => VatStatus::Identified->value,
+            'is_vat_payer' => false,
+        ]);
+    }
+
+    public function nonPayer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'vat_status' => VatStatus::NonPayer->value,
+            'is_vat_payer' => false,
         ]);
     }
 }

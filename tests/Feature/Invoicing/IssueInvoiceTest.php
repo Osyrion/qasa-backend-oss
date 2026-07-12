@@ -21,6 +21,7 @@ function draftInvoice(string $currency = 'EUR', array $userAttributes = []): arr
         'ico' => '12345678',
         'dic' => 'CZ12345678',
         'is_vat_payer' => true,
+        'vat_status' => 'payer',
         'country' => 'CZ',
         ...$userAttributes,
     ]);

@@ -38,4 +38,11 @@ return [
     'hours' => 'Hodiny',
     'total_hours' => 'Spolu hodín',
     'generated' => 'Vygenerované',
+    'title_tax_document' => 'Faktúra – daňový doklad',
+    'title_invoice' => 'Faktúra',
+    'not_vat_payer' => 'Dodávateľ nie je platiteľom DPH.',
+    'total_excl_vat' => 'Celkom bez DPH',
+    'reverse_charge_clause_domestic_sk' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa § 69 ods. 12 zákona č. 222/2004 Z. z.',
+    'reverse_charge_clause_domestic_cz' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa § 92a zákona č. 235/2004 Zb.',
+    'reverse_charge_clause_eu' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa čl. 196 smernice Rady 2006/112/ES.',
 ];

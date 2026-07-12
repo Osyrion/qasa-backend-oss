@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Services\InvoiceVatRegimeResolver;
+use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
@@ -19,20 +22,32 @@ readonly class CreateInvoiceAction
     public function __construct(
         private InvoiceRepositoryInterface $repository,
         private BankAccountRepositoryInterface $bankAccounts,
+        private InvoiceVatRegimeResolver $regimeResolver,
     ) {}
 
     /**
+     * @throws DomainException
      * @throws Throwable
      */
     public function execute(InvoiceData $data, User $user): Invoice
     {
         return DB::transaction(function () use ($data, $user): Invoice {
-            $userId = $user->accountOwnerId();
+            $owner = $user->accountOwner();
+            $userId = $owner->id;
+
+            $client = Client::forUser($userId)->findOrFail($data->client_id);
+
+            $decision = $this->regimeResolver->resolve(
+                $owner->vat_status,
+                $owner->country,
+                $client,
+                $data->reverse_charge,
+            );
 
             $invoiceNumber = $this->repository->nextInvoiceNumber(
                 userId: $userId,
                 mask: $data->type->numberMask($user),
-                start: $user->accountOwner()->invoice_number_start ?? 1,
+                start: $owner->invoice_number_start ?? 1,
             );
 
             $bankAccountId = $data->bank_account_id
@@ -54,6 +69,8 @@ readonly class CreateInvoiceAction
                 'subtotal' => 0,
                 'discount_percent' => $data->discount_percent,
                 'discount_amount' => 0,
+                'reverse_charge' => $decision->reverseCharge,
+                'reverse_charge_mode' => $decision->mode?->value,
                 'vat_amount' => 0,
                 'total' => 0,
                 'note' => $data->note,

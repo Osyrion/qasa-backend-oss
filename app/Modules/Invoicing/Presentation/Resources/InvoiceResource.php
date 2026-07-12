@@ -25,6 +25,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'bank_account_id', type: 'string', format: 'uuid', nullable: true),
         new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
         new OA\Property(property: 'discount_amount', type: 'number', format: 'float'),
+        new OA\Property(property: 'reverse_charge', type: 'boolean'),
+        new OA\Property(property: 'reverse_charge_mode', type: 'string', enum: ['domestic', 'eu'], nullable: true),
         new OA\Property(property: 'is_overdue', type: 'boolean'),
         new OA\Property(property: 'days_until_due', type: 'integer'),
         new OA\Property(property: 'currency', type: 'string', nullable: true, enum: ['CZK', 'EUR', 'USD']),
@@ -68,6 +70,8 @@ class InvoiceResource extends JsonResource
                 ? (float) $this->resource->discount_percent
                 : null,
             'discount_amount' => (float) $this->resource->discount_amount,
+            'reverse_charge' => $this->resource->reverse_charge,
+            'reverse_charge_mode' => $this->resource->reverse_charge_mode?->value,
             'is_overdue' => $this->resource->isOverdue(),
             'days_until_due' => $this->resource->daysUntilDue(),
             'currency' => $this->resource->currency?->value,

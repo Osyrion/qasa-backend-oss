@@ -27,6 +27,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
         new OA\Property(property: 'due_days', type: 'integer'),
         new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+        new OA\Property(property: 'reverse_charge', type: 'boolean', description: 'Intent only — re-resolved from the current client at each generation'),
         new OA\Property(property: 'tax_date_mode', type: 'string', enum: ['issue_date', 'previous_month_end']),
         new OA\Property(property: 'auto_send', type: 'boolean', description: 'Issue and email generated invoices automatically'),
         new OA\Property(property: 'note_above', type: 'string', nullable: true, description: 'Supports period placeholders {BOM}, {EOM}, {MONTH}, {YEAR}'),
@@ -62,6 +63,7 @@ class RecurringInvoiceTemplateResource extends JsonResource
             'discount_percent' => $this->resource->discount_percent !== null
                 ? (float) $this->resource->discount_percent
                 : null,
+            'reverse_charge' => $this->resource->reverse_charge,
             'tax_date_mode' => $this->resource->tax_date_mode->value,
             'auto_send' => $this->resource->auto_send,
             'note_above' => $this->resource->note_above,

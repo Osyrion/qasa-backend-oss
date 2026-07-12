@@ -171,7 +171,7 @@ class RecurringInvoiceTemplateController extends Controller
         $user = $request->user();
 
         $request->validate([
-            ...RecurringTemplateData::rules(),
+            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->accountOwner()->country),
             'first_issue_date' => ['required', 'date', 'after_or_equal:today'],
             'client_id' => $this->clientRule($user),
         ]);
@@ -232,7 +232,7 @@ class RecurringInvoiceTemplateController extends Controller
         }
 
         $request->validate([
-            ...RecurringTemplateData::rules(),
+            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->accountOwner()->country),
             'first_issue_date' => $firstIssueDateRules,
             'client_id' => $this->clientRule($user),
         ]);

@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
+use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -41,6 +42,8 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $client_snapshot Frozen at issue
  * @property numeric|null $discount_percent
  * @property numeric $discount_amount
+ * @property bool $reverse_charge
+ * @property ReverseChargeMode|null $reverse_charge_mode
  * @property Currency $currency
  * @property numeric|null $exchange_rate_snapshot ČNB rate to CZK frozen at issue (non-CZK invoices)
  * @property numeric $subtotal Sum of all items excl. VAT
@@ -123,6 +126,8 @@ class Invoice extends Model
         'subtotal',
         'discount_percent',
         'discount_amount',
+        'reverse_charge',
+        'reverse_charge_mode',
         'vat_amount',
         'total',
         'note',
@@ -151,6 +156,8 @@ class Invoice extends Model
             'subtotal' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'reverse_charge' => 'boolean',
+            'reverse_charge_mode' => ReverseChargeMode::class,
             'vat_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'emailed_at' => 'datetime',
@@ -237,6 +244,27 @@ class Invoice extends Model
     public function daysUntilDue(): int
     {
         return (int) now()->diffInDays($this->due_at, false);
+    }
+
+    /**
+     * A reverse-charged invoice carries no VAT — every item's rate is forced
+     * to 0% (domestic and EU reverse charge alike). Call before
+     * recalculateTotals() whenever reverse_charge flips on or an item is
+     * added to an already-reverse-charged invoice.
+     */
+    public function normalizeItemsForReverseCharge(): void
+    {
+        $this->loadMissing('items');
+
+        foreach ($this->items as $item) {
+            if ((float) $item->vat_rate === 0.0) {
+                continue;
+            }
+
+            $item->vat_rate = 0;
+            $item->recalculate();
+            $item->save();
+        }
     }
 
     /**
