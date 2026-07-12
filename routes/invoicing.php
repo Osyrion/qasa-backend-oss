@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Presentation\Controllers\InvoiceInboxController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePaymentController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePdfController;
 use App\Modules\Invoicing\Presentation\Controllers\RecurringInvoiceTemplateController;
+use App\Modules\Invoicing\Presentation\Controllers\StatisticsController;
 use App\Modules\Invoicing\Presentation\Controllers\SupplierInvoiceController;
 use App\Modules\Invoicing\Presentation\Controllers\VatRateController;
 use App\Modules\Invoicing\Presentation\Controllers\VatReportController;
@@ -22,6 +23,14 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
     Route::get('invoices/export/csv', [InvoiceExportController::class, 'csv'])->name('invoices.export.csv');
 
     Route::get('reports/eu-sales-list', [VatReportController::class, 'euSalesList'])->name('reports.eu-sales-list');
+
+    Route::prefix('statistics')->name('statistics.')->group(function (): void {
+        Route::get('overview', [StatisticsController::class, 'overview'])->name('overview');
+        Route::get('receivables', [StatisticsController::class, 'receivables'])->name('receivables');
+        Route::get('partners', [StatisticsController::class, 'partners'])->name('partners');
+        Route::get('health', [StatisticsController::class, 'health'])->name('health');
+        Route::get('tables', [StatisticsController::class, 'tables'])->name('tables');
+    });
 
     Route::apiResource('invoices', InvoiceController::class);
 
