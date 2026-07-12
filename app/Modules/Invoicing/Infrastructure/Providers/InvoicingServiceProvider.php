@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\PaymentOrderRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
@@ -19,6 +20,7 @@ use App\Modules\Invoicing\Domain\Events\QuoteRejected;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
+use App\Modules\Invoicing\Domain\Models\PaymentOrder;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
@@ -27,6 +29,7 @@ use App\Modules\Invoicing\Infrastructure\Ocr\CompositeExtractor;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentBankAccountRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentInvoiceInboxRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentInvoiceRepository;
+use App\Modules\Invoicing\Infrastructure\Repositories\EloquentPaymentOrderRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentQuoteRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentRecurringInvoiceTemplateRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentSupplierInvoiceRepository;
@@ -37,6 +40,7 @@ use App\Modules\Invoicing\Presentation\Console\SendAutoRemindersCommand;
 use App\Modules\Invoicing\Presentation\Policies\BankAccountPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoiceInboxItemPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoicePolicy;
+use App\Modules\Invoicing\Presentation\Policies\PaymentOrderPolicy;
 use App\Modules\Invoicing\Presentation\Policies\QuotePolicy;
 use App\Modules\Invoicing\Presentation\Policies\RecurringInvoiceTemplatePolicy;
 use App\Modules\Invoicing\Presentation\Policies\SupplierInvoicePolicy;
@@ -86,6 +90,11 @@ class InvoicingServiceProvider extends ServiceProvider
             QuoteRepositoryInterface::class,
             EloquentQuoteRepository::class,
         );
+
+        $this->app->bind(
+            PaymentOrderRepositoryInterface::class,
+            EloquentPaymentOrderRepository::class,
+        );
     }
 
     public function boot(): void
@@ -124,6 +133,7 @@ class InvoicingServiceProvider extends ServiceProvider
         Gate::policy(InvoiceInboxItem::class, InvoiceInboxItemPolicy::class);
         Gate::policy(VatRate::class, VatRatePolicy::class);
         Gate::policy(Quote::class, QuotePolicy::class);
+        Gate::policy(PaymentOrder::class, PaymentOrderPolicy::class);
 
         Event::listen(UserRegistered::class, SeedVatRatesForNewUser::class);
         Event::listen(QuoteAccepted::class, SendQuoteDecisionNotification::class);

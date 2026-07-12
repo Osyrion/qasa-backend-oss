@@ -855,6 +855,55 @@ platieb, DUZP či dobropisov.
   (`recapFromItems`/`subtotalFromItems`/…), ktoré `Invoice`- aj `Quote`-typované metódy
   volajú ako tenké wrappery — jedna implementácia zaokrúhľovania pre oba typy dokladov.
 
+### Platobné príkazy — hromadná úhrada prijatých faktúr
+
+Výber neuhradených prijatých faktúr → dávka (`PaymentOrder`) → súbor pre internetbanking.
+Automatické párovanie bankových výpisov je vedome mimo OSS (SaaS) — preto je „predané
+k úhrade" samostatná dimenzia, nie stav: `supplier_invoices.handed_to_payment_at`
+(nastaví vytvorenie dávky, zmaže zmazanie poslednej živej dávky s faktúrou), `status`
+ostáva `received`/`booked`; skutočné `paid` nastaví ručné označenie alebo `mark_paid`
+pri vytvorení dávky.
+
+- **Účet príjemcu žije na prijatej faktúre** (`vendor_account_number` tuzemský
+  `[predčíslie-]číslo` + `vendor_bank_code`, alebo `vendor_iban`/`vendor_bic`);
+  `account_source` eviduje pôvod (`manual|ocr` — ISDOC/QR-z-PDF sú budúce hodnoty).
+  `SupplierInvoiceParser` extrahuje popri VS aj IBAN (mod-97 validácia) a označený
+  tuzemský účet; `ConvertInboxItemAction` prenesie nezmenený návrh ako `ocr`.
+- **Dávka je snapshot**: `payment_orders` (payer_snapshot účtu platcu, mena, splatnosť,
+  KS, `items_count`, `total_amount`, `marked_paid`, SoftDeletes) +
+  `payment_order_items` (zmrazený dodávateľ/účet/VS/suma; `supplier_invoice_id`
+  nullOnDelete — snapshot prežije zmazanie faktúry). Súbory sa neukladajú, generujú sa
+  na požiadanie zo snapshotu — opakované stiahnutie je totožné.
+- **Jeden príkaz = jedna mena = mena účtu platcu** (`BankAccount.currency`); guardy pri
+  vytvorení: faktúra `payable()` (received/booked), má účet, zhodná mena; splatnosť
+  v minulosti sa posunie na dnešok (`due_date_adjusted` v response).
+- **Endpointy** (`routes/invoicing.php`, policy `PaymentOrderPolicy` =
+  `invoices.view`/`manage` + `sameAccount`): `GET payment-orders/candidates`
+  (`?bank_account_id=&hide_handed=`, skupiny `abo_eligible`/`other`, `selectable` +
+  lokalizovaný `selectable_reason`), `apiResource payment-orders`
+  (index/store/show/destroy), `GET payment-orders/{id}/export/{abo|csv|pdf}`.
+- **Exporty**: `AboKpcBuilder` (Domain) — ABO/KPC „hromadný příkaz k úhradě", pozičný
+  ASCII formát (UHL1 hlavička, veta 1501, sumy v halieroch, KS kódovaný spolu so
+  smerovým kódom banky príjemcu), len CZK + tuzemské účty, inak 422; **golden-file
+  test** (`tests/Fixtures/payment-order/hromadny-prikaz.kpc`, byte-by-byte).
+  `PaymentOrderCsvBuilder` (UTF-8 BOM, `;`), `PaymentOrderPdfService` (dompdf,
+  landscape, `payment-order-pdf.blade.php`).
+- **Overenie účtu (CZ CRPDPH, prevencia ručenia podľa § 109)**: `CrpdphApiClient`
+  v Clients module za `VatPayerAccountRegistryInterface` (SOAP obálka cez
+  `Http::withBody`, bez ext-soap; cache deň; `services.crpdph`/`CRPDPH_API_URL`) —
+  SK register sa neskôr pridá ako ďalšia implementácia. `POST
+  supplier-invoices/{id}/verify-account` porovnáva uložený účet so zverejnenými
+  v IBAN priestore (`CzechIbanConverter` — deterministická konverzia tuzemského tvaru),
+  uloží `account_verified_at` + `account_verification_result`
+  (`published|unpublished|unreliable`); pri nezhode response vypíše zverejnené účty.
+  Zmena účtu cez `PUT supplier-invoices/{id}` overenie zresetuje a nastaví
+  `account_source = manual`.
+- **QR platba per faktúra**: `GET supplier-invoices/{id}/payment-qr` —
+  `SupplierPaymentQrService` (CZK → SPAYD, EUR → EPC, inak 422; tuzemský účet sa
+  prepočíta na CZ IBAN; SVG data URI).
+- **Zoznam prijatých faktúr**: filter `handed=1|0` + účtové polia
+  v `SupplierInvoiceResource`.
+
 ---
 
 ## 14. Štatistiky

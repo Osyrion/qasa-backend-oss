@@ -45,6 +45,33 @@ return [
     'vat_control_statement_country_invalid' => 'Kontrolný výkaz DPH je dostupný len pre krajiny SK alebo CZ.',
     'vat_control_statement_period_required' => 'XML návrh SK KV DPH vyžaduje mesiac alebo štvrťrok — nie je možné ho vygenerovať naraz za celý rok.',
 
+    'payment_order_invoice_not_payable' => 'Faktúru :number nie je možné zaradiť do platobného príkazu — uhrádzať možno len prijaté alebo zaúčtované faktúry.',
+    'payment_order_account_missing' => 'Faktúra :number nemá evidovaný bankový účet dodávateľa.',
+    'payment_order_currency_mismatch' => 'Faktúra :number je v mene :currency, ale účet platcu je v mene :payer_currency.',
+    'payment_order_abo_not_applicable' => 'Export ABO (KPC) vyžaduje dávku v CZK s tuzemským účtom platcu aj na každom riadku.',
+    'payment_order_reason_account_missing' => 'Chýba evidovaný bankový účet dodávateľa.',
+    'payment_order_reason_currency_mismatch' => 'Faktúra je v mene :currency, účet platcu je v mene :payer_currency.',
+    'payment_order_due_date_adjusted' => 'Dátum splatnosti bol v minulosti a bol posunutý na dnešok.',
+    'payment_account_missing' => 'Prijatá faktúra nemá evidovaný bankový účet dodávateľa.',
+    'account_verification_unavailable' => 'Overenie účtu je dostupné len pre CZ platiteľov DPH, alebo je register dočasne nedostupný.',
+    'payment_qr_currency_not_supported' => 'Platobný QR kód nie je dostupný pre faktúry v mene :currency.',
+    'payment_qr_unavailable' => 'Platobný QR kód sa nepodarilo vygenerovať.',
+
+    'payment_order_export' => [
+        'csv_headers' => [
+            'vendor_name' => 'Dodávateľ',
+            'supplier_invoice_number' => 'Číslo dokladu',
+            'account' => 'Účet',
+            'iban' => 'IBAN',
+            'bic' => 'BIC/SWIFT',
+            'variable_symbol' => 'Variabilný symbol',
+            'constant_symbol' => 'Konštantný symbol',
+            'amount' => 'Suma',
+            'currency' => 'Mena',
+            'due_date' => 'Splatnosť',
+        ],
+    ],
+
     'supplier_invoice' => [
         'client_must_be_vendor' => 'Vybraný klient nie je označený ako dodávateľ.',
         'only_draft_editable' => 'Upravovať alebo zmazať je možné len koncept prijatej faktúry.',

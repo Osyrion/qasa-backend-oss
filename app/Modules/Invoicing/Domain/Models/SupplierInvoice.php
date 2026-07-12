@@ -45,6 +45,14 @@ use Illuminate\Support\Carbon;
  * @property numeric $self_assessed_vat_amount Mirrors vat_amount for self-assessed regimes; not owed to the vendor
  * @property array<string, mixed>|null $vendor_snapshot Frozen at received
  * @property string|null $note
+ * @property string|null $vendor_account_number Domestic format [prefix-]number
+ * @property string|null $vendor_bank_code
+ * @property string|null $vendor_iban
+ * @property string|null $vendor_bic
+ * @property string|null $account_source manual|ocr
+ * @property Carbon|null $account_verified_at
+ * @property string|null $account_verification_result published|unpublished|unreliable
+ * @property Carbon|null $handed_to_payment_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -60,6 +68,7 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|SupplierInvoice newModelQuery()
  * @method static Builder<static>|SupplierInvoice newQuery()
  * @method static Builder<static>|SupplierInvoice onlyTrashed()
+ * @method static Builder<static>|SupplierInvoice payable()
  * @method static Builder<static>|SupplierInvoice query()
  * @method static Builder<static>|SupplierInvoice unpaid()
  * @method static Builder<static>|SupplierInvoice withTrashed(bool $withTrashed = true)
@@ -101,6 +110,14 @@ class SupplierInvoice extends Model
         'self_assessed_vat_amount',
         'vendor_snapshot',
         'note',
+        'vendor_account_number',
+        'vendor_bank_code',
+        'vendor_iban',
+        'vendor_bic',
+        'account_source',
+        'account_verified_at',
+        'account_verification_result',
+        'handed_to_payment_at',
     ];
 
     protected function casts(): array
@@ -119,6 +136,8 @@ class SupplierInvoice extends Model
             'total' => 'decimal:2',
             'self_assessed_vat_amount' => 'decimal:2',
             'vendor_snapshot' => 'array',
+            'account_verified_at' => 'datetime',
+            'handed_to_payment_at' => 'datetime',
         ];
     }
 
@@ -130,6 +149,18 @@ class SupplierInvoice extends Model
     }
 
     public function scopeUnpaid($query)
+    {
+        return $query->whereIn('status', ['received', 'booked']);
+    }
+
+    /**
+     * Candidates for a payment order — received or booked, i.e. real
+     * documents that haven't been paid or cancelled yet.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePayable(Builder $query): Builder
     {
         return $query->whereIn('status', ['received', 'booked']);
     }
@@ -149,6 +180,27 @@ class SupplierInvoice extends Model
     public function isPaid(): bool
     {
         return $this->status === 'paid';
+    }
+
+    /**
+     * A payable vendor account is either the domestic pair (number + bank
+     * code) or an IBAN.
+     */
+    public function hasPaymentAccount(): bool
+    {
+        return $this->hasDomesticVendorAccount()
+            || ($this->vendor_iban !== null && $this->vendor_iban !== '');
+    }
+
+    public function hasDomesticVendorAccount(): bool
+    {
+        return $this->vendor_account_number !== null && $this->vendor_account_number !== ''
+            && $this->vendor_bank_code !== null && $this->vendor_bank_code !== '';
+    }
+
+    public function isHandedToPayment(): bool
+    {
+        return $this->handed_to_payment_at !== null;
     }
 
     /**

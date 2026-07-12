@@ -55,6 +55,10 @@ return [
         'base_url' => env('VIES_API_URL', 'https://ec.europa.eu/taxation_customs/vies/rest-api'),
     ],
 
+    'crpdph' => [
+        'base_url' => env('CRPDPH_API_URL', 'https://adisrws.mfcr.cz'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

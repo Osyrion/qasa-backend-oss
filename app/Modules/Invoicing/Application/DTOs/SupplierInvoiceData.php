@@ -43,6 +43,18 @@ class SupplierInvoiceData extends Data
         public readonly ?string $note = null,
 
         public readonly SupplierVatRegime $vat_regime = SupplierVatRegime::Domestic,
+
+        #[Nullable]
+        public readonly ?string $vendor_account_number = null,
+
+        #[Nullable]
+        public readonly ?string $vendor_bank_code = null,
+
+        #[Nullable]
+        public readonly ?string $vendor_iban = null,
+
+        #[Nullable]
+        public readonly ?string $vendor_bic = null,
     ) {}
 
     /**
@@ -68,6 +80,12 @@ class SupplierInvoiceData extends Data
             'exchange_rate' => ['nullable', 'numeric', 'min:0'],
             'variable_symbol' => ['nullable', 'string', 'regex:/^\d{1,10}$/'],
             'note' => ['nullable', 'string', 'max:2000'],
+            // Vendor payment account: domestic pair and IBAN pair are each
+            // all-or-nothing; BIC only makes sense alongside an IBAN.
+            'vendor_account_number' => ['nullable', 'string', 'regex:/^(\d{1,6}-)?\d{2,10}$/', 'required_with:vendor_bank_code'],
+            'vendor_bank_code' => ['nullable', 'digits:4', 'required_with:vendor_account_number'],
+            'vendor_iban' => ['nullable', 'string', 'max:34', 'regex:/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/', 'required_with:vendor_bic'],
+            'vendor_bic' => ['nullable', 'string', 'regex:/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/'],
             'vat_regime' => ['sometimes', Rule::enum(SupplierVatRegime::class)],
             'vat_lines' => ['required', 'array', 'min:1'],
             'vat_lines.*.vat_rate' => [
@@ -100,6 +118,16 @@ class SupplierInvoiceData extends Data
             vat_regime: $request->filled('vat_regime')
                 ? SupplierVatRegime::from($request->string('vat_regime')->toString())
                 : SupplierVatRegime::Domestic,
+            vendor_account_number: $request->filled('vendor_account_number') ? $request->string('vendor_account_number')->toString() : null,
+            vendor_bank_code: $request->filled('vendor_bank_code') ? $request->string('vendor_bank_code')->toString() : null,
+            vendor_iban: $request->filled('vendor_iban') ? strtoupper(str_replace(' ', '', $request->string('vendor_iban')->toString())) : null,
+            vendor_bic: $request->filled('vendor_bic') ? strtoupper($request->string('vendor_bic')->toString()) : null,
         );
+    }
+
+    public function hasVendorAccount(): bool
+    {
+        return ($this->vendor_account_number !== null && $this->vendor_bank_code !== null)
+            || $this->vendor_iban !== null;
     }
 }

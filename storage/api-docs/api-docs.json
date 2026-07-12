@@ -5373,6 +5373,366 @@
                 ]
             }
         },
+        "/api/v1/payment-orders": {
+            "get": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "List payment order batches",
+                "operationId": "5937bca8ccbe274a266b365259ef7190",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "direction",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of payment orders",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PaymentOrder"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "Create a payment order batch and mark invoices as handed to payment",
+                "operationId": "a613116b00eda3627bb10015ba3bf647",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "bank_account_id",
+                                    "due_date",
+                                    "supplier_invoice_ids"
+                                ],
+                                "properties": {
+                                    "bank_account_id": {
+                                        "type": "string",
+                                        "format": "uuid"
+                                    },
+                                    "due_date": {
+                                        "description": "A past date is bumped to today (due_date_adjusted flags it)",
+                                        "type": "string",
+                                        "format": "date"
+                                    },
+                                    "constant_symbol": {
+                                        "type": "string",
+                                        "example": "0308",
+                                        "nullable": true
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "supplier_invoice_ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    },
+                                    "mark_paid": {
+                                        "description": "Also transition the invoices to paid",
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment order created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PaymentOrder"
+                                        },
+                                        "due_date_adjusted": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Bank account or supplier invoice not found"
+                    },
+                    "422": {
+                        "description": "Invoice not payable, missing account or currency mismatch"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payment-orders/candidates": {
+            "get": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "List unpaid supplier invoices grouped for the payment-order builder",
+                "operationId": "0666f4ec96a41f8c521eeb4d68b1cca3",
+                "parameters": [
+                    {
+                        "name": "bank_account_id",
+                        "in": "query",
+                        "description": "Payer account — enables the currency-match check on each row",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "hide_handed",
+                        "in": "query",
+                        "description": "Hide invoices already handed to payment",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Candidates grouped by ABO eligibility",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "abo_eligible": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "other": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Bank account not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payment-orders/{id}": {
+            "get": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "Get payment order details with frozen rows",
+                "operationId": "cefa179634414f7399cb53973e41006a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment order details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentOrder"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Payment order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "Delete a payment order and clear the handed-to-payment flag",
+                "operationId": "8a400412dbf2214965e69ac3ed60c696",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Payment order deleted"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Payment order not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/payment-orders/{payment_order}/export/{format}": {
+            "get": {
+                "tags": [
+                    "PaymentOrders"
+                ],
+                "summary": "Download the batch as ABO (KPC), CSV or PDF — always from the frozen snapshot",
+                "operationId": "96c3adc5eb93fe207e0c523c58aaeca3",
+                "parameters": [
+                    {
+                        "name": "payment_order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "abo",
+                                "csv",
+                                "pdf"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Export file"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Payment order not found"
+                    },
+                    "422": {
+                        "description": "ABO is not applicable to this batch"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/public/invoices/{token}": {
             "get": {
                 "tags": [
@@ -6460,6 +6820,15 @@
                         }
                     },
                     {
+                        "name": "handed",
+                        "in": "query",
+                        "description": "Filter by handed-to-payment flag (1 = in a payment order, 0 = not)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
                         "name": "date_from",
                         "in": "query",
                         "description": "Filter from date",
@@ -6939,6 +7308,125 @@
                     },
                     "422": {
                         "description": "Invalid status transition"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/supplier-invoices/{supplier_invoice}/verify-account": {
+            "post": {
+                "tags": [
+                    "SupplierInvoices"
+                ],
+                "summary": "Verify the stored vendor account against the CZ VAT payer register (CRPDPH)",
+                "operationId": "c5b3ca280550fd72a76f32d7b9b54553",
+                "parameters": [
+                    {
+                        "name": "supplier_invoice",
+                        "in": "path",
+                        "description": "Supplier invoice ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verification result; on a mismatch the published accounts are listed for manual comparison",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "result": {
+                                            "type": "string",
+                                            "enum": [
+                                                "published",
+                                                "unpublished",
+                                                "unreliable"
+                                            ]
+                                        },
+                                        "verified_at": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "published_accounts": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Supplier invoice not found"
+                    },
+                    "422": {
+                        "description": "No stored account, vendor is not a CZ VAT payer, or the register is unreachable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/supplier-invoices/{supplier_invoice}/payment-qr": {
+            "get": {
+                "tags": [
+                    "SupplierInvoices"
+                ],
+                "summary": "Payment QR for the received invoice (CZK → SPAYD, EUR → SEPA EPC)",
+                "operationId": "8287294dfc7ce3c925e29dc43da50052",
+                "parameters": [
+                    {
+                        "name": "supplier_invoice",
+                        "in": "path",
+                        "description": "Supplier invoice ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SVG payment QR as a data URI",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data_uri": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Supplier invoice not found"
+                    },
+                    "422": {
+                        "description": "No stored account or unsupported currency"
                     }
                 },
                 "security": [
@@ -11322,6 +11810,113 @@
                 },
                 "type": "object"
             },
+            "PaymentOrderItem": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "supplier_invoice_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "vendor_name": {
+                        "type": "string"
+                    },
+                    "supplier_invoice_number": {
+                        "type": "string"
+                    },
+                    "account_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bank_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "iban": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bic": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "variable_symbol": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "amount": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentOrder": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "bank_account_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "payer_snapshot": {
+                        "description": "Frozen payer account (label, number, IBAN, BIC, currency)",
+                        "type": "object"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "enum": [
+                            "CZK",
+                            "EUR",
+                            "USD"
+                        ]
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "constant_symbol": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "items_count": {
+                        "type": "integer"
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "marked_paid": {
+                        "type": "boolean"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PaymentOrderItem"
+                        },
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "QuoteItem": {
                 "properties": {
                     "id": {
@@ -11791,6 +12386,50 @@
                     },
                     "note": {
                         "type": "string",
+                        "nullable": true
+                    },
+                    "vendor_account_number": {
+                        "description": "Domestic format [prefix-]number",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "vendor_bank_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "vendor_iban": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "vendor_bic": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "account_source": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "manual",
+                            "ocr"
+                        ]
+                    },
+                    "account_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "account_verification_result": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "published",
+                            "unpublished",
+                            "unreliable"
+                        ]
+                    },
+                    "handed_to_payment_at": {
+                        "type": "string",
+                        "format": "date-time",
                         "nullable": true
                     },
                     "client": {
@@ -12413,6 +13052,10 @@
         {
             "name": "Invoice PDF",
             "description": "Invoice PDF generation endpoints"
+        },
+        {
+            "name": "PaymentOrders",
+            "description": "Bulk payment batches for received supplier invoices (ABO/CSV/PDF export)"
         },
         {
             "name": "Public Invoice",

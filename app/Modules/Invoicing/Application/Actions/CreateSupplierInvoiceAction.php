@@ -71,6 +71,11 @@ readonly class CreateSupplierInvoiceAction
                 'vat_amount' => 0,
                 'total' => 0,
                 'note' => $data->note,
+                'vendor_account_number' => $data->vendor_account_number,
+                'vendor_bank_code' => $data->vendor_bank_code,
+                'vendor_iban' => $data->vendor_iban,
+                'vendor_bic' => $data->vendor_bic,
+                'account_source' => $data->hasVendorAccount() ? 'manual' : null,
             ]);
 
             foreach ($data->vat_lines as $line) {

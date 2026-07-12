@@ -7,6 +7,25 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Pridané (Added)
+
+#### Platobné príkazy — hromadná úhrada prijatých faktúr
+- **Dávka (`PaymentOrder`)**: výber neuhradených prijatých faktúr → platobný príkaz so zmrazenými riadkami (`payment_order_items` — dodávateľ, účet, VS, suma); opakované stiahnutie je totožné s pôvodným exportom bez ohľadu na neskoršie zmeny faktúr
+  - Jeden príkaz = jedna mena = mena účtu platcu (`BankAccount`); splatnosť v minulosti sa posunie na dnešok (`due_date_adjusted` v response)
+  - „Predané k úhrade" je samostatná dimenzia (`supplier_invoices.handed_to_payment_at`), nie stav — pripravené pre budúce SaaS párovanie výpisov; voliteľný `mark_paid` prepne faktúry na `paid`
+  - Endpointy: `GET /api/v1/payment-orders/candidates` (skupiny `abo_eligible`/`other`, `selectable` + lokalizovaný dôvod, `hide_handed`), `apiResource payment-orders` (index/store/show/destroy), `GET /api/v1/payment-orders/{id}/export/{abo|csv|pdf}`
+  - Zmazanie dávky vynuluje `handed_to_payment_at` faktúram, ktoré nie sú v žiadnej inej živej dávke
+- **Exporty**: ABO (KPC) „hromadný příkaz k úhradě" (`AboKpcBuilder`, len CZK + tuzemské účty, golden-file test), CSV (UTF-8 BOM, `;`), PDF prehľad (dompdf, landscape)
+- **Účet príjemcu na prijatej faktúre**: `vendor_account_number`/`vendor_bank_code` (tuzemský tvar), `vendor_iban`/`vendor_bic`; `account_source` (`manual|ocr`); OCR parser scan inboxu extrahuje IBAN (mod-97 validácia) aj označený tuzemský účet a konverzia ich prenesie ako `ocr`
+- **Overenie účtu proti CZ registru platiteľov DPH (CRPDPH, § 109 ručenie)**: `POST /api/v1/supplier-invoices/{id}/verify-account` — `CrpdphApiClient` za `VatPayerAccountRegistryInterface` (Clients modul, cache 1 deň, `CRPDPH_API_URL`); výsledok `published|unpublished|unreliable` sa ukladá na faktúru, pri nezhode response vypíše zverejnené účty; zmena účtu overenie zresetuje
+- **QR platba per prijatá faktúra**: `GET /api/v1/supplier-invoices/{id}/payment-qr` (CZK → SPAYD, EUR → SEPA EPC; tuzemský účet sa deterministicky prepočíta na CZ IBAN cez `CzechIbanConverter`)
+- **Zoznam prijatých faktúr**: filter `handed=1|0`, účtové polia a stav overenia v `SupplierInvoiceResource`
+- Migrácie: `2026_07_17_000001_add_payment_fields_to_supplier_invoices`, `2026_07_17_000002_create_payment_orders_table`, `2026_07_17_000003_create_payment_order_items_table`
+
+---
+
 ## [1.1.0] - 2026-07-09
 
 ### Pridané (Added)

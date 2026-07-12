@@ -6,9 +6,11 @@ namespace App\Modules\Clients\Infrastructure\Providers;
 
 use App\Modules\Clients\Application\Actions\FetchCompanyDataAction;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
+use App\Modules\Clients\Application\Contracts\VatPayerAccountRegistryInterface;
 use App\Modules\Clients\Application\Contracts\VatValidatorInterface;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Clients\Infrastructure\Clients\AresApiClient;
+use App\Modules\Clients\Infrastructure\Clients\CrpdphApiClient;
 use App\Modules\Clients\Infrastructure\Clients\RpoApiClient;
 use App\Modules\Clients\Infrastructure\Clients\ViesApiClient;
 use App\Modules\Clients\Infrastructure\Repositories\EloquentClientRepository;
@@ -28,6 +30,11 @@ class ClientsServiceProvider extends ServiceProvider
         $this->app->bind(
             VatValidatorInterface::class,
             ViesApiClient::class,
+        );
+
+        $this->app->bind(
+            VatPayerAccountRegistryInterface::class,
+            CrpdphApiClient::class,
         );
 
         $this->app->bind(FetchCompanyDataAction::class, fn (): FetchCompanyDataAction => new FetchCompanyDataAction([

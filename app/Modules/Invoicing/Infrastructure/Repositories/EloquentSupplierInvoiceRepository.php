@@ -37,6 +37,13 @@ class EloquentSupplierInvoiceRepository implements SupplierInvoiceRepositoryInte
             $query->where('client_id', $filters['client_id']);
         }
 
+        // handed=1|0 — handed to payment (in a live payment order) or not.
+        if (isset($filters['handed']) && $filters['handed'] !== '') {
+            filter_var($filters['handed'], FILTER_VALIDATE_BOOLEAN)
+                ? $query->whereNotNull('handed_to_payment_at')
+                : $query->whereNull('handed_to_payment_at');
+        }
+
         if (! empty($filters['search'])) {
             $term = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $filters['search'])).'%';
             $query->where(function ($q) use ($term): void {

@@ -62,6 +62,58 @@ it('converts a pending inbox item into a supplier invoice', function (): void {
     ]);
 });
 
+it('carries an OCR-suggested account over to the supplier invoice as ocr-sourced', function (): void {
+    $user = createSupplierInvoiceOwner();
+    $vendor = vendorClientFor($user);
+    $item = inboxItemFor($user, [
+        'suggestions' => [
+            'supplier_invoice_number' => 'INV-1',
+            'account_number' => '19-2000145399',
+            'bank_code' => '0800',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->postJson(
+        "/api/v1/invoice-inbox/{$item->id}/convert",
+        supplierInvoicePayload($vendor->id, [
+            'vendor_account_number' => '19-2000145399',
+            'vendor_bank_code' => '0800',
+        ]),
+    );
+
+    $response->assertCreated();
+
+    $this->assertDatabaseHas('supplier_invoices', [
+        'id' => $response->json('id'),
+        'vendor_account_number' => '19-2000145399',
+        'vendor_bank_code' => '0800',
+        'account_source' => 'ocr',
+    ]);
+});
+
+it('keeps a retyped account as manual when converting', function (): void {
+    $user = createSupplierInvoiceOwner();
+    $vendor = vendorClientFor($user);
+    $item = inboxItemFor($user, [
+        'suggestions' => ['account_number' => '19-2000145399', 'bank_code' => '0800'],
+    ]);
+
+    $response = $this->actingAs($user)->postJson(
+        "/api/v1/invoice-inbox/{$item->id}/convert",
+        supplierInvoicePayload($vendor->id, [
+            'vendor_account_number' => '999999999',
+            'vendor_bank_code' => '0300',
+        ]),
+    );
+
+    $response->assertCreated();
+
+    $this->assertDatabaseHas('supplier_invoices', [
+        'id' => $response->json('id'),
+        'account_source' => 'manual',
+    ]);
+});
+
 it('rejects converting an already processed inbox item', function (): void {
     $user = createUser();
     $vendor = vendorClientFor($user);

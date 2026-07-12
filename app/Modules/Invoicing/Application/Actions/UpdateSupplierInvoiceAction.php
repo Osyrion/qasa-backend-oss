@@ -45,7 +45,7 @@ readonly class UpdateSupplierInvoiceAction
         }
 
         return DB::transaction(function () use ($supplierInvoice, $data): SupplierInvoice {
-            $updated = $this->repository->update($supplierInvoice, [
+            $attributes = [
                 'client_id' => $data->client_id,
                 'supplier_invoice_number' => $data->supplier_invoice_number,
                 'variable_symbol' => $data->variable_symbol,
@@ -57,7 +57,21 @@ readonly class UpdateSupplierInvoiceAction
                 'currency' => $data->currency->value,
                 'exchange_rate' => $data->exchange_rate,
                 'note' => $data->note,
-            ]);
+                'vendor_account_number' => $data->vendor_account_number,
+                'vendor_bank_code' => $data->vendor_bank_code,
+                'vendor_iban' => $data->vendor_iban,
+                'vendor_bic' => $data->vendor_bic,
+            ];
+
+            // A verification is tied to the exact account it checked — any
+            // account change resets it and marks the account as manual.
+            if ($this->accountChanged($supplierInvoice, $data)) {
+                $attributes['account_source'] = $data->hasVendorAccount() ? 'manual' : null;
+                $attributes['account_verified_at'] = null;
+                $attributes['account_verification_result'] = null;
+            }
+
+            $updated = $this->repository->update($supplierInvoice, $attributes);
 
             $updated->vatLines()->delete();
 
@@ -74,5 +88,13 @@ readonly class UpdateSupplierInvoiceAction
 
             return $updated;
         });
+    }
+
+    private function accountChanged(SupplierInvoice $supplierInvoice, SupplierInvoiceData $data): bool
+    {
+        return $supplierInvoice->vendor_account_number !== $data->vendor_account_number
+            || $supplierInvoice->vendor_bank_code !== $data->vendor_bank_code
+            || $supplierInvoice->vendor_iban !== $data->vendor_iban
+            || $supplierInvoice->vendor_bic !== $data->vendor_bic;
     }
 }

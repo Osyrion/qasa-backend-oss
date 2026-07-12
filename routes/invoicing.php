@@ -8,6 +8,7 @@ use App\Modules\Invoicing\Presentation\Controllers\InvoiceExportController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoiceInboxController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePaymentController;
 use App\Modules\Invoicing\Presentation\Controllers\InvoicePdfController;
+use App\Modules\Invoicing\Presentation\Controllers\PaymentOrderController;
 use App\Modules\Invoicing\Presentation\Controllers\PublicInvoiceController;
 use App\Modules\Invoicing\Presentation\Controllers\PublicQuoteController;
 use App\Modules\Invoicing\Presentation\Controllers\QuoteController;
@@ -53,6 +54,23 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
 
     Route::post('supplier-invoices/{supplier_invoice}/status', [SupplierInvoiceController::class, 'updateStatus'])
         ->name('supplier-invoices.status');
+
+    Route::post('supplier-invoices/{supplier_invoice}/verify-account', [SupplierInvoiceController::class, 'verifyAccount'])
+        ->name('supplier-invoices.verify-account');
+    Route::get('supplier-invoices/{supplier_invoice}/payment-qr', [SupplierInvoiceController::class, 'paymentQr'])
+        ->name('supplier-invoices.payment-qr');
+
+    // Before the resource so "candidates" isn't captured as {payment_order}.
+    Route::get('payment-orders/candidates', [PaymentOrderController::class, 'candidates'])
+        ->name('payment-orders.candidates');
+
+    Route::apiResource('payment-orders', PaymentOrderController::class)
+        ->parameters(['payment-orders' => 'payment_order'])
+        ->only(['index', 'store', 'show', 'destroy']);
+
+    Route::get('payment-orders/{payment_order}/export/{format}', [PaymentOrderController::class, 'export'])
+        ->whereIn('format', ['abo', 'csv', 'pdf'])
+        ->name('payment-orders.export');
 
     Route::apiResource('invoice-inbox', InvoiceInboxController::class)
         ->parameters(['invoice-inbox' => 'inbox_item'])

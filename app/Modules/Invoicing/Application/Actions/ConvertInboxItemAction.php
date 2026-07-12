@@ -32,11 +32,32 @@ readonly class ConvertInboxItemAction
         return DB::transaction(function () use ($item, $data, $user): SupplierInvoice {
             $supplierInvoice = $this->createSupplierInvoiceAction->execute($data, $user);
 
+            // An account carried over unchanged from the OCR suggestions is
+            // ocr-sourced; anything the user retyped stays manual.
+            if ($supplierInvoice->hasPaymentAccount() && $this->accountMatchesSuggestions($supplierInvoice, $item)) {
+                $supplierInvoice->account_source = 'ocr';
+                $supplierInvoice->save();
+            }
+
             $item->supplier_invoice_id = $supplierInvoice->id;
             $item->status = InvoiceInboxStatus::Imported->value;
             $item->save();
 
             return $supplierInvoice;
         });
+    }
+
+    private function accountMatchesSuggestions(SupplierInvoice $supplierInvoice, InvoiceInboxItem $item): bool
+    {
+        $suggestions = $item->suggestions ?? [];
+
+        $ibanMatches = $supplierInvoice->vendor_iban !== null
+            && $supplierInvoice->vendor_iban === ($suggestions['iban'] ?? null);
+
+        $domesticMatches = $supplierInvoice->hasDomesticVendorAccount()
+            && $supplierInvoice->vendor_account_number === ($suggestions['account_number'] ?? null)
+            && $supplierInvoice->vendor_bank_code === ($suggestions['bank_code'] ?? null);
+
+        return $ibanMatches || $domesticMatches;
     }
 }

@@ -45,6 +45,33 @@ return [
     'vat_control_statement_country_invalid' => 'The VAT control statement is only available for SK or CZ.',
     'vat_control_statement_period_required' => 'The SK KV DPH XML draft requires either a month or a quarter — it cannot be generated for a whole year at once.',
 
+    'payment_order_invoice_not_payable' => 'Invoice :number cannot be added to a payment order — only received or booked invoices can be paid.',
+    'payment_order_account_missing' => 'Invoice :number has no vendor bank account on file.',
+    'payment_order_currency_mismatch' => 'Invoice :number is in :currency but the payer account is in :payer_currency.',
+    'payment_order_abo_not_applicable' => 'ABO (KPC) export requires a CZK batch with domestic accounts on the payer and on every row.',
+    'payment_order_reason_account_missing' => 'No vendor bank account on file.',
+    'payment_order_reason_currency_mismatch' => 'Invoice is in :currency, the payer account is in :payer_currency.',
+    'payment_order_due_date_adjusted' => 'The due date was in the past and was moved to today.',
+    'payment_account_missing' => 'The supplier invoice has no vendor bank account on file.',
+    'account_verification_unavailable' => 'Account verification is only available for CZ VAT payers, or the register is temporarily unreachable.',
+    'payment_qr_currency_not_supported' => 'A payment QR is not available for :currency invoices.',
+    'payment_qr_unavailable' => 'The payment QR could not be generated.',
+
+    'payment_order_export' => [
+        'csv_headers' => [
+            'vendor_name' => 'Vendor',
+            'supplier_invoice_number' => 'Document number',
+            'account' => 'Account',
+            'iban' => 'IBAN',
+            'bic' => 'BIC/SWIFT',
+            'variable_symbol' => 'Variable symbol',
+            'constant_symbol' => 'Constant symbol',
+            'amount' => 'Amount',
+            'currency' => 'Currency',
+            'due_date' => 'Due date',
+        ],
+    ],
+
     'supplier_invoice' => [
         'client_must_be_vendor' => 'The selected client is not marked as a vendor.',
         'only_draft_editable' => 'Only a draft supplier invoice can be edited or deleted.',

@@ -17,7 +17,7 @@ beforeEach(function (): void {
         public function extract(string $absolutePath, string $mime): ExtractionResult
         {
             return new ExtractionResult(
-                "Faktúra číslo: INV-2026-001\nIČO: 12345678\nCelkom k úhrade: 120,00 EUR",
+                "Faktúra číslo: INV-2026-001\nIČO: 12345678\nCelkom k úhrade: 120,00 EUR\nČíslo účtu: 19-2000145399/0800\nIBAN: CZ6508000000192000145399",
                 'stub',
             );
         }
@@ -36,7 +36,10 @@ it('scans new files into pending inbox items and moves them to processed', funct
     expect($item->status)->toBe('pending')
         ->and($item->user_id)->toBe($user->id)
         ->and($item->ocr_engine)->toBe('stub')
-        ->and($item->suggestions['supplier_invoice_number'] ?? null)->toBe('INV-2026-001');
+        ->and($item->suggestions['supplier_invoice_number'] ?? null)->toBe('INV-2026-001')
+        ->and($item->suggestions['account_number'] ?? null)->toBe('19-2000145399')
+        ->and($item->suggestions['bank_code'] ?? null)->toBe('0800')
+        ->and($item->suggestions['iban'] ?? null)->toBe('CZ6508000000192000145399');
 
     Storage::disk('local')->assertMissing("inbox/{$user->id}/invoice.pdf");
     Storage::disk('local')->assertExists("inbox/{$user->id}/processed/invoice.pdf");
