@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 
 /** @param array<string, mixed> $attributes */
@@ -102,4 +103,77 @@ it('returns no CZK recap for CZK invoices or without a snapshot', function (): v
 
     expect($calculator->czkRecap($czkInvoice))->toBeNull()
         ->and($calculator->czkRecap($noRate))->toBeNull();
+});
+
+// ── Item-based core (shared by Invoice and Quote) ────────────────────────────
+
+/** @param array<string, mixed> $attributes */
+function recapQuote(array $attributes = []): Quote
+{
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    return Quote::factory()->draft()->create([
+        'user_id' => $user->id,
+        'client_id' => $client->id,
+        'currency' => 'EUR',
+        'discount_percent' => null,
+        ...$attributes,
+    ]);
+}
+
+function addRecapQuoteItem(Quote $quote, float $quantity, float $unitPrice, float $vatRate): void
+{
+    $item = $quote->items()->create([
+        'description' => 'Item',
+        'quantity' => $quantity,
+        'unit' => 'ks',
+        'unit_price' => $unitPrice,
+        'vat_rate' => $vatRate,
+        'vat_amount' => 0,
+        'total_excl_vat' => 0,
+        'total_incl_vat' => 0,
+        'sort_order' => 0,
+    ]);
+    $item->recalculate()->save();
+}
+
+it('computes the same per-rate buckets for a quote as for an invoice', function (): void {
+    $quote = recapQuote(['discount_percent' => 10]);
+    addRecapQuoteItem($quote, 1, 100, 21);
+    addRecapQuoteItem($quote, 1, 200, 0);
+
+    $calculator = new VatRecapCalculator;
+    $rows = $calculator->recapForQuote($quote->refresh());
+
+    expect($rows[0]->base)->toBe(180.0)
+        ->and($rows[1]->base)->toBe(90.0)
+        ->and($rows[1]->vat)->toBe(18.9)
+        ->and($calculator->discountAmountForQuote($quote))->toBe(30.0)
+        ->and($calculator->subtotalForQuote($quote))->toBe(300.0)
+        ->and($calculator->vatAmountForQuote($quote))->toBe(18.9);
+});
+
+it('recalculates quote totals via the shared item-based core', function (): void {
+    $quote = recapQuote(['discount_percent' => 10]);
+    addRecapQuoteItem($quote, 1, 100, 21);
+
+    $quote->refresh()->recalculateTotals()->save();
+
+    expect((float) $quote->subtotal)->toBe(100.0)
+        ->and((float) $quote->discount_amount)->toBe(10.0)
+        ->and((float) $quote->vat_amount)->toBe(18.9)
+        ->and((float) $quote->total)->toBe(108.9);
+});
+
+it('recapFromItems with no discount matches the plain per-rate buckets', function (): void {
+    $quote = recapQuote();
+    addRecapQuoteItem($quote, 2, 100, 20);
+
+    $calculator = new VatRecapCalculator;
+    $rows = $calculator->recapFromItems($quote->refresh()->items, null);
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]->base)->toBe(200.0)
+        ->and($rows[0]->vat)->toBe(40.0);
 });

@@ -44,6 +44,16 @@ class SupplierInvoicePolicy
             && $user->can('invoices.manage');
     }
 
+    /**
+     * Register verification runs on non-draft invoices too (that's where it
+     * matters — right before paying), so no isEditable() check.
+     */
+    public function verifyAccount(User $user, SupplierInvoice $supplierInvoice): bool
+    {
+        return $this->sameAccount($user, $supplierInvoice->user_id)
+            && $user->can('invoices.manage');
+    }
+
     public function delete(User $user, SupplierInvoice $supplierInvoice): bool
     {
         return $this->sameAccount($user, $supplierInvoice->user_id)

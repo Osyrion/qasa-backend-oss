@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Contracts;
 
+use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceExportData;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 interface SupplierInvoiceRepositoryInterface
@@ -14,6 +16,11 @@ interface SupplierInvoiceRepositoryInterface
      * @param  array<string, mixed>  $filters
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
+
+    /**
+     * @return Collection<int, SupplierInvoice>
+     */
+    public function forExport(SupplierInvoiceExportData $filter): Collection;
 
     public function findById(string $id): ?SupplierInvoice;
 

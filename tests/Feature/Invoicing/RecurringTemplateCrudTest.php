@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 
 /** @return array{0: User, 1: Client} */
 function templateScope(): array
 {
-    $user = createUser(['invoice_prefix' => 'FA']);
+    $user = createUser(['invoice_prefix' => 'FA', 'country' => 'CZ', 'vat_status' => 'payer']);
+    app(VatRateSeederService::class)->seedFor($user);
     $client = Client::factory()->create(['user_id' => $user->id]);
 
     return [$user, $client];

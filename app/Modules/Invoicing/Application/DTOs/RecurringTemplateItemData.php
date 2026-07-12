@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\DTOs;
 
+use App\Modules\Invoicing\Domain\Rules\VatRateInCatalog;
 use Spatie\LaravelData\Attributes\Validation\Max;
 use Spatie\LaravelData\Data;
 
@@ -28,14 +29,17 @@ class RecurringTemplateItemData extends Data
     /**
      * @return array<string, mixed>
      */
-    public static function rules(): array
+    public static function rules(?string $userId = null, ?string $country = null): array
     {
         return [
             'description' => ['required', 'string', 'max:500'],
             'quantity' => ['required', 'numeric', 'min:0.001'],
             'unit' => ['sometimes', 'string', 'max:20'],
             'unit_price' => ['required', 'numeric', 'min:0'],
-            'vat_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'vat_rate' => [
+                'sometimes', 'numeric', 'min:0', 'max:100',
+                ...($userId !== null && $country !== null ? [new VatRateInCatalog($userId, $country)] : []),
+            ],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ];
     }

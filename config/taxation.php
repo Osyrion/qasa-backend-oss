@@ -2,7 +2,7 @@
 
 return [
     'SK' => [
-        'vat_rates' => [0, 5, 10, 23],
+        'vat_rates' => [0, 5, 19, 23],
         'default_vat_rate' => 23,
         'currency' => 'EUR',
         'ico_label' => 'IČO',

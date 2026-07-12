@@ -27,7 +27,7 @@ readonly class ImportCsvAction
      *
      * @throws Exception
      */
-    public function execute(SplFileObject $file, string $userId): array
+    public function execute(SplFileObject $file, string $userId, string $orderId): array
     {
         $csv = Reader::createFromFileObject($file);
         $csv->setHeaderOffset(0);
@@ -55,6 +55,7 @@ readonly class ImportCsvAction
                 }
 
                 $timeEntryData['user_id'] = $userId;
+                $timeEntryData['order_id'] = $orderId;
 
                 $this->repository->create($timeEntryData);
                 $created++;

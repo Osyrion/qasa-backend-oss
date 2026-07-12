@@ -50,11 +50,12 @@ it('still logs in an existing user via google when registration is disabled', fu
     $googleUser->shouldReceive('getId')->andReturn('google-123');
     $googleUser->shouldReceive('getAvatar')->andReturn(null);
 
-    $token = app(LoginWithGoogleAction::class)->execute($googleUser);
+    $result = app(LoginWithGoogleAction::class)->execute($googleUser);
 
     $user->refresh();
 
-    expect($token)->toBeString()->not->toBeEmpty()
+    expect($result->twoFactorRequired)->toBeFalse()
+        ->and($result->token)->toBeString()->not->toBeEmpty()
         ->and($user->google_id)->toBe('google-123');
 });
 

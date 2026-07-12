@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Invoicing\Application\Services\ViesPreconditionService;
+use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\TimeTracking\Application\Contracts\ExchangeRateServiceInterface;
 
 /**
@@ -20,6 +23,7 @@ readonly class IssueInvoiceAction
 {
     public function __construct(
         private ExchangeRateServiceInterface $exchangeRateService,
+        private ViesPreconditionService $viesPrecondition,
     ) {}
 
     /**
@@ -40,6 +44,9 @@ readonly class IssueInvoiceAction
         );
     }
 
+    /**
+     * @throws DomainException
+     */
     public function execute(Invoice $invoice, ?float $exchangeRate = null): Invoice
     {
         $invoice->loadMissing(['user', 'client', 'bankAccount', 'items']);
@@ -49,12 +56,22 @@ readonly class IssueInvoiceAction
 
         assert($user !== null);
 
+        if ($invoice->reverse_charge_mode === ReverseChargeMode::Eu) {
+            assert($client !== null);
+            $this->viesPrecondition->ensureVerified($client);
+        }
+
+        if (! $user->vat_status->canChargeVat() && $invoice->items->contains(fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+            throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
+        }
+
         $invoice->supplier_snapshot = [
             'name' => $user->full_name,
             'ico' => $user->ico,
             'dic' => $user->dic,
             'vat_id' => $user->vat_id,
             'is_vat_payer' => $user->is_vat_payer,
+            'vat_status' => $user->vat_status->value,
             'address' => $user->address,
             'city' => $user->city,
             'postal_code' => $user->postal_code,

@@ -16,6 +16,7 @@ readonly class SendInvoiceEmailAction
 {
     public function __construct(
         private UpdateInvoiceStatusAction $updateStatusAction,
+        private CreateInvoicePublicLinkAction $createPublicLinkAction,
     ) {}
 
     /**
@@ -42,11 +43,17 @@ readonly class SendInvoiceEmailAction
             $invoice = $this->updateStatusAction->execute($invoice, InvoiceStatus::Sent);
         }
 
+        $publicUrl = null;
+
+        if (config('invoicing.public_link_in_emails')) {
+            $publicUrl = $this->createPublicLinkAction->execute($invoice)->publicUrl();
+        }
+
         $locale = $invoice->client->locale ?? $invoice->user->locale ?? (string) config('app.locale');
 
         Mail::to($recipient)
             ->cc($data->cc ?? [])
-            ->queue((new InvoiceEmail($invoice, $data?->message))->locale($locale));
+            ->queue((new InvoiceEmail($invoice, $data?->message, $publicUrl))->locale($locale));
 
         // emailed_at means "handed to the mail queue" — delivery retries
         // are the queue worker's responsibility. A permanent job failure

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Domain\Models;
 
 use App\Modules\Auth\Domain\Contracts\ProvidesAccountMeta;
+use App\Modules\Calendar\Domain\Models\Event;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Orders\Domain\Models\Order;
@@ -12,6 +13,7 @@ use App\Modules\Orders\Domain\Models\OrderAttachment;
 use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
 use App\Modules\TimeTracking\Domain\Models\Expense;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
@@ -48,7 +50,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $color Hex, e.g. #3B82F6
  * @property string|null $ico
  * @property string|null $dic
- * @property bool $is_vat_payer
+ * @property bool $is_vat_payer Deprecated, kept in sync with vat_status; vat_status is the source of truth
+ * @property VatStatus $vat_status
  * @property int $tax_flat_rate 0-80; 0 = real expenses
  * @property Currency $default_currency
  * @property string $invoice_prefix
@@ -56,6 +59,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property int|null $invoice_number_start
  * @property string|null $supplier_invoice_number_mask
  * @property int|null $supplier_invoice_number_start
+ * @property string|null $quote_number_mask
+ * @property int|null $quote_number_start
  * @property bool $invoice_inbox_enabled
  * @property string $locale UI language
  * @property string $country ISO 3166-1 alpha-2
@@ -66,8 +71,15 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $vat_id IČ DPH / VAT ID
  * @property string|null $website
  * @property string|null $invoice_footer_text
+ * @property int $overdue_reminder_days Dashboard overdue-reminder threshold in days
+ * @property bool $auto_remind_enabled Whether overdue invoices get automatic reminder emails
+ * @property int $auto_remind_max Max automatic reminders sent per invoice, 1-10
+ * @property int $auto_remind_interval_days Minimum days between automatic reminders
  * @property string|null $clockify_api_key
  * @property string|null $clockify_workspace_id
+ * @property string|null $two_factor_secret Base32 TOTP secret; unconfirmed until two_factor_confirmed_at is set
+ * @property list<string>|null $two_factor_recovery_codes Hashed one-time recovery codes
+ * @property Carbon|null $two_factor_confirmed_at
  * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -75,6 +87,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property Carbon|null $deleted_at
  * @property-read Collection<int, Client> $clients
  * @property-read int|null $clients_count
+ * @property-read Collection<int, Event> $events
+ * @property-read int|null $events_count
  * @property-read Collection<int, ExchangeRate> $exchangeRates
  * @property-read int|null $exchange_rates_count
  * @property-read Collection<int, Expense> $expenses
@@ -145,16 +159,30 @@ class User extends Authenticatable implements ProvidesAccountMeta
     protected $fillable = [
         'title', 'name', 'surname', 'email', 'phone',
         'password', 'google_id', 'avatar_path', 'color',
-        'ico', 'dic', 'is_vat_payer', 'tax_flat_rate',
+        'ico', 'dic', 'is_vat_payer', 'vat_status', 'tax_flat_rate',
         'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
         'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
+        'quote_number_mask', 'quote_number_start',
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
-        'clockify_api_key', 'clockify_workspace_id',
+        'overdue_reminder_days', 'clockify_api_key', 'clockify_workspace_id',
+        'auto_remind_enabled', 'auto_remind_max', 'auto_remind_interval_days',
+        'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
     ];
 
     protected $hidden = [
         'password', 'remember_token', 'google_id', 'clockify_api_key',
+        'two_factor_secret', 'two_factor_recovery_codes',
+    ];
+
+    // Mirrors the DB defaults so freshly created (not yet re-fetched)
+    // instances carry them too.
+    protected $attributes = [
+        'overdue_reminder_days' => 14,
+        'vat_status' => 'non_payer',
+        'auto_remind_enabled' => false,
+        'auto_remind_max' => 3,
+        'auto_remind_interval_days' => 7,
     ];
 
     protected function casts(): array
@@ -163,13 +191,34 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
+            'vat_status' => VatStatus::class,
             'tax_flat_rate' => 'integer',
             'invoice_number_start' => 'integer',
             'supplier_invoice_number_start' => 'integer',
             'invoice_inbox_enabled' => 'boolean',
+            'overdue_reminder_days' => 'integer',
+            'auto_remind_enabled' => 'boolean',
+            'auto_remind_max' => 'integer',
+            'auto_remind_interval_days' => 'integer',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * is_vat_payer is deprecated but still read by old snapshots and the SaaS
+     * overlay; keep it mirroring vat_status until it's dropped.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $user): void {
+            if ($user->isDirty('vat_status')) {
+                $user->is_vat_payer = $user->vat_status === VatStatus::Payer;
+            }
+        });
     }
 
     // ── Computed ──────────────────────────────────────────────────────────────
@@ -194,6 +243,11 @@ class User extends Authenticatable implements ProvidesAccountMeta
     public function hasGoogleAuth(): bool
     {
         return $this->google_id !== null;
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_confirmed_at !== null;
     }
 
     public function hasPassword(): bool
@@ -314,5 +368,13 @@ class User extends Authenticatable implements ProvidesAccountMeta
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<Event, $this>
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
     }
 }

@@ -18,8 +18,26 @@ Schedule::command('qasa:invoices:generate-recurring')
     ->withoutOverlapping()
     ->onOneServer();
 
+Schedule::command('qasa:invoices:send-auto-reminders')
+    ->dailyAt('06:00')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('qasa:invoices:scan-inbox')
     ->everyFifteenMinutes()
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('qasa:calendar:purge-past')
+    ->dailyAt('04:30')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('qasa:integrations:purge-webhook-deliveries')
+    ->dailyAt('04:00')
     ->timezone((string) config('qasa.schedule_timezone'))
     ->withoutOverlapping()
     ->onOneServer();

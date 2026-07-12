@@ -37,6 +37,7 @@ readonly class UpdateClientAction
                 'dic' => $data->dic,
                 'vat_id' => $data->vat_id,
                 'is_vat_payer' => $data->is_vat_payer,
+                'reverse_charge_allowed' => $data->reverse_charge_allowed,
                 'is_customer' => $data->is_customer,
                 'is_vendor' => $data->is_vendor,
                 'email' => $data->email,
@@ -76,6 +77,10 @@ readonly class UpdateClientAction
 
         if (! $data->is_customer && ! $data->is_vendor) {
             throw DomainException::because(__('clients.role_required'));
+        }
+
+        if ($data->reverse_charge_allowed && empty($data->vat_id)) {
+            throw DomainException::because(__('clients.reverse_charge_requires_vat_id'));
         }
     }
 }

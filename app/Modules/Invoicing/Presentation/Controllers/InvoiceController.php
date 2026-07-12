@@ -8,8 +8,10 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\AddInvoiceItemAction;
 use App\Modules\Invoicing\Application\Actions\CreateCorrectiveInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\CreateInvoiceAction;
+use App\Modules\Invoicing\Application\Actions\CreateInvoicePublicLinkAction;
 use App\Modules\Invoicing\Application\Actions\GenerateInvoiceFromOrderAction;
 use App\Modules\Invoicing\Application\Actions\RemindInvoiceAction;
+use App\Modules\Invoicing\Application\Actions\RevokeInvoicePublicLinkAction;
 use App\Modules\Invoicing\Application\Actions\SendInvoiceEmailAction;
 use App\Modules\Invoicing\Application\Actions\UpdateInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\UpdateInvoiceStatusAction;
@@ -57,6 +59,8 @@ class InvoiceController extends Controller
         private readonly CreateCorrectiveInvoiceAction $correctiveAction,
         private readonly SendInvoiceEmailAction $sendEmailAction,
         private readonly RemindInvoiceAction $remindAction,
+        private readonly CreateInvoicePublicLinkAction $createPublicLinkAction,
+        private readonly RevokeInvoicePublicLinkAction $revokePublicLinkAction,
     ) {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
@@ -400,7 +404,7 @@ class InvoiceController extends Controller
         // their parent (orders / price_lists) so a caller cannot pin a foreign
         // account's record onto their own invoice item.
         $request->validate([
-            ...InvoiceItemData::rules(),
+            ...InvoiceItemData::rules($ownerId, $user->accountOwner()->country, $invoice->issued_at->toDateString()),
             'time_entry_id' => [
                 'nullable', 'uuid',
                 Rule::exists('time_entries', 'id')->where('user_id', $ownerId),
@@ -762,5 +766,92 @@ class InvoiceController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    #[OA\Post(
+        path: '/api/v1/invoices/{invoice}/public-link',
+        summary: 'Create (or return the existing) public link for the invoice; pass regenerate=true for a fresh token',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'regenerate', type: 'boolean', default: false),
+                ]
+            )
+        ),
+        tags: ['Invoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'invoice',
+                description: 'Invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Public link token and URL',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'url', type: 'string'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Invoice not found'),
+            new OA\Response(response: 422, description: 'Invoice is still a draft'),
+        ]
+    )]
+    public function createPublicLink(Request $request, Invoice $invoice): JsonResponse
+    {
+        $this->authorize('publicLink', $invoice);
+
+        $request->validate([
+            'regenerate' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $updated = $this->createPublicLinkAction->execute($invoice, $request->boolean('regenerate'));
+
+            return response()->json([
+                'token' => $updated->public_token,
+                'url' => $updated->publicUrl(),
+            ]);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Delete(
+        path: '/api/v1/invoices/{invoice}/public-link',
+        summary: 'Revoke the invoice public link',
+        security: [['sanctum' => []]],
+        tags: ['Invoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'invoice',
+                description: 'Invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Public link revoked'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Invoice not found'),
+        ]
+    )]
+    public function revokePublicLink(Invoice $invoice): JsonResponse
+    {
+        $this->authorize('publicLink', $invoice);
+
+        $this->revokePublicLinkAction->execute($invoice);
+
+        return response()->json(null, 204);
     }
 }

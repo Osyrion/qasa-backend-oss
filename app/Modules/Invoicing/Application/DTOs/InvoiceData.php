@@ -38,6 +38,14 @@ class InvoiceData extends Data
 
         #[Nullable]
         public readonly ?string $note_above = null,
+
+        /**
+         * Requests reverse charge; the actual mode (domestic/eu) is resolved
+         * server-side from the supplier's VAT status and the client (see
+         * InvoiceVatRegimeResolver) — an identified person or an EU B2B
+         * client with a VAT ID gets it automatically regardless of this flag.
+         */
+        public readonly bool $reverse_charge = false,
     ) {}
 
     /**
@@ -57,6 +65,7 @@ class InvoiceData extends Data
             'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'note' => ['nullable', 'string', 'max:2000'],
             'note_above' => ['nullable', 'string', 'max:2000'],
+            'reverse_charge' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -76,6 +85,7 @@ class InvoiceData extends Data
             discount_percent: $request->filled('discount_percent') ? (float) $request->input('discount_percent') : null,
             note: $request->filled('note') ? $request->string('note')->toString() : null,
             note_above: $request->filled('note_above') ? $request->string('note_above')->toString() : null,
+            reverse_charge: $request->boolean('reverse_charge'),
         );
     }
 }

@@ -26,6 +26,11 @@ use Illuminate\Support\Carbon;
  * @property Currency $currency
  * @property Carbon $date
  * @property string|null $note
+ * @property string|null $attachment_disk
+ * @property string|null $attachment_path
+ * @property string|null $attachment_filename
+ * @property string|null $attachment_mime_type
+ * @property int|null $attachment_size_bytes
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -38,6 +43,11 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Expense onlyTrashed()
  * @method static Builder<static>|Expense query()
  * @method static Builder<static>|Expense whereAmount($value)
+ * @method static Builder<static>|Expense whereAttachmentDisk($value)
+ * @method static Builder<static>|Expense whereAttachmentFilename($value)
+ * @method static Builder<static>|Expense whereAttachmentMimeType($value)
+ * @method static Builder<static>|Expense whereAttachmentPath($value)
+ * @method static Builder<static>|Expense whereAttachmentSizeBytes($value)
  * @method static Builder<static>|Expense whereCategory($value)
  * @method static Builder<static>|Expense whereCreatedAt($value)
  * @method static Builder<static>|Expense whereCurrency($value)
@@ -68,6 +78,11 @@ class Expense extends Model
         'currency',
         'date',
         'note',
+        'attachment_disk',
+        'attachment_path',
+        'attachment_filename',
+        'attachment_mime_type',
+        'attachment_size_bytes',
     ];
 
     protected function casts(): array
@@ -76,7 +91,15 @@ class Expense extends Model
             'amount' => 'decimal:2',
             'currency' => Currency::class,
             'date' => 'date',
+            'attachment_size_bytes' => 'integer',
         ];
+    }
+
+    // ── Computed ──────────────────────────────────────────────────────────────
+
+    public function hasAttachment(): bool
+    {
+        return $this->attachment_path !== null;
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────

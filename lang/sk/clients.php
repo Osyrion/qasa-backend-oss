@@ -12,4 +12,5 @@ return [
     'company_not_found' => 'Pre IČO :ico sa nenašla žiadna firma.',
     'vat_check_unavailable' => 'IČ DPH sa nepodarilo overiť, pretože služba VIES je momentálne nedostupná.',
     'role_required' => 'Klient musí byť odberateľ, dodávateľ alebo oboje.',
+    'reverse_charge_requires_vat_id' => 'Tuzemské prenesenie daňovej povinnosti vyžaduje, aby mal klient vyplnené IČ DPH.',
 ];

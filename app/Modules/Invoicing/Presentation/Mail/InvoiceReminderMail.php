@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Presentation\Mail;
 
 use App\Modules\Invoicing\Application\Services\InvoicePdfService;
+use App\Modules\Invoicing\Application\Services\PaymentQrService;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -21,6 +22,7 @@ class InvoiceReminderMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public readonly Invoice $invoice,
+        public readonly ?string $publicUrl = null,
     ) {
         $this->afterCommit();
     }
@@ -32,13 +34,25 @@ class InvoiceReminderMail extends Mailable implements ShouldQueue
         );
     }
 
+    /**
+     * Bank details and the QR PNG are resolved here, on the queue worker at
+     * send time, so the queued payload carries only the serialized model
+     * reference — same principle as the lazy PDF attachment below.
+     */
     public function content(): Content
     {
+        $qrService = app(PaymentQrService::class);
+        $bank = $qrService->bankDetails($this->invoice);
+
         return new Content(
             view: 'invoices::emails.reminder',
             with: [
                 'invoice' => $this->invoice,
                 'supplierName' => $this->invoice->supplier_snapshot['name'] ?? null,
+                'iban' => isset($bank['iban']) && $bank['iban'] !== '' ? (string) $bank['iban'] : null,
+                'bic' => isset($bank['bic']) && $bank['bic'] !== '' ? (string) $bank['bic'] : null,
+                'qrPng' => $qrService->png($this->invoice, $this->invoice->balance()),
+                'publicUrl' => $this->publicUrl,
             ],
         );
     }

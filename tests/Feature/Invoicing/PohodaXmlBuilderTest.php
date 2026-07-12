@@ -18,6 +18,7 @@ function xmlExportInvoice(array $invoiceAttributes = []): array
         'dic' => '2020202020',
         'vat_id' => 'SK2020202020',
         'is_vat_payer' => true,
+        'vat_status' => 'payer',
         'country' => 'SK',
         'address' => 'Hlavná 1',
         'city' => 'Bratislava',
@@ -162,4 +163,69 @@ it('produces a valid empty dataPack for no invoices', function (): void {
 
     expect($loaded)->toBeTrue()
         ->and($xml)->not->toContain('<inv:invoice ');
+});
+
+it('appends the domestic reverse charge clause to the note element', function (): void {
+    [, $invoice] = xmlExportInvoice([
+        'reverse_charge' => true,
+        'reverse_charge_mode' => 'domestic',
+    ]);
+
+    $xml = app(PohodaXmlBuilder::class)->build([$invoice]);
+
+    expect($xml)->toContain((string) __('invoices::pdf.reverse_charge_clause_domestic_sk'));
+
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument;
+    $loaded = $dom->loadXML($xml);
+    libxml_clear_errors();
+    expect($loaded)->toBeTrue();
+});
+
+it('appends the EU reverse charge clause to the note element', function (): void {
+    [, $invoice] = xmlExportInvoice([
+        'reverse_charge' => true,
+        'reverse_charge_mode' => 'eu',
+    ]);
+
+    $xml = app(PohodaXmlBuilder::class)->build([$invoice]);
+
+    expect($xml)->toContain((string) __('invoices::pdf.reverse_charge_clause_eu'));
+});
+
+it('exports a non-VAT-payer invoice with all-zero rates without a reverse charge clause', function (): void {
+    $user = createUser([
+        'ico' => '12345678', 'country' => 'SK', 'vat_status' => 'non_payer', 'is_vat_payer' => false,
+    ]);
+    $client = Client::factory()->create(['user_id' => $user->id, 'country' => 'SK']);
+
+    $invoice = Invoice::factory()->sent()->create([
+        'user_id' => $user->id,
+        'client_id' => $client->id,
+        'type' => 'invoice',
+        'currency' => 'EUR',
+        'discount_percent' => null,
+        'supplier_snapshot' => ['name' => $user->full_name, 'country' => 'SK', 'vat_status' => 'non_payer'],
+        'client_snapshot' => ['name' => $client->display_name, 'country' => 'SK'],
+    ]);
+
+    $invoice->items()->create([
+        'description' => 'Konzultácia', 'quantity' => 1, 'unit' => 'ks',
+        'unit_price' => 100, 'vat_rate' => 0, 'vat_amount' => 0,
+        'total_excl_vat' => 100, 'total_incl_vat' => 100, 'sort_order' => 0,
+    ]);
+
+    $invoice->refresh()->recalculateTotals()->save();
+
+    $xml = app(PohodaXmlBuilder::class)->build([$invoice->refresh()]);
+
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument;
+    $loaded = $dom->loadXML($xml);
+    libxml_clear_errors();
+
+    expect($loaded)->toBeTrue()
+        ->and($xml)->toContain('<inv:rateVAT>none</inv:rateVAT>')
+        ->and($xml)->not->toContain((string) __('invoices::pdf.reverse_charge_clause_domestic_sk'))
+        ->and($xml)->not->toContain((string) __('invoices::pdf.reverse_charge_clause_eu'));
 });

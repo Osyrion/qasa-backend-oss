@@ -117,13 +117,33 @@ final class PohodaXmlBuilder
         ));
         $header->appendChild($paymentType);
 
-        $noteParts = array_filter([$invoice->note_above, $invoice->note], static fn (?string $part): bool => $part !== null && $part !== '');
+        $noteParts = array_filter(
+            [$invoice->note_above, $invoice->note, $this->reverseChargeNote($invoice)],
+            static fn (?string $part): bool => $part !== null && $part !== '',
+        );
 
         if ($noteParts !== []) {
             $header->appendChild($this->requiredTextEl($dom, self::NS_INV, 'inv:note', implode("\n", $noteParts)));
         }
 
         return $header;
+    }
+
+    /**
+     * Reverse-charge invoices carry no VAT columns natively (items are
+     * already 0%, so rateVAT resolves to "none" on its own) — the legal
+     * clause is the only thing that needs adding, appended to the same
+     * inv:note element already used for note_above/note.
+     */
+    private function reverseChargeNote(Invoice $invoice): ?string
+    {
+        if ($invoice->reverse_charge_mode === null) {
+            return null;
+        }
+
+        $country = (string) ($invoice->supplier_snapshot['country'] ?? 'SK');
+
+        return (string) __('invoices::pdf.'.$invoice->reverse_charge_mode->clauseKey($country));
     }
 
     /**

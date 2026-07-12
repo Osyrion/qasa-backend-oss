@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Actions\FetchCompanyDataAction;
 use App\Modules\Clients\Application\Actions\VerifyVatAction;
 use App\Modules\Clients\Application\DTOs\CompanyRegistryData;
@@ -68,6 +69,7 @@ class CompanyLookupController extends Controller
         parameters: [
             new OA\Parameter(name: 'country', in: 'query', required: true, schema: new OA\Schema(type: 'string', maxLength: 2)),
             new OA\Parameter(name: 'vat_id', in: 'query', required: true, schema: new OA\Schema(type: 'string', maxLength: 20)),
+            new OA\Parameter(name: 'client_id', description: 'Stamps vat_verified_at on this client when the check succeeds', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'VAT validation result'),
@@ -83,9 +85,20 @@ class CompanyLookupController extends Controller
         $data = VerifyVatData::validateAndCreate($request->all());
 
         try {
-            return $this->verifyVat->execute($data->country, $data->vat_id);
+            $result = $this->verifyVat->execute($data->country, $data->vat_id);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        if ($result->valid && $data->client_id !== null) {
+            /** @var User $user */
+            $user = $request->user();
+
+            Client::forUser($user->accountOwnerId())
+                ->whereKey($data->client_id)
+                ->update(['vat_verified_at' => now()]);
+        }
+
+        return $result;
     }
 }

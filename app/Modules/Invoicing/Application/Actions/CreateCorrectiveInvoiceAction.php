@@ -75,6 +75,8 @@ readonly class CreateCorrectiveInvoiceAction
                 'subtotal' => 0,
                 'discount_percent' => $original->discount_percent,
                 'discount_amount' => 0,
+                'reverse_charge' => $original->reverse_charge,
+                'reverse_charge_mode' => $original->reverse_charge_mode?->value,
                 'vat_amount' => 0,
                 'total' => 0,
                 'note' => $original->note,

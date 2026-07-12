@@ -60,6 +60,10 @@ readonly class GenerateInvoiceFromTemplateAction
             // Placeholders resolve against DUZP; proforma against issue date.
             $periodDate = $taxableSupplyAt ?? $issuedAt;
 
+            // The client may have changed since the template was created, so
+            // the RC decision is never copied from a prior invoice — only
+            // the intent is, and CreateInvoiceAction re-resolves it fresh
+            // against the current client via InvoiceVatRegimeResolver.
             $invoice = $this->createInvoice->execute(new InvoiceData(
                 client_id: $template->client_id,
                 issued_at: $issuedAt->toDateString(),
@@ -70,6 +74,7 @@ readonly class GenerateInvoiceFromTemplateAction
                 discount_percent: $template->discount_percent !== null ? (float) $template->discount_percent : null,
                 note: $this->placeholders->resolve($template->note_below, $periodDate),
                 note_above: $this->placeholders->resolve($template->note_above, $periodDate),
+                reverse_charge: $template->reverse_charge,
             ), $owner);
 
             $invoice->update([
@@ -83,7 +88,7 @@ readonly class GenerateInvoiceFromTemplateAction
                         'quantity' => $item->quantity,
                         'unit' => $item->unit,
                         'unit_price' => $item->unit_price,
-                        'vat_rate' => $item->vat_rate,
+                        'vat_rate' => $invoice->reverse_charge ? 0 : $item->vat_rate,
                         'sort_order' => $item->sort_order,
                     ])
                     ->recalculate()

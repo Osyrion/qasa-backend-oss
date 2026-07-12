@@ -7,6 +7,7 @@ namespace App\Modules\Invoicing\Domain\Models;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
+use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\SupplierInvoiceFactory;
@@ -30,6 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string $supplier_invoice_number Original document number as issued by the vendor
  * @property string|null $variable_symbol
  * @property string $status
+ * @property SupplierVatRegime $vat_regime
  * @property Carbon $issued_at
  * @property Carbon|null $taxable_supply_at DUZP
  * @property Carbon|null $due_at
@@ -40,8 +42,17 @@ use Illuminate\Support\Carbon;
  * @property numeric $subtotal
  * @property numeric $vat_amount
  * @property numeric $total
+ * @property numeric $self_assessed_vat_amount Mirrors vat_amount for self-assessed regimes; not owed to the vendor
  * @property array<string, mixed>|null $vendor_snapshot Frozen at received
  * @property string|null $note
+ * @property string|null $vendor_account_number Domestic format [prefix-]number
+ * @property string|null $vendor_bank_code
+ * @property string|null $vendor_iban
+ * @property string|null $vendor_bic
+ * @property string|null $account_source manual|ocr
+ * @property Carbon|null $account_verified_at
+ * @property string|null $account_verification_result published|unpublished|unreliable
+ * @property Carbon|null $handed_to_payment_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -57,6 +68,7 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|SupplierInvoice newModelQuery()
  * @method static Builder<static>|SupplierInvoice newQuery()
  * @method static Builder<static>|SupplierInvoice onlyTrashed()
+ * @method static Builder<static>|SupplierInvoice payable()
  * @method static Builder<static>|SupplierInvoice query()
  * @method static Builder<static>|SupplierInvoice unpaid()
  * @method static Builder<static>|SupplierInvoice withTrashed(bool $withTrashed = true)
@@ -71,6 +83,12 @@ class SupplierInvoice extends Model
     use HasUuids;
     use SoftDeletes;
 
+    // Mirrors the DB default so a freshly created (not yet re-fetched)
+    // instance carries it too.
+    protected $attributes = [
+        'vat_regime' => 'domestic',
+    ];
+
     protected $fillable = [
         'user_id',
         'client_id',
@@ -78,6 +96,7 @@ class SupplierInvoice extends Model
         'supplier_invoice_number',
         'variable_symbol',
         'status',
+        'vat_regime',
         'issued_at',
         'taxable_supply_at',
         'due_at',
@@ -88,14 +107,24 @@ class SupplierInvoice extends Model
         'subtotal',
         'vat_amount',
         'total',
+        'self_assessed_vat_amount',
         'vendor_snapshot',
         'note',
+        'vendor_account_number',
+        'vendor_bank_code',
+        'vendor_iban',
+        'vendor_bic',
+        'account_source',
+        'account_verified_at',
+        'account_verification_result',
+        'handed_to_payment_at',
     ];
 
     protected function casts(): array
     {
         return [
             'currency' => Currency::class,
+            'vat_regime' => SupplierVatRegime::class,
             'issued_at' => 'date',
             'taxable_supply_at' => 'date',
             'due_at' => 'date',
@@ -105,7 +134,10 @@ class SupplierInvoice extends Model
             'subtotal' => 'decimal:2',
             'vat_amount' => 'decimal:2',
             'total' => 'decimal:2',
+            'self_assessed_vat_amount' => 'decimal:2',
             'vendor_snapshot' => 'array',
+            'account_verified_at' => 'datetime',
+            'handed_to_payment_at' => 'datetime',
         ];
     }
 
@@ -117,6 +149,18 @@ class SupplierInvoice extends Model
     }
 
     public function scopeUnpaid($query)
+    {
+        return $query->whereIn('status', ['received', 'booked']);
+    }
+
+    /**
+     * Candidates for a payment order — received or booked, i.e. real
+     * documents that haven't been paid or cancelled yet.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePayable(Builder $query): Builder
     {
         return $query->whereIn('status', ['received', 'booked']);
     }
@@ -139,7 +183,32 @@ class SupplierInvoice extends Model
     }
 
     /**
-     * Recalculate header totals from VAT recap lines.
+     * A payable vendor account is either the domestic pair (number + bank
+     * code) or an IBAN.
+     */
+    public function hasPaymentAccount(): bool
+    {
+        return $this->hasDomesticVendorAccount()
+            || ($this->vendor_iban !== null && $this->vendor_iban !== '');
+    }
+
+    public function hasDomesticVendorAccount(): bool
+    {
+        return $this->vendor_account_number !== null && $this->vendor_account_number !== ''
+            && $this->vendor_bank_code !== null && $this->vendor_bank_code !== '';
+    }
+
+    public function isHandedToPayment(): bool
+    {
+        return $this->handed_to_payment_at !== null;
+    }
+
+    /**
+     * Recalculate header totals from VAT recap lines. Self-assessed regimes
+     * (eu_reverse_charge/import) owe the vendor only the subtotal — the VAT
+     * is declared (and, where applicable, deducted) by us instead of being
+     * paid out, so it's mirrored into self_assessed_vat_amount rather than
+     * added to total.
      */
     public function recalculateTotals(): self
     {
@@ -148,7 +217,14 @@ class SupplierInvoice extends Model
 
         $this->subtotal = $subtotal;
         $this->vat_amount = $vatAmount;
-        $this->total = round($subtotal + $vatAmount, 2);
+
+        if ($this->vat_regime->isSelfAssessed()) {
+            $this->self_assessed_vat_amount = $vatAmount;
+            $this->total = $subtotal;
+        } else {
+            $this->self_assessed_vat_amount = 0;
+            $this->total = round($subtotal + $vatAmount, 2);
+        }
 
         return $this;
     }

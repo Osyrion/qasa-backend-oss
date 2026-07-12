@@ -9,8 +9,10 @@ use App\Modules\Invoicing\Application\Actions\CreateSupplierInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\DeleteSupplierInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\UpdateSupplierInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\UpdateSupplierInvoiceStatusAction;
+use App\Modules\Invoicing\Application\Actions\VerifySupplierAccountAction;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
+use App\Modules\Invoicing\Application\Services\SupplierPaymentQrService;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Presentation\Resources\SupplierInvoiceResource;
@@ -38,6 +40,8 @@ class SupplierInvoiceController extends Controller
         private readonly UpdateSupplierInvoiceAction $updateAction,
         private readonly UpdateSupplierInvoiceStatusAction $updateStatusAction,
         private readonly DeleteSupplierInvoiceAction $deleteAction,
+        private readonly VerifySupplierAccountAction $verifyAccountAction,
+        private readonly SupplierPaymentQrService $paymentQrService,
     ) {
         $this->authorizeResource(SupplierInvoice::class, 'supplier_invoice');
     }
@@ -75,6 +79,13 @@ class SupplierInvoiceController extends Controller
                 in: 'query',
                 required: false,
                 schema: new OA\Schema(type: 'string')
+            ),
+            new OA\Parameter(
+                name: 'handed',
+                description: 'Filter by handed-to-payment flag (1 = in a payment order, 0 = not)',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'boolean')
             ),
             new OA\Parameter(
                 name: 'date_from',
@@ -124,7 +135,7 @@ class SupplierInvoiceController extends Controller
         $supplierInvoices = $this->repository->paginate(
             perPage: (int) $request->input('per_page', 20),
             filters: $request->only([
-                'status', 'client_id', 'search',
+                'status', 'client_id', 'search', 'handed',
                 'date_from', 'date_to',
                 'sort', 'direction',
             ]),
@@ -215,7 +226,7 @@ class SupplierInvoiceController extends Controller
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules(),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')
@@ -301,7 +312,7 @@ class SupplierInvoiceController extends Controller
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules(),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')
@@ -407,6 +418,90 @@ class SupplierInvoiceController extends Controller
             );
 
             return response()->json(SupplierInvoiceResource::make($updated));
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Post(
+        path: '/api/v1/supplier-invoices/{supplier_invoice}/verify-account',
+        summary: 'Verify the stored vendor account against the CZ VAT payer register (CRPDPH)',
+        security: [['sanctum' => []]],
+        tags: ['SupplierInvoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'supplier_invoice',
+                description: 'Supplier invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Verification result; on a mismatch the published accounts are listed for manual comparison',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'result', type: 'string', enum: ['published', 'unpublished', 'unreliable']),
+                        new OA\Property(property: 'verified_at', type: 'string', format: 'date-time'),
+                        new OA\Property(property: 'published_accounts', type: 'array', items: new OA\Items(type: 'object')),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Supplier invoice not found'),
+            new OA\Response(response: 422, description: 'No stored account, vendor is not a CZ VAT payer, or the register is unreachable'),
+        ]
+    )]
+    public function verifyAccount(SupplierInvoice $supplierInvoice): JsonResponse
+    {
+        $this->authorize('verifyAccount', $supplierInvoice);
+
+        try {
+            return response()->json($this->verifyAccountAction->execute($supplierInvoice));
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Get(
+        path: '/api/v1/supplier-invoices/{supplier_invoice}/payment-qr',
+        summary: 'Payment QR for the received invoice (CZK → SPAYD, EUR → SEPA EPC)',
+        security: [['sanctum' => []]],
+        tags: ['SupplierInvoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'supplier_invoice',
+                description: 'Supplier invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'SVG payment QR as a data URI',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data_uri', type: 'string'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Supplier invoice not found'),
+            new OA\Response(response: 422, description: 'No stored account or unsupported currency'),
+        ]
+    )]
+    public function paymentQr(SupplierInvoice $supplierInvoice): JsonResponse
+    {
+        $this->authorize('view', $supplierInvoice);
+
+        try {
+            return response()->json([
+                'data_uri' => $this->paymentQrService->dataUri($supplierInvoice),
+            ]);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

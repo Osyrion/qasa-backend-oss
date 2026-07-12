@@ -7,6 +7,7 @@ namespace App\Modules\Invoicing\Application\DTOs;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceWorkReportLine;
 use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Support\Collection;
 
 /**
@@ -31,6 +32,13 @@ final readonly class InvoicePdfViewModel
         public ?string $relatedInvoiceNumber,
         public array $supplier,
         public array $supplierTaxLines,
+        public VatStatus $supplierVatStatus,
+        public bool $showVatColumns,
+        public bool $showVatRecap,
+        public bool $showTaxableSupplyDate,
+        public ?string $vatNote,
+        public ?string $reverseChargeClause,
+        public string $totalLabel,
         public ?string $logoDataUri,
         public array $client,
         public array $clientTaxLines,

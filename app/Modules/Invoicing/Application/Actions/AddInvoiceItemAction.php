@@ -24,7 +24,14 @@ class AddInvoiceItemAction
             throw DomainException::because(__('invoicing.items_only_for_draft'));
         }
 
-        return DB::transaction(function () use ($invoice, $data): InvoiceItem {
+        $invoice->loadMissing('user');
+        $vatRate = $invoice->reverse_charge ? 0.0 : $data->vat_rate;
+
+        if ($vatRate > 0.0 && ! $invoice->user?->vat_status->canChargeVat()) {
+            throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
+        }
+
+        return DB::transaction(function () use ($invoice, $data, $vatRate): InvoiceItem {
             $unit = ItemUnit::tryFrom($data->unit)?->value ?? $data->unit;
 
             /** @var InvoiceItem $item */
@@ -36,7 +43,7 @@ class AddInvoiceItemAction
                 'quantity' => $data->quantity,
                 'unit' => $unit,
                 'unit_price' => $data->unit_price,
-                'vat_rate' => $data->vat_rate,
+                'vat_rate' => $vatRate,
                 'sort_order' => $data->sort_order,
             ]);
 

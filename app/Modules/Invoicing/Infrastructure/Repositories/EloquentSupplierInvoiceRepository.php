@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceExportData;
+use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
+use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +35,13 @@ class EloquentSupplierInvoiceRepository implements SupplierInvoiceRepositoryInte
 
         if (! empty($filters['client_id'])) {
             $query->where('client_id', $filters['client_id']);
+        }
+
+        // handed=1|0 — handed to payment (in a live payment order) or not.
+        if (isset($filters['handed']) && $filters['handed'] !== '') {
+            filter_var($filters['handed'], FILTER_VALIDATE_BOOLEAN)
+                ? $query->whereNotNull('handed_to_payment_at')
+                : $query->whereNull('handed_to_payment_at');
         }
 
         if (! empty($filters['search'])) {
@@ -57,6 +68,28 @@ class EloquentSupplierInvoiceRepository implements SupplierInvoiceRepositoryInte
         $query->orderBy($sort, $direction);
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * @return Collection<int, SupplierInvoice>
+     */
+    public function forExport(SupplierInvoiceExportData $filter): Collection
+    {
+        $column = $filter->period_basis->column();
+
+        $query = SupplierInvoice::query()
+            ->whereNot('status', SupplierInvoiceStatus::Draft->value)
+            ->whereBetween($column, [$filter->date_from, $filter->date_to]);
+
+        if ($filter->period_basis === ExportPeriodBasis::Tax) {
+            $query->whereNotNull('taxable_supply_at');
+        }
+
+        return $query
+            ->with(['vatLines', 'client'])
+            ->orderBy('issued_at')
+            ->orderBy('supplier_invoice_number')
+            ->get();
     }
 
     public function findById(string $id): ?SupplierInvoice

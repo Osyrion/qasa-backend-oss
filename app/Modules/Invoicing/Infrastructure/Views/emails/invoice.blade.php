@@ -39,6 +39,12 @@
 
                             <p style="margin: 0 0 24px; color: #71717a; font-size: 13px;">{{ __('invoices::emails.attachment_note') }}</p>
 
+                            @if (($publicUrl ?? null) !== null)
+                                <p style="margin: 0 0 24px;">
+                                    <a href="{{ $publicUrl }}" style="display: inline-block; padding: 10px 20px; background-color: #27272a; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 14px;">{{ __('invoices::emails.view_online') }}</a>
+                                </p>
+                            @endif
+
                             <p style="margin: 0;">{{ __('invoices::emails.regards') }}@if ($supplierName !== null),<br>{{ $supplierName }}@endif</p>
                         </td>
                     </tr>

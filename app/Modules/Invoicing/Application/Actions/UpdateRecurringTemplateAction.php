@@ -7,16 +7,25 @@ namespace App\Modules\Invoicing\Application\Actions;
 use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Enums\RecurringTemplateStatus;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 readonly class UpdateRecurringTemplateAction
 {
     /**
+     * @throws DomainException
      * @throws Throwable
      */
     public function execute(RecurringInvoiceTemplate $template, RecurringTemplateData $data): RecurringInvoiceTemplate
     {
+        $owner = $template->user;
+        assert($owner !== null);
+
+        if (! $owner->accountOwner()->vat_status->canChargeVat() && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+            throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
+        }
+
         return DB::transaction(function () use ($template, $data): RecurringInvoiceTemplate {
             $scheduleChanged = $template->period !== $data->period
                 || $template->day_of_month !== $data->day_of_month
@@ -34,6 +43,7 @@ readonly class UpdateRecurringTemplateAction
                 'currency' => $data->currency->value,
                 'due_days' => $data->due_days,
                 'discount_percent' => $data->discount_percent,
+                'reverse_charge' => $data->reverse_charge,
                 'tax_date_mode' => $data->tax_date_mode->value,
                 'auto_send' => $data->auto_send,
                 'note_above' => $data->note_above,

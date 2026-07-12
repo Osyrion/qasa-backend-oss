@@ -76,6 +76,8 @@ class ExpenseController extends Controller
     {
         $this->authorize('delete', $expense);
 
+        // Soft delete only — the attachment file stays on disk so a restore
+        // (SoftDeletes) still has its receipt/invoice document.
         $this->repository->delete($expense);
 
         return response()->json(null, 204);

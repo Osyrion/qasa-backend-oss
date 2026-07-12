@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
+use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -41,6 +42,8 @@ use Illuminate\Support\Carbon;
  * @property array<string, mixed>|null $client_snapshot Frozen at issue
  * @property numeric|null $discount_percent
  * @property numeric $discount_amount
+ * @property bool $reverse_charge
+ * @property ReverseChargeMode|null $reverse_charge_mode
  * @property Currency $currency
  * @property numeric|null $exchange_rate_snapshot ČNB rate to CZK frozen at issue (non-CZK invoices)
  * @property numeric $subtotal Sum of all items excl. VAT
@@ -55,6 +58,11 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $email_failed_at Set when the queued email job permanently failed; cleared on the next send
  * @property Carbon|null $last_reminded_at Last time a payment reminder was sent
  * @property int $reminder_count Number of payment reminders sent
+ * @property Carbon|null $overdue_notified_at First time this invoice was detected past due; idempotency marker for the invoice.overdue event
+ * @property Carbon|null $reminders_exhausted_notified_at Set once the owner has been notified that auto-reminders hit the limit
+ * @property string|null $public_token Grants read-only public access; set exclusively by CreateInvoicePublicLinkAction
+ * @property Carbon|null $public_first_viewed_at First time the public page was opened
+ * @property int $public_view_count Number of times the public page was opened
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -123,6 +131,8 @@ class Invoice extends Model
         'subtotal',
         'discount_percent',
         'discount_amount',
+        'reverse_charge',
+        'reverse_charge_mode',
         'vat_amount',
         'total',
         'note',
@@ -134,6 +144,8 @@ class Invoice extends Model
         'email_failed_at',
         'last_reminded_at',
         'reminder_count',
+        'overdue_notified_at',
+        'reminders_exhausted_notified_at',
     ];
 
     protected function casts(): array
@@ -151,12 +163,18 @@ class Invoice extends Model
             'subtotal' => 'decimal:2',
             'discount_percent' => 'decimal:2',
             'discount_amount' => 'decimal:2',
+            'reverse_charge' => 'boolean',
+            'reverse_charge_mode' => ReverseChargeMode::class,
             'vat_amount' => 'decimal:2',
             'total' => 'decimal:2',
             'emailed_at' => 'datetime',
             'emailed_cc' => 'array',
             'email_failed_at' => 'datetime',
             'last_reminded_at' => 'datetime',
+            'overdue_notified_at' => 'datetime',
+            'reminders_exhausted_notified_at' => 'datetime',
+            'public_first_viewed_at' => 'datetime',
+            'public_view_count' => 'integer',
         ];
     }
 
@@ -234,9 +252,44 @@ class Invoice extends Model
         return $this->isDraft();
     }
 
+    public function hasPublicLink(): bool
+    {
+        return $this->public_token !== null;
+    }
+
+    public function publicUrl(): ?string
+    {
+        if ($this->public_token === null) {
+            return null;
+        }
+
+        return rtrim((string) config('app.frontend_url'), '/').'/i/'.$this->public_token;
+    }
+
     public function daysUntilDue(): int
     {
         return (int) now()->diffInDays($this->due_at, false);
+    }
+
+    /**
+     * A reverse-charged invoice carries no VAT — every item's rate is forced
+     * to 0% (domestic and EU reverse charge alike). Call before
+     * recalculateTotals() whenever reverse_charge flips on or an item is
+     * added to an already-reverse-charged invoice.
+     */
+    public function normalizeItemsForReverseCharge(): void
+    {
+        $this->loadMissing('items');
+
+        foreach ($this->items as $item) {
+            if ((float) $item->vat_rate === 0.0) {
+                continue;
+            }
+
+            $item->vat_rate = 0;
+            $item->recalculate();
+            $item->save();
+        }
     }
 
     /**

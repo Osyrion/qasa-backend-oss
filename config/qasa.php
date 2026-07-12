@@ -53,4 +53,18 @@ return [
         'available' => ['en', 'sk'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | VIES grace window
+    |--------------------------------------------------------------------------
+    |
+    | Days a client's last successful VIES check (clients.vat_verified_at)
+    | remains trusted when VIES itself is unreachable at issuance time. Only
+    | covers a down VIES service — a number VIES actively rejects always
+    | blocks issuance, grace window or not.
+    |
+    */
+
+    'vies_grace_days' => (int) env('QASA_VIES_GRACE_DAYS', 30),
+
 ];

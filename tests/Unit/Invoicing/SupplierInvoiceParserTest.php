@@ -52,3 +52,25 @@ it('returns only matched fields for sparse text', function (): void {
 
     expect($suggestions)->toBe([]);
 });
+
+it('extracts a domestic account number alongside the variable symbol', function (): void {
+    $text = <<<'TEXT'
+        Faktura c.: 2026/0090
+        Číslo účtu: 19-2000145399/0800
+        Variabilní symbol: 20260090
+        TEXT;
+
+    $suggestions = (new SupplierInvoiceParser)->parse($text);
+
+    expect($suggestions['account_number'])->toBe('19-2000145399')
+        ->and($suggestions['bank_code'])->toBe('0800')
+        ->and($suggestions['variable_symbol'])->toBe('20260090');
+});
+
+it('only suggests checksum-valid IBANs', function (): void {
+    $valid = (new SupplierInvoiceParser)->parse('IBAN: CZ6508000000192000145399');
+    $invalid = (new SupplierInvoiceParser)->parse('IBAN: CZ0008000000192000145399');
+
+    expect($valid['iban'])->toBe('CZ6508000000192000145399')
+        ->and($invalid)->not->toHaveKey('iban');
+});

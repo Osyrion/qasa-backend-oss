@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Services;
 
+use App\Modules\Shared\Enums\VatStatus;
+
 /**
  * Maps a party's country to the native labels of its tax identifiers.
  * Values in `ico`/`dic`/`vat_id` columns are printed under these labels;
@@ -14,13 +16,17 @@ final class CountryTaxLabelMap
     /**
      * @return array<string, string> field name => printed label
      */
-    public static function labelsFor(string $countryCode, bool $isVatPayer): array
+    public static function labelsFor(string $countryCode, VatStatus $status): array
     {
         $country = strtoupper($countryCode);
+        // SK prints IČ DPH for both a full payer and an identified person —
+        // an identified person is assigned a VAT ID too, just without the
+        // right to charge domestic VAT.
+        $hasVatId = $status->hasVatId();
 
         return match ($country) {
             'CZ' => ['ico' => 'IČO', 'dic' => 'DIČ'],
-            'SK' => $isVatPayer
+            'SK' => $hasVatId
                 ? ['ico' => 'IČO', 'dic' => 'DIČ', 'vat_id' => 'IČ DPH']
                 : ['ico' => 'IČO', 'dic' => 'DIČ'],
             'DE', 'AT' => ['dic' => 'Steuernummer', 'vat_id' => 'USt-IdNr.'],

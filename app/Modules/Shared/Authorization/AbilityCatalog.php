@@ -31,6 +31,9 @@ final class AbilityCatalog
             'pricing.view',
             'pricing.manage',
             'reports.view',
+            'calendar.view',
+            'calendar.manage',
+            'integrations.manage',
         ];
     }
 

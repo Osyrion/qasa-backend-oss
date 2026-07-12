@@ -31,8 +31,16 @@ final class SupplierInvoiceParser
             'total' => $this->extractTotal($normalized),
             'variable_symbol' => $this->extractVariableSymbol($normalized),
             'iban' => $this->extractIban($text),
+            'account_number' => null,
+            'bank_code' => null,
             'currency' => $this->extractCurrency($normalized),
         ];
+
+        $domestic = $this->extractDomesticAccount($normalized);
+
+        if ($domestic !== null) {
+            [$suggestions['account_number'], $suggestions['bank_code']] = $domestic;
+        }
 
         /** @var array<string, string|float> */
         return array_filter($suggestions, fn (string|float|null $value): bool => $value !== null);
@@ -114,7 +122,7 @@ final class SupplierInvoiceParser
 
     private function extractVariableSymbol(string $text): ?string
     {
-        if (preg_match('/(?:variabiln[ýy]\s*symbol|VS)\s*[:\s]\s*(\d{1,10})/ui', $text, $m) === 1) {
+        if (preg_match('/(?:variabiln[ýyí]\s*symbol|VS)\s*[:\s]\s*(\d{1,10})/ui', $text, $m) === 1) {
             return $m[1];
         }
 
@@ -123,8 +131,63 @@ final class SupplierInvoiceParser
 
     private function extractIban(string $text): ?string
     {
-        if (preg_match('/\b([A-Z]{2}\d{2}(?:[ ]?[0-9A-Z]{4}){2,7})\b/', $text, $m) === 1) {
-            return str_replace(' ', '', $m[1]);
+        if (preg_match_all('/\b([A-Z]{2}\d{2}(?:[ ]?[0-9A-Z]{4}){2,7}(?:[ ]?[0-9A-Z]{1,4})?)\b/', $text, $m) > 0) {
+            foreach ($m[1] as $candidate) {
+                $iban = str_replace(' ', '', $candidate);
+
+                if ($this->isValidIban($iban)) {
+                    return $iban;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ISO 13616 mod-97 check — OCR text is full of IBAN-shaped noise, so
+     * only checksum-valid candidates are suggested.
+     */
+    private function isValidIban(string $iban): bool
+    {
+        if (preg_match('/^[A-Z]{2}\d{2}[0-9A-Z]{11,30}$/', $iban) !== 1) {
+            return false;
+        }
+
+        $rearranged = substr($iban, 4).substr($iban, 0, 4);
+        $numeric = '';
+
+        foreach (str_split($rearranged) as $char) {
+            $numeric .= ctype_alpha($char) ? (string) (ord($char) - 55) : $char;
+        }
+
+        // bcmath-free mod 97 over the digit string, chunk by chunk.
+        $remainder = 0;
+
+        foreach (str_split($numeric, 7) as $chunk) {
+            $remainder = ((int) ($remainder.$chunk)) % 97;
+        }
+
+        return $remainder === 1;
+    }
+
+    /**
+     * Domestic CZ/SK account format `[prefix-]number/bankCode`. A label is
+     * required — an unanchored match would happily pick up document numbers
+     * like `2026/0090`.
+     *
+     * @return array{0: string, 1: string}|null [account_number, bank_code]
+     */
+    private function extractDomesticAccount(string $text): ?array
+    {
+        $labels = [
+            'číslo účtu', 'cislo uctu', 'č. účtu', 'c. uctu', 'č.ú.', 'c.u.',
+            'účet', 'ucet', 'bankovní spojení', 'bankovni spojeni', 'bankové spojenie', 'bankove spojenie',
+        ];
+        $labelPattern = implode('|', array_map(fn (string $l): string => preg_quote($l, '/'), $labels));
+
+        if (preg_match('/(?:'.$labelPattern.')\s*[:\s]\s*((?:\d{1,6}-)?\d{2,10})\/(\d{4})\b/ui', $text, $m) === 1) {
+            return [$m[1], $m[2]];
         }
 
         return null;

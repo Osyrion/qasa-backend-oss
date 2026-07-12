@@ -105,6 +105,13 @@
         </tr>
     </table>
 
+    @if($vm->vatNote || $vm->reverseChargeClause)
+        <div class="note">
+            @if($vm->vatNote){{ $vm->vatNote }}<br>@endif
+            @if($vm->reverseChargeClause){{ $vm->reverseChargeClause }}@endif
+        </div>
+    @endif
+
     {{-- Parties --}}
     <table class="parties">
         <tr>
@@ -168,7 +175,7 @@
                         <td class="meta-label">{{ __('invoices::pdf.issued_at') }}</td>
                         <td class="meta-value right">{{ $invoice->issued_at?->format('d.m.Y') }}</td>
                     </tr>
-                    @if($vm->isTaxDocument && $invoice->taxable_supply_at)
+                    @if($vm->showTaxableSupplyDate && $invoice->taxable_supply_at)
                         <tr>
                             <td class="meta-label">{{ __('invoices::pdf.taxable_supply_at') }}</td>
                             <td class="meta-value right">{{ $invoice->taxable_supply_at->format('d.m.Y') }}</td>
@@ -197,7 +204,9 @@
             <th class="right" style="width:12%">{{ __('invoices::pdf.quantity') }}</th>
             <th style="width:9%">{{ __('invoices::pdf.unit') }}</th>
             <th class="right" style="width:13%">{{ __('invoices::pdf.unit_price') }}</th>
-            <th class="right" style="width:8%">{{ __('invoices::pdf.vat') }} %</th>
+            @if($vm->showVatColumns)
+                <th class="right" style="width:8%">{{ __('invoices::pdf.vat') }} %</th>
+            @endif
             <th class="right" style="width:14%">{{ __('invoices::pdf.total') }}</th>
         </tr>
         </thead>
@@ -208,13 +217,15 @@
                 <td class="right">{{ $fmt($item->quantity) }}</td>
                 <td>{{ $item->unit }}</td>
                 <td class="right">{{ $fmt($item->unit_price) }}</td>
-                <td class="right">{{ (float) $item->vat_rate > 0 ? number_format((float) $item->vat_rate, 0).'%' : '—' }}</td>
+                @if($vm->showVatColumns)
+                    <td class="right">{{ (float) $item->vat_rate > 0 ? number_format((float) $item->vat_rate, 0).'%' : '—' }}</td>
+                @endif
                 <td class="right">{{ $fmt($item->total_incl_vat) }}</td>
             </tr>
         @endforeach
         @if($vm->hasWorkReport())
             <tr>
-                <td colspan="6">
+                <td colspan="{{ $vm->showVatColumns ? 6 : 5 }}">
                     <a class="work-report-link" href="#work-report">{{ __('invoices::pdf.work_report') }}</a>
                 </td>
             </tr>
@@ -226,7 +237,7 @@
     <table class="summary">
         <tr>
             <td style="width:52%">
-                @if($vm->vatRecap !== [])
+                @if($vm->showVatRecap && $vm->vatRecap !== [])
                     <div class="recap-title">{{ __('invoices::pdf.vat_recap') }}</div>
                     <table class="recap">
                         <tr>
@@ -246,7 +257,7 @@
                     </table>
                 @endif
 
-                @if($vm->czkRecap !== null)
+                @if($vm->showVatRecap && $vm->czkRecap !== null)
                     <div class="czk-box">
                         <div class="recap-title">{{ __('invoices::pdf.czk_conversion') }} ({{ __('invoices::pdf.exchange_rate') }}: {{ number_format((float) $vm->exchangeRate, 3, ',', ' ') }} CZK/{{ $currency->value }})</div>
                         <table class="recap">
@@ -281,14 +292,14 @@
                             <td class="right">-{{ $fmt($invoice->discount_amount) }} {{ $currency->symbol() }}</td>
                         </tr>
                     @endif
-                    @if((float) $invoice->vat_amount != 0.0)
+                    @if($vm->showVatColumns && (float) $invoice->vat_amount != 0.0)
                         <tr>
                             <td>{{ __('invoices::pdf.vat') }}</td>
                             <td class="right">{{ $fmt($invoice->vat_amount) }} {{ $currency->symbol() }}</td>
                         </tr>
                     @endif
                     <tr class="grand">
-                        <td>{{ __('invoices::pdf.total_due') }}</td>
+                        <td>{{ $vm->totalLabel }}</td>
                         <td class="right">{{ $fmt($invoice->total) }} {{ $currency->symbol() }}</td>
                     </tr>
                 </table>

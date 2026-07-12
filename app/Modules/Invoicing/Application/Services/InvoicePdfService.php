@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Services\CountryTaxLabelMap;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
+use App\Modules\Shared\Enums\VatStatus;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
@@ -54,18 +55,40 @@ class InvoicePdfService
         $bank = $invoice->bank_account_snapshot ?? $invoice->bankAccount?->toSnapshot();
 
         $type = $invoice->type ?? InvoiceType::Invoice;
+        $supplierStatus = $this->partyVatStatus($supplier);
+        $reverseCharge = (bool) $invoice->reverse_charge;
+
+        // A reverse-charged invoice is always a full tax document (with
+        // DUZP); otherwise only a full VAT payer's invoice is — an
+        // identified person's domestic supply and a non-payer's invoice
+        // print the same plain "not a tax document" heading as each other.
+        $isTaxDocumentHeading = $reverseCharge || $supplierStatus->canChargeVat();
+        $showVatColumns = $supplierStatus->canChargeVat() && ! $reverseCharge;
 
         $czkRecap = $type->isTaxDocument()
             ? $this->recapCalculator->czkRecap($invoice)
             : null;
 
+        $titleText = $type === InvoiceType::Invoice
+            ? (string) __('invoices::pdf.'.($isTaxDocumentHeading ? 'title_tax_document' : 'title_invoice'))
+            : $type->label();
+
         return new InvoicePdfViewModel(
             invoice: $invoice,
-            documentTitle: $type->label().' '.$invoice->invoice_number,
+            documentTitle: $titleText.' '.$invoice->invoice_number,
             isTaxDocument: $type->isTaxDocument(),
             relatedInvoiceNumber: $invoice->relatedInvoice?->invoice_number,
             supplier: $supplier,
             supplierTaxLines: $this->taxLines($supplier),
+            supplierVatStatus: $supplierStatus,
+            showVatColumns: $showVatColumns,
+            showVatRecap: $showVatColumns,
+            showTaxableSupplyDate: $type->isTaxDocument() && $isTaxDocumentHeading,
+            vatNote: $isTaxDocumentHeading ? null : (string) __('invoices::pdf.not_vat_payer'),
+            reverseChargeClause: $invoice->reverse_charge_mode !== null
+                ? (string) __('invoices::pdf.'.$invoice->reverse_charge_mode->clauseKey((string) ($supplier['country'] ?? '')))
+                : null,
+            totalLabel: (string) __('invoices::pdf.'.($reverseCharge ? 'total_excl_vat' : 'total_due')),
             logoDataUri: $this->logoDataUri($supplier['logo_path'] ?? null),
             client: $client,
             clientTaxLines: $this->taxLines($client),
@@ -109,6 +132,7 @@ class InvoicePdfService
             'dic' => $user->dic,
             'vat_id' => $user->vat_id,
             'is_vat_payer' => $user->is_vat_payer,
+            'vat_status' => $user->vat_status->value,
             'address' => $user->address,
             'city' => $user->city,
             'postal_code' => $user->postal_code,
@@ -165,7 +189,7 @@ class InvoicePdfService
 
         $labels = CountryTaxLabelMap::labelsFor(
             (string) ($party['country'] ?? ''),
-            (bool) ($party['is_vat_payer'] ?? false),
+            $this->partyVatStatus($party),
         );
 
         $lines = [];
@@ -179,6 +203,23 @@ class InvoicePdfService
         }
 
         return $lines;
+    }
+
+    /**
+     * Resolves a supplier/client's VAT status from its snapshot or live
+     * record. Snapshots frozen before vat_status existed only carry the
+     * legacy is_vat_payer boolean, so they're derived from it — this keeps
+     * old issued invoices rendering exactly as they did at issue time.
+     *
+     * @param  array<string, mixed>  $party
+     */
+    private function partyVatStatus(array $party): VatStatus
+    {
+        if (isset($party['vat_status'])) {
+            return VatStatus::from((string) $party['vat_status']);
+        }
+
+        return VatStatus::fromLegacyBool((bool) ($party['is_vat_payer'] ?? false));
     }
 
     private function logoDataUri(?string $logoPath): ?string

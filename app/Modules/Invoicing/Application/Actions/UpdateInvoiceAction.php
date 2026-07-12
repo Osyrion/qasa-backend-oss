@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Services\InvoiceVatRegimeResolver;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -15,6 +17,7 @@ readonly class UpdateInvoiceAction
 {
     public function __construct(
         private InvoiceRepositoryInterface $repository,
+        private InvoiceVatRegimeResolver $regimeResolver,
     ) {}
 
     /**
@@ -31,6 +34,18 @@ readonly class UpdateInvoiceAction
         }
 
         return DB::transaction(function () use ($invoice, $data): Invoice {
+            $user = $invoice->user;
+            assert($user !== null);
+            $owner = $user->accountOwner();
+            $client = Client::forUser($owner->id)->findOrFail($data->client_id);
+
+            $decision = $this->regimeResolver->resolve(
+                $owner->vat_status,
+                $owner->country,
+                $client,
+                $data->reverse_charge,
+            );
+
             $updated = $this->repository->update($invoice, [
                 'client_id' => $data->client_id,
                 'issued_at' => $data->issued_at,
@@ -40,11 +55,19 @@ readonly class UpdateInvoiceAction
                 'bank_account_id' => $data->bank_account_id,
                 'currency' => $data->currency->value,
                 'discount_percent' => $data->discount_percent,
+                'reverse_charge' => $decision->reverseCharge,
+                'reverse_charge_mode' => $decision->mode?->value,
                 'note' => $data->note,
                 'note_above' => $data->note_above,
             ]);
 
-            $updated->refresh()->recalculateTotals()->save();
+            $updated->refresh();
+
+            if ($decision->reverseCharge) {
+                $updated->normalizeItemsForReverseCharge();
+            }
+
+            $updated->recalculateTotals()->save();
 
             return $updated;
         });

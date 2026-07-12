@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Application\Actions;
 
+use App\Modules\Auth\Application\Results\LoginResult;
+use App\Modules\Auth\Application\Services\TwoFactorChallengeStore;
 use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Enums\Currency;
@@ -14,10 +16,14 @@ use Throwable;
 
 class LoginWithGoogleAction
 {
+    public function __construct(
+        private readonly TwoFactorChallengeStore $challengeStore,
+    ) {}
+
     /**
      * @throws Throwable
      */
-    public function execute(SocialiteUser $googleUser, ?string $deviceName = null): string
+    public function execute(SocialiteUser $googleUser, ?string $deviceName = null): LoginResult
     {
         $user = DB::transaction(function () use ($googleUser): User {
             /** @var class-string<User> $model */
@@ -69,18 +75,23 @@ class LoginWithGoogleAction
             return $user;
         });
 
+        if ($user->hasTwoFactorEnabled()) {
+            return LoginResult::twoFactorChallenge($this->challengeStore->issue($user));
+        }
+
         $deviceName = $deviceName ?? 'google-oauth';
         $user->tokens()->where('name', $deviceName)->delete();
 
-        return $user->createToken($deviceName)->plainTextToken;
+        return LoginResult::success($user->createToken($deviceName)->plainTextToken, $user);
     }
 
-    private function parseName(string $fullName): array
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function parseName(?string $fullName): array
     {
-        $parts = explode(' ', trim($fullName), 2);
-        $name = $parts[0] ?? '';
-        $surname = $parts[1] ?? '';
+        $parts = explode(' ', trim((string) $fullName), 2);
 
-        return [$name, $surname];
+        return [$parts[0], $parts[1] ?? ''];
     }
 }
