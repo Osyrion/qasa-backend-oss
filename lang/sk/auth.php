@@ -14,4 +14,7 @@ return [
     'password_reset_success' => 'Heslo bolo úspešne zmenené.',
     'logout_success' => 'Odhlásenie úspešné.',
     'legacy_vat_payer_conflicts_with_identified' => 'Tento účet je vedený ako identifikovaná osoba; na zmenu daňového statusu použite pole "vat_status" namiesto zastaraného príznaku "is_vat_payer".',
+    'export_owner_only' => 'Túto akciu môže vykonať len vlastník účtu.',
+    'invalid_password' => 'Nesprávne heslo.',
+    'invalid_delete_confirmation' => 'Pre zmazanie účtu prihláseného cez Google napíšte "DELETE".',
 ];

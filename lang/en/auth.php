@@ -14,4 +14,7 @@ return [
     'password_reset_success' => 'Password changed successfully.',
     'logout_success' => 'Logout successful.',
     'legacy_vat_payer_conflicts_with_identified' => 'This account is registered as an identified person; use "vat_status" to change its VAT status instead of the legacy "is_vat_payer" flag.',
+    'export_owner_only' => 'Only the account owner can perform this action.',
+    'invalid_password' => 'Incorrect password.',
+    'invalid_delete_confirmation' => 'Type "DELETE" to confirm deleting a Google-only account.',
 ];

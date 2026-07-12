@@ -12,14 +12,14 @@
 4. [Multi-tenancy: ako sú oddelené dáta jednotlivých účtov](#4-multi-tenancy-ako-sú-oddelené-dáta-jednotlivých-účtov)
 5. [Role a oprávnenia](#5-role-a-oprávnenia)
 6. [Modul Auth — registrácia, prihlásenie, profil](#6-modul-auth--registrácia-prihlásenie-profil)
-7. [Modul Team — tímy a pozvánky](#7-modul-team--tímy-a-pozvánky)
-8. [Modul Admin — administrátorský back-office](#8-modul-admin--administrátorský-back-office)
-9. [Modul Clients — klienti a kontaktné osoby](#9-modul-clients--klienti-a-kontaktné-osoby)
-10. [Modul Orders — zákazky](#10-modul-orders--zákazky)
-11. [Modul Pricing — sadzby a cenníky](#11-modul-pricing--sadzby-a-cenníky)
-12. [Modul TimeTracking — časové výkazy a výdavky](#12-modul-timetracking--časové-výkazy-a-výdavky)
-13. [Modul Invoicing — fakturácia](#13-modul-invoicing--fakturácia)
-14. [Moduly Subscriptions a Saas — predplatné a edícia](#14-moduly-subscriptions-a-saas--predplatné-a-edícia)
+7. [SaaS nadstavba — Team, Admin, Subscriptions, Saas](#7-saas-nadstavba--team-admin-subscriptions-saas)
+8. [Modul Clients — klienti a kontaktné osoby](#8-modul-clients--klienti-a-kontaktné-osoby)
+9. [Modul Orders — zákazky](#9-modul-orders--zákazky)
+10. [Modul Pricing — sadzby a cenníky](#10-modul-pricing--sadzby-a-cenníky)
+11. [Modul TimeTracking — časové výkazy a výdavky](#11-modul-timetracking--časové-výkazy-a-výdavky)
+12. [Modul Calendar — udalosti, import/export, retencia](#12-modul-calendar--udalosti-importexport-retencia)
+13. [Modul Invoicing — fakturácia, DPH, prijaté faktúry](#13-modul-invoicing--fakturácia-dph-prijaté-faktúry)
+14. [Štatistiky](#14-štatistiky)
 15. [Kompletný flow: od zákazky po zaplatenú faktúru](#15-kompletný-flow-od-zákazky-po-zaplatenú-faktúru)
 16. [Bezpečnosť a spoločné konvencie](#16-bezpečnosť-a-spoločné-konvencie)
 17. [Známe medzery / rozpracované časti](#17-známe-medzery--rozpracované-časti)
@@ -34,20 +34,25 @@ ale s dôrazom na sledovanie zákaziek a času). Postavený je na:
 | Oblasť | Technológia |
 |---|---|
 | Jazyk / framework | PHP ^8.4, Laravel ^13.0 (`declare(strict_types=1)` povinné vo všetkých súboroch) |
-| Databáza | PostgreSQL/MySQL cez Eloquent ORM |
+| Databáza | PostgreSQL cez Eloquent ORM |
 | Autentifikácia (API) | Laravel Sanctum (token-based, nie session cookies) |
 | Sociálne prihlásenie | Laravel Socialite (Google) |
-| Platby / predplatné | Laravel Cashier (Stripe) |
-| Role a oprávnenia | Spatie Laravel Permission |
+| Platby / predplatné | Laravel Cashier (Stripe) — **len SaaS repo** (`qasa_saas`), nie je v `composer.json` tohto repozitára |
+| Role a oprávnenia | Spatie Laravel Permission — **len SaaS repo**; OSS jadro schvaľuje všetko cez `Gate::before` (kapitola 3) |
 | DTO / validácia | Spatie Laravel Data |
 | Query building | Spatie Laravel Query Builder |
 | PDF | barryvdh/laravel-dompdf |
 | QR platby | chillerlan/php-qrcode |
 | CSV import | league/csv |
+| ICS (kalendár) | sabre/vobject |
+| Extrakcia textu z PDF (scan inbox) | smalot/pdfparser |
+| OCR obrázkov (scan inbox) | thiagoalessio/tesseract_ocr |
 | Testy | Pest PHP ^3.0 / PHPUnit ^11.3 |
-| Statická analýza | PHPStan ^2.0, Psalm ^6.0, Laravel Pint ^1.27 |
+| Statická analýza | PHPStan ^2.1 cez Larastan ^3.9 (level 8), Laravel Pint ^1.27. **Psalm sa nepoužíva.** |
 | API dokumentácia | L5-Swagger (OpenAPI) |
 | MCP server | `laravel/mcp` (`Mcp::local('qasa', QasaServer::class)`) |
+
+Zoznam dependencies pravidelne kontroluj proti `composer.json` — je jediný zdroj pravdy.
 
 ---
 
@@ -63,19 +68,21 @@ app/Modules/{Modul}/
 └── Presentation/    # Controllery, FormRequesty, API resources, route súbory
 ```
 
-Existujúce moduly:
+Existujúce moduly v tomto repozitári (`app/Modules/*`) — jadro/OSS edícia:
 
 - **Auth** — používatelia, prihlásenie, registrácia, profil
-- **Team** — tímy, pozvánky, delegovanie rolí (len SaaS)
-- **Admin** — back-office pre prevádzkovateľa platformy
-- **Clients** — klienti (zákazníci) a ich kontaktné osoby
+- **Clients** — klienti (zákazníci aj dodávatelia) a ich kontaktné osoby
 - **Orders** — zákazky (projekty/kontrakty)
 - **Pricing** — sadzby a cenníky služieb/produktov
-- **TimeTracking** — časové záznamy, výdavky, kurzové lístky
-- **Invoicing** — faktúry, platby, PDF, opakovaná fakturácia
-- **Subscriptions** — dátový model predplatných plánov (Stripe/Cashier)
-- **Saas** — "lepidlo" pre SaaS edíciu (nie je to biznis modul)
+- **TimeTracking** — časové záznamy (vrátane API pre CRUD/timer/CSV import), výdavky (s prílohou
+  dokladu), kurzové lístky
+- **Calendar** — udalosti, CSV/ICS import a export, retenčné mazanie
+- **Invoicing** — faktúry, DPH (vrátane reverse charge), prijaté faktúry a scan inbox, platby,
+  PDF, opakovaná fakturácia, cenové ponuky, štatistiky
 - **Shared** — spoločné traits, enumy, politiky, výnimky
+
+Moduly **Team, Admin, Subscriptions a Saas** v tomto repozitári **nie sú** — sú súčasťou
+uzavretého multi-tenant nadstavbového repozitára `qasa_saas` (kapitola 7).
 
 Každý modul má vlastný `*ServiceProvider` (`app/Modules/{Modul}/Infrastructure/Providers/`),
 ktorý registruje routy, bindingy rozhraní a middleware. Laravel ich nenačítava automaticky cez
@@ -134,33 +141,19 @@ pozri kapitolu 16).
 
 ## 5. Role a oprávnenia
 
-Role a oprávnenia (Spatie Permission) sa reálne používajú **len v SaaS edícii** — v OSS
-edícii ich obchádza `Gate::before` (kapitola 3).
+V **tomto repozitári (OSS jadro)** neexistuje žiadna tabuľka rolí ani Spatie Permission
+balík — `AuthServiceProvider::boot()` použije `Gate::before(...)`, ktorý automaticky schváli
+každú schopnosť z `App\Modules\Shared\Authorization\AbilityCatalog`
+(`clients.view/manage`, `orders.view/manage`, `timetracking.view/manage`,
+`invoices.view/manage`, `pricing.view/manage`, `reports.view`, `calendar.view/manage`) pre
+každého prihláseného používateľa. Policy triedy (`ClientPolicy`, `OrderPolicy`,
+`TimeEntryPolicy`, ...) teda v OSS edícii vždy kontrolujú len
+`sameAccount()` (kapitola 4) — samotné volanie `$user->can(...)` v OSS prejde vždy.
 
-**Role tímu** — `App\Modules\Team\Domain\Enums\TeamRole`: `Owner`, `Admin`, `Member`, `Viewer`,
-s metódou `canGrant()` implementujúcou pravidlo "môžem udeliť len rovnakú alebo nižšiu rolu,
-akú mám sám".
-
-Jediný zdroj pravdy pre matricu rolí je `App\Modules\Team\Domain\PermissionCatalog`:
-
-| Oprávnenie | Owner | Admin | Member | Viewer |
-|---|:---:|:---:|:---:|:---:|
-| `clients.view` / `orders.view` / `timetracking.view` / `invoices.view` / `pricing.view` / `reports.view` | ✅ | ✅ | ✅ | ✅ |
-| `clients.manage` / `orders.manage` / `timetracking.manage` | ✅ | ✅ | ✅ | ❌ |
-| `invoices.manage` / `pricing.manage` / `team.manage` | ✅ | ✅ | ❌ | ❌ |
-| `team.view` | ✅ | ✅ | ✅ | ✅ |
-| `billing.manage` | ✅ | ❌ | ❌ | ❌ |
-
-Samostatný guard `admin` (back-office) má vlastnú sadu oprávnení
-(`admin.users.view/manage`, `admin.activity.view`, `admin.billing.manage`,
-`admin.support.manage`) — v kóde sa však reálne kontroluje jednoduchšie pole
-`AdminUser.role` (`super_admin | support | billing`), nie Spatie permissions
-(pozri kapitolu 8).
-
-Role a oprávnenia zakladá `RolePermissionSeeder` (idempotentný, `findOrCreate`/`syncPermissions`),
-ktorý sa spúšťa cez `DatabaseSeeder` na základe zoznamu v `config('qasa.seeders')` — čisté
-jadro (OSS) neseeduje nič. `AdminUserSeeder` sa **nespúšťa automaticky** a vyžaduje env
-premennú `ADMIN_SEED_PASSWORD`.
+Skutočná matica rolí (`Owner/Admin/Member/Viewer`), tímové pozvánky, Spatie Permission a
+samostatný `admin` guard s back-office rolami (`super_admin | support | billing`) sú
+implementované **len v `qasa_saas`** — pozri kapitolu 7. V tomto repozitári preto niet
+tried ako `TeamRole`, `PermissionCatalog`, `AdminUser` ani `RolePermissionSeeder`.
 
 ---
 
@@ -192,6 +185,14 @@ Tieto dva guardy sa **nikdy nesmú miešať** — nemajú spoločné oprávnenia
 | PUT | `/profile` | úprava profilu | `auth:sanctum` |
 | POST | `/profile/logo` | upload loga (na faktúry) | `auth:sanctum` |
 | POST | `/email/verification-notification` | opätovné odoslanie overovacieho e-mailu | `auth:sanctum`, `throttle:6,1` |
+| GET | `/api/v1/profile/export` | GDPR export všetkých dát účtu ako JSON (`AccountExportService`) | `auth:sanctum` |
+| DELETE | `/api/v1/profile` | GDPR zmazanie účtu (soft-delete, zneplatnenie tokenov) | `auth:sanctum` |
+
+Export a zmazanie účtu sú zámerne **len vlastníkove** (`accountOwnerId() === id`, inak 403
+`auth.export_owner_only`) — v tomto jadre je to vždy pravda, hák slúži pre SaaS tímových
+členov. Zmazanie vyžaduje heslo (účty s heslom) alebo reťazec `confirmation: "DELETE"`
+(Google-only účty); dáta v DB pri zmazaní **ostávajú** (vystavené faktúry majú zákonnú
+retenciu) — ide o vedomé minimum, nie plný purge/anonymizáciu (kapitola 17).
 
 Rovnaký route súbor (`auth.php`) registruje aj `GET /api/v1/dashboard`
 (`DashboardController` → `DashboardService`, middleware `auth:sanctum`) — agregované
@@ -227,81 +228,32 @@ expenses, exchangeRates, invoices`.
 5. **Overenie e-mailu**: podpísaný (`signed`) link — nevyžaduje prihlásenie, dôkazom je HMAC
    podpis; kontrola prebieha manuálnym `hash_equals()` porovnaním hashu.
 
-> 2FA nie je pre bežných používateľov implementované. Stĺpce pre 2FA existujú na `AdminUser`,
-> ale nie sú zapojené (pozri kapitolu 17).
+> 2FA nie je implementované — ani stĺpce, ani žiadna akcia (pozri kapitolu 17).
 
 ---
 
-## 7. Modul Team — tímy a pozvánky
+## 7. SaaS nadstavba — Team, Admin, Subscriptions, Saas
 
-*(Platí len pre SaaS edíciu.)*
+Moduly **Team** (tímy a pozvánky), **Admin** (administrátorský back-office s vlastným
+`AdminUser` modelom a `admin` guardom), **Subscriptions** (dátový model predplatných plánov,
+Stripe/Cashier) a **Saas** ("lepidlo" edície — migrácie `owner_id`, seedery rolí) **žijú
+v uzavretom repozitári `qasa_saas`**, nie v tomto jadre. Tento repozitár (`qasa_core`) nesie
+len to, čo jadro potrebuje na zámenu (kapitola 3):
 
-### Endpointy (`api/v1/team/*`)
+- **Multi-tenancy hák**: `Saas\Domain\Models\User extends CoreUser`, `accountOwnerId()`
+  vracia `owner_id ?? id` (kapitola 4).
+- **Role a oprávnenia**: `Gate::before` v OSS jadre schvaľuje všetko z `AbilityCatalog`;
+  Spatie Permission a matica rolí (`Owner/Admin/Member/Viewer`) sa reálne aplikujú až v SaaS
+  repozitári (kapitola 5).
+- **Guard `admin`**: úplne oddelený autentifikačný vesmír od bežného `sanctum` guardu —
+  iná tabuľka (`admin_users`), žiadne prekrývanie oprávnení; implementácia je v SaaS repu.
 
-| Metóda | URI | Účel | Oprávnenie |
-|---|---|---|---|
-| POST | `/invitations/accept` | prijatie pozvánky (verejné, token = dôkaz totožnosti) | — |
-| GET | `/members` | zoznam členov tímu | `team.view` |
-| GET | `/invitations` | zoznam čakajúcich pozvánok | `team.view` |
-| GET | `/catalog` | katalóg rolí/oprávnení, ktoré môže aktuálny používateľ udeliť | len `auth:sanctum` |
-| PUT | `/members/{member}` | zmena role/oprávnení člena | `team.manage` |
-| DELETE | `/members/{member}` | odobratie člena | `team.manage` |
-| POST | `/invitations` | vytvorenie pozvánky | `team.manage` |
-| DELETE | `/invitations/{invitation}` | zrušenie pozvánky | `team.manage` |
-
-### Dátový model `TeamInvitation`
-
-`owner_id, email, role (TeamRole), permissions (json), token` (uložený ako sha256 hash),
-`expires_at, accepted_at, created_by`.
-
-### Krok za krokom
-
-1. **Pozvanie** (`InviteMemberAction`): overí, že pozývajúci môže udeliť danú rolu/oprávnenia
-   (`canGrant` + kontrola podmnožiny oprávnení), odmietne duplicitné pozvanie na existujúci
-   e-mail alebo už čakajúcu pozvánku, **skontroluje limit miest** podľa predplatného plánu
-   (`plan->withinLimit('max_users', seats)`), vygeneruje 64-znakový token (uloží sa hashovaný),
-   odošle e-mail (`InvitationNotification`), platnosť pozvánky 7 dní.
-2. **Prijatie** (`AcceptInvitationAction`): overí token (hash) + platnosť, vytvorí člena
-   (`User` s `owner_id`), skopíruje predvolené hodnoty vlastníka (mena, jazyk, krajina,
-   prefix faktúr), pridelí rolu/oprávnenia, označí pozvánku ako prijatú, vydá Sanctum token
-   (automatické prihlásenie hneď po prijatí pozvánky).
-3. **Zmena role / odobratie** (`UpdateMemberRoleAction`/`RemoveMemberAction`): vždy sa overuje
-   príslušnosť k rovnakému účtu a pravidlo "rovnaká alebo nižšia rola"; vlastníka ani seba
-   samého nemožno odobrať; pri odobratí sa zmažú tokeny a role/oprávnenia člena.
+V tomto repozitári teda **nie je** žiadny `TeamController`, `AdminController`,
+`SubscriptionController`, checkout endpoint ani Stripe webhook — hľadaj ich v `qasa_saas`.
 
 ---
 
-## 8. Modul Admin — administrátorský back-office
-
-Samostatný svet od bežných používateľov — vlastný model `AdminUser` (nie je súčasťou
-tabuľky `users`), vlastný guard `admin`.
-
-### Dátové modely
-
-- **`AdminUser`**: `name, email, password, role` (`super_admin | support | billing` — jednoduchý
-  reťazec, nie enum), `is_active, last_login_at, last_login_ip, login_count`, stĺpce pre 2FA
-  (nevyužité), `timezone, locale, notes, created_by`.
-- **`ActivityLog`**: univerzálny audit log (`admin_user_id, action, subject_type, subject_id,
-  payload, description, ip_address, user_agent, url, country, city, result` — `success/failure/error`).
-  Statické helpery `record()/recordSuccess()/recordFailure()/recordError()` automaticky
-  zachytávajú prihláseného admina a metadáta requestu.
-
-### Endpointy (`api/v1/admin/*`)
-
-| Metóda | URI | Účel | Middleware |
-|---|---|---|---|
-| POST | `/auth/login` | prihlásenie admina | `throttle:10,1` |
-| POST | `/auth/logout` | odhlásenie | `admin.access` |
-| GET | `/auth/me` | profil admina | `admin.access` |
-| GET/POST/PUT/DELETE | `/users[/…]` | správa admin účtov | `admin.access` + `admin.role:super_admin` |
-| POST | `/users/{user}/ban`, `/unban` | zablokovanie/odblokovanie | `admin.access` + `admin.role:super_admin` |
-
-Správu admin účtov môže robiť **len `super_admin`** — role `support`/`billing` zatiaľ nemajú
-žiadne vlastné endpointy okrem prihlásenia. Každá mutácia sa zaznamenáva do `ActivityLog`.
-
----
-
-## 9. Modul Clients — klienti a kontaktné osoby
+## 8. Modul Clients — klienti a kontaktné osoby
 
 ### Endpointy (`api/v1/clients/*`)
 
@@ -373,7 +325,7 @@ Autorizácia (`ClientPolicy`): rovnaký vzorec ako všade — `sameAccount()` + 
 
 ---
 
-## 10. Modul Orders — zákazky
+## 9. Modul Orders — zákazky
 
 "Zákazka" (job/projekt/kontrakt) je kontajner, na ktorý sa naväzujú časové záznamy, poznámky,
 prílohy a položky — a z ktorej neskôr vzniká faktúra.
@@ -404,7 +356,7 @@ Plný REST pre `orders`, plus vnorené (`scopeBindings`) pod `orders/{order}`:
 
 ---
 
-## 11. Modul Pricing — sadzby a cenníky
+## 10. Modul Pricing — sadzby a cenníky
 
 Rieši, akou sadzbou sa má oceniť konkrétny odpracovaný čas alebo položka. Konzumujú ho
 moduly Orders aj Invoicing.
@@ -437,7 +389,7 @@ prácu** — každý časový záznam sa ocení sadzbou platnou v deň, kedy bol
 
 ---
 
-## 12. Modul TimeTracking — časové výkazy a výdavky
+## 11. Modul TimeTracking — časové výkazy a výdavky
 
 ### Endpointy
 
@@ -447,7 +399,12 @@ všetky pod prefixom `api/v1` a middleware `auth:sanctum`:
 | Metóda | URI | Účel |
 |---|---|---|
 | POST | `/time-entries/sync/clockify` | synchronizácia časových záznamov z Clockify |
+| POST | `/time-entries/import/csv` | import časových záznamov z Toggl/Clockify CSV exportu |
+| POST | `/time-entries/start` | spustenie časovača (jeden bežiaci na účet) |
+| POST | `/time-entries/{time_entry}/stop` | zastavenie bežiaceho časovača |
+| — | `/time-entries` (`apiResource`) | plný REST nad časovými záznamami (`TimeEntryController`) |
 | — | `/expenses` (`apiResource`) | plný REST nad výdavkami (`ExpenseController`) |
+| POST/GET/DELETE | `/expenses/{expense}/attachment` | doklad k výdavku (fotka bločku/PDF) — upload/download/zmazanie |
 | GET/POST/DELETE | `/exchange-rates` | kurzové lístky (`ExchangeRateController`, len `index`/`store`/`destroy`) |
 
 ### Dátové modely
@@ -455,24 +412,74 @@ všetky pod prefixom `api/v1` a middleware `auth:sanctum`:
 - **`TimeEntry`**: `user_id, order_id, order_item_id, description, started_at, ended_at`
   (`null` = beží časovač), `duration_seconds, rate_override, vat_rate, is_billable,
   is_invoiced, source, external_id` (deduplikačný kľúč pre Clockify/Toggl sync). Metóda
-  `stop()` dopočíta `ended_at`/`duration_seconds`.
+  `stop()` dopočíta `ended_at`/`duration_seconds`. `is_invoiced`, `source` a `external_id`
+  sa z requestu nikdy nepreberajú (mass-assignment ochrana fakturačného stavu); záznam s
+  `is_invoiced = true` sa nedá upraviť ani zmazať (`time_tracking.entry_already_invoiced`).
 - **`Expense`**: `description, category` (`office|travel|software|hardware|marketing|other`),
-  `amount, currency, date, note`.
+  `amount, currency, date, note`, plus voliteľná príloha dokladu: `attachment_disk,
+  attachment_path, attachment_filename, attachment_mime_type, attachment_size_bytes`
+  (`hasAttachment()`). Príloha sa pri soft-delete výdavku **ponecháva** na disku (restore
+  musí mať doklad k dispozícii); mime allowlist `image/jpeg|png|webp`, `application/pdf`,
+  limit 20 MB.
 - **`ExchangeRate`**: `user_id` (nullable = systémový kurz), `base_currency, target_currency,
   rate, date, source`.
 
 ### Integrácie
 
-`ClockifyApiClient` + CSV parsery (`ClockifyCsvParser`, `TogglCsvParser`) pre import časových
-záznamov. `CnbApiRateClient` (Česká národná banka) poskytuje výmenné kurzy — používa ho
-tento modul aj `IssueInvoiceAction` v module Invoicing pri "zmrazení" kurzu na faktúre
-v cudzej mene.
+`ClockifyApiClient` + CSV parsery (`ClockifyCsvParser`, `TogglCsvParser`, zdieľané
+`ImportCsvAction`) pre import časových záznamov — CSV import aj Clockify sync viažu celý
+import na jednu zákazku (`order_id`). `CnbApiRateClient` (Česká národná banka) poskytuje
+výmenné kurzy — používa ho tento modul aj `IssueInvoiceAction` v module Invoicing pri
+"zmrazení" kurzu na faktúre v cudzej mene.
 
 ### Väzba na Orders/Invoicing
 
-Časový záznam patrí k zákazke (`order_id`). Záznamy, ktoré sú `is_billable = true` a
-`is_invoiced = false`, sú presne tie, ktoré `GenerateInvoiceFromOrderAction` pri fakturácii
-vezme a po vyfakturovaní označí `is_invoiced = true`, aby sa nedali vyfakturovať dvakrát.
+Časový záznam patrí k zákazke (`order_id`), voliteľne aj k položke zákazky (`order_item_id`
+— musí patriť tej istej zákazke, inak `time_tracking.item_not_in_order`). Záznamy, ktoré sú
+`is_billable = true` a `is_invoiced = false`, sú presne tie, ktoré
+`GenerateInvoiceFromOrderAction` pri fakturácii vezme a po vyfakturovaní označí
+`is_invoiced = true`, aby sa nedali vyfakturovať dvakrát.
+
+---
+
+## 12. Modul Calendar — udalosti, import/export, retencia
+
+Jednoduchý kalendár udalostí naviazaný na účet, s CSV/ICS importom aj exportom.
+Podrobnejší plán v [`docs/PLAN_KALENDAR.md`](./PLAN_KALENDAR.md).
+
+### Endpointy (`api/v1/events/*`, `routes/calendar.php`, `auth:sanctum`)
+
+| Metóda | URI | Účel |
+|---|---|---|
+| — | `/events` (`apiResource`) | plný REST nad udalosťami |
+| POST | `/events/import/csv` | import zo Slovak/Qasa CSV formátu (`;`-delimited) |
+| POST | `/events/import/ics` | import z ICS súboru |
+| GET | `/events/export/csv` | export do CSV (`from`/`to` filter) |
+| GET | `/events/export/ics` | export do ICS (`from`/`to` filter) |
+
+### Dátový model `Event`
+
+`user_id, title, description, location, color, is_all_day, starts_at, ends_at` (exkluzívne
+— polnoc sa ukladá ako nasledujúci deň 00:00), `source` (`manual|csv_import|ics_import`),
+`external_uid` (ICS UID alebo import hash — dedupe kľúč). Celodenné udalosti sa normalizujú
+na `[začiatok dňa, +1 deň)`; časované udalosti nesmú prekročiť polnoc a zarovnávajú sa na
+mriežku `config('calendar.slot_minutes')` (default 15 min).
+
+Import (CSV aj ICS) zdieľa rovnaký dedupe/normalizačný pipeline a vracia `{created, skipped,
+errors[]}` — chyba v jednom riadku nezastaví import ostatných. Export do ICS
+(`Infrastructure/Ics/IcsBuilder`, cez `sabre/vobject`) používa "plávajúci" lokálny čas (bez
+`TZID`/`Z`), zhodne s tým, ako sa časy ukladajú v DB.
+
+Presahovanie udalostí rieši rebindovateľné rozhranie `OverlapPolicyInterface` — OSS edícia
+(`AllowOverlapPolicy`) povoľuje čokoľvek; kontrola presahov je pripravená ako hák pre SaaS.
+
+### Retencia — `qasa:calendar:purge-past`
+
+Naplánovaný denne o 4:30 (`routes/console.php`, `withoutOverlapping()->onOneServer()`),
+tvrdo maže (force-delete) staré udalosti cez `PurgePastEventsAction`. Hranica podľa
+`config('calendar.retention.mode')`: `current_month` (OSS default — drží od začiatku
+aktuálneho mesiaca) alebo `months_after_end` (SaaS, `CALENDAR_RETENTION_MONTHS_AFTER_END`,
+default 3 mesiace po skončení udalosti).
 
 ---
 
@@ -593,6 +600,87 @@ nikdy neprekrývajú. Proforma nie je daňový doklad (nemá DUZP, na tlačive j
   tabuľka), zľava na úrovni faktúry sa aplikuje pomerne pred výpočtom DPH (česká/slovenská
   účtovná konvencia); generuje aj CZK prepočet podľa zmrazeného kurzu.
 
+### DPH — sadzby, reverse charge, súhrnný výkaz
+
+Podrobnejší plán v [`docs/PLAN_DPH.md`](./PLAN_DPH.md).
+
+- **`VatStatus`** (`app/Modules/Shared/Enums/VatStatus.php`) na `User.vat_status`:
+  `non_payer` (nikdy neúčtuje DPH), `identified` (má IČ DPH pre vnútrounijné nadobudnutia,
+  domácu DPH účtovať nemôže, bez nároku na odpočet), `payer` (plný platiteľ, účtuje DPH,
+  má nárok na odpočet). `is_vat_payer` je zastarané, len zrkadlí `vat_status === Payer`
+  (pozri pamäťovú poznámku o synchronizácii pri factory testoch).
+- **`VatRate`** — per-tenant katalóg sadzieb (`user_id, code, country, rate, label,
+  is_default, valid_from/valid_to`). `VatRateInCatalog` rule pri zápise overí, že číselná
+  sadzba položky existuje v katalógu pre danú krajinu/dátum — položky nemajú FK na katalóg,
+  takže zmrazená sadzba prežije aj neskoršiu úpravu/zmazanie katalógovej položky. **0 % je
+  vždy povolené** (reverse charge / neplatiteľ / oslobodené plnenie).
+- **Reverse charge polia**: `clients.reverse_charge_allowed` (domáci RC opt-in),
+  `clients.vat_verified_at` (posledná úspešná VIES kontrola), `invoices.reverse_charge` +
+  `reverse_charge_mode` (`domestic|eu`), `supplier_invoices.vat_regime`
+  (`domestic|eu_reverse_charge|import`) + `self_assessed_vat_amount`,
+  `recurring_invoice_templates.reverse_charge` (len úmysel — režim sa vždy nanovo odvodí
+  od aktuálneho klienta pri každom generovaní, nikdy sa needukladá natrvalo).
+- **`InvoiceVatRegimeResolver`** rozhoduje o reverse charge: neplatiteľ nikdy nemôže
+  fakturovať v režime RC; EU klient s IČ DPH (iná krajina ako dodávateľ, v
+  `config('countries.eu_members')`) je automaticky v režime `eu` bez ohľadu na
+  `identified`/`payer` status dodávateľa; `identified` dodávateľ mimo EU/domáci klient nikdy
+  RC nemá; `payer` dodávateľ môže domáci RC použiť len ak si ho explicitne vyžiada **a**
+  `client.reverse_charge_allowed = true` **a** krajiny sa zhodujú, inak
+  `invoicing.reverse_charge_not_allowed_for_client`. `ViesPreconditionService` podmieňuje
+  vystavenie EU-RC faktúry živou VIES kontrolou, s dočasným grace-oknom
+  (`config('qasa.vies_grace_days', 30)`) pri výpadku VIES — nikdy pre číslo, ktoré VIES
+  aktívne odmietlo.
+- **Prijaté faktúry**: `SupplierVatRegime` (`domestic|eu_reverse_charge|import`) —
+  self-assessed režimy (`isSelfAssessed()`) sa nezapočítavajú do `total` (dodávateľovi sa
+  nič neplatí), sledujú sa len v `self_assessed_vat_amount`.
+- **Súhrnný výkaz (EU sales list)** — `EuSalesListService` cez
+  `GET /api/v1/reports/eu-sales-list?year=&quarter=&month=`: zoskupí vystavené,
+  vnútrounijné RC faktúry (`reverse_charge_mode = eu`) podľa mesiaca a **zmrazeného**
+  `client_snapshot['vat_id']` (neskoršia úprava klienta spätne nemení už podaný výkaz),
+  drafty a storná vylúčené.
+
+### Prijaté faktúry a scan inbox
+
+Podrobnejší plán v [`docs/PLAN_PRIJATE_FAKTURY.md`](./PLAN_PRIJATE_FAKTURY.md) a
+[`docs/PLAN_SCAN_INBOX.md`](./PLAN_SCAN_INBOX.md).
+
+**Endpointy** (`routes/invoicing.php`): plný REST `apiResource('supplier-invoices', ...)`
+plus `POST supplier-invoices/{supplier_invoice}/status`; pre inbox
+`apiResource('invoice-inbox', ...)->only(['index', 'show', 'destroy'])` plus
+`GET invoice-inbox/{inbox_item}/download`, `POST invoice-inbox/{inbox_item}/convert`,
+`POST invoice-inbox/{inbox_item}/ignore`.
+
+**Dátové modely**: `SupplierInvoice` (dodávateľ modelovaný ako `Client`,
+`internal_number, supplier_invoice_number, variable_symbol, status, vat_regime, issued_at,
+taxable_supply_at, due_at, received_at, paid_at, currency, exchange_rate, subtotal,
+vat_amount, total, self_assessed_vat_amount, vendor_snapshot`) s riadkami DPH rekapitulácie
+`SupplierInvoiceVatLine`. `InvoiceInboxItem` (`status`: pending/imported/ignored/failed,
+`disk, path, original_filename, mime_type, size_bytes, file_hash` — SHA-256 dedupe,
+`ocr_text, ocr_engine, suggestions, matched_client_id, scanned_at, error`).
+
+**Scan inbox pipeline** (dokument → návrh dokladu):
+
+1. Súbor sa nahrá do priečinka schránky účtu (disk/cesta z `config('invoicing.inbox.*')`).
+2. `qasa:invoices:scan-inbox` (naplánované každých 15 minút,
+   `withoutOverlapping()->onOneServer()`) prejde všetky účty s `invoice_inbox_enabled = true`
+   a spustí `ScanInboxAction` — validuje MIME (`application/pdf`, `image/jpeg`, `image/png`)
+   a veľkosť (max 20 MB podľa `invoicing.inbox.max_bytes`), počíta SHA-256 hash (duplicita sa
+   preskočí, ale súbor sa aj tak presunie do `processed/`, aby sa už neprocesoval znova).
+3. `CompositeExtractor` extrahuje text — pre PDF najprv `smalot/pdfparser` (textová vrstva);
+   ak text nestačí (napr. skenované PDF bez textovej vrstvy), text ostane prázdny — **OCR
+   fallback pre obrázkové PDF zatiaľ nie je implementovaný** (MVP limitácia, pozri kapitolu
+   17); pre obrázky sa použije `thiagoalessio/tesseract_ocr`.
+4. `SupplierInvoiceParser` (čisté regex/heuristiky nad SK/CZ textom) vytiahne číslo faktúry,
+   IČO/DIČ, dátumy, sumu, VS, IBAN, menu; `ScanInboxAction` k tomu dopáruje dodávateľa podľa
+   IČO (`matched_client_id`).
+5. Výsledok sa uloží ako `InvoiceInboxItem` v stave `pending`; prázdny extrahovaný text →
+   rovno `failed` (`invoicing.inbox.extraction_failed`).
+6. Používateľ návrh skontroluje (`GET invoice-inbox/{id}`) a potvrdí
+   (`POST .../convert`) — `ConvertInboxItemAction` v transakcii vytvorí `SupplierInvoice`
+   cez `CreateSupplierInvoiceAction` a naviaže ju späť na inbox položku (`status = imported`).
+   Druhý pokus na už spracovanú položku → `invoicing.inbox.already_processed`.
+   `POST .../ignore` označí položku ako `ignored` bez vytvorenia dokladu.
+
 ### Hromadný export faktúr — Pohoda XML a CSV
 
 Účtovníci potrebujú na konci obdobia vyviezť vydané faktúry do svojho účtovného softvéru.
@@ -678,31 +766,34 @@ platieb, DUZP či dobropisov.
 
 ---
 
-## 14. Moduly Subscriptions a Saas — predplatné a edícia
+## 14. Štatistiky
 
-**Subscriptions** obsahuje zatiaľ **len doménové modely**, žiadnu Application/Presentation
-vrstvu:
+Implementované v module Invoicing (`routes/invoicing.php`, prefix `api/v1/statistics`,
+`auth:sanctum`), dokumentované samostatne kvôli rozsahu — podrobný plán v
+[`docs/PLAN_STATISTIKY.md`](./PLAN_STATISTIKY.md).
 
-- **`SubscriptionPlan`**: `name, slug, stripe_price_id, price, currency, interval, limits`
-  (json: `max_clients/max_orders/max_users/…`), `is_active, is_public, sort_order,
-  trial_days, features, badge_text/badge_color`. `getLimit()/withinLimit()` (`-1` = bez limitu).
-- **`Subscription`/`SubscriptionItem`**: lokálne zrkadlo Cashier/Stripe stavu (`stripe_id,
-  stripe_status, stripe_price, quantity, trial_ends_at, ends_at`).
+| Metóda | URI | Účel |
+|---|---|---|
+| GET | `/statistics/overview` | KPI karty (tržby/náklady/zisk mesiac/12m/YTD s trendom a YoY %), porovnávacia tabuľka za 5 období, 12-mesačný trendový graf, ziskový graf (mesačný + kumulatívny YTD vs. minulý rok). Cachované 5 minút (`stats:overview:{ownerId}:{currency}:{today}`). |
+| GET | `/statistics/tables?year=` | tabuľky tržieb/nákladov/zisku podľa roka a mesiaca |
+| GET | `/statistics/receivables` | vekové pásma (`not_yet_due, d1_30, d31_60, d61_90, d90_plus`) otvorených pohľadávok aj záväzkov, v hotovostnom vyjadrení vrátane DPH |
+| GET | `/statistics/partners?limit=` | top klienti, top dodávatelia (natívna mena, bez prepočtu), riziko odchodu |
+| GET | `/statistics/health` | DSO/DPO, platobná morálka, koncentrácia tržieb podľa klienta/dodávateľa, cyklus pracovného kapitálu (rolling 12 mesiacov) |
 
-V tomto repozitári **nie je žiadny SubscriptionController, checkout endpoint ani Stripe
-webhook** — v súlade s konceptom otvoreného jadra to zjavne žije v uzavretom `qasa_saas`
-repozitári; tento repozitár nesie len dátový model plánov/limitov.
+**Definícia tržieb/nákladov** (`RevenueCostAggregator`): tržby = typy `invoice` +
+`credit_note` v stavoch `[issued, sent, reminded, paid, credited]` (proforma/storno
+vylúčené; `credited` sa počíta, aby sa originál + dobropis vynulovali; zrušené originály sú
+vylúčené, lebo `CreateCorrectiveInvoiceAction` ich pri stornovaní automaticky zruší) — počíta
+sa na **báze platiteľa dane** (`subtotal` pre platiteľov DPH, inak `total`), datované podľa
+DUZP s fallbackom na dátum vystavenia. Náklady zrkadlia rovnaké pravidlo nad
+`supplier_invoices` (stavy `received, booked, paid`).
 
-**Vynucovanie limitov funkcií** prebieha priamo na `Saas\User`: `currentPlan()` =
-`accountOwner()->subscription('default')?->plan` (Cashier vzťah), s helpermi
-`isOnPlan()/isOnStarter()/isOnPro()/hasFeature()/withinLimit()`. Napríklad limit počtu
-členov tímu (`max_users`) kontroluje `InviteMemberAction` presne cez tento mechanizmus —
-ak účet nemá žiadne predplatné, limit sa nevynucuje.
-
-**Saas** modul je len "lepidlo" edície (nie biznis modul): migrácie pre admin/activity/
-subscription/permission tabuľky, stĺpce `owner_id` na `users`, a seedery
-(`RolePermissionSeeder`, `AdminUserSeeder`). Jediný integračný bod je `SaasServiceProvider`
-(kapitola 3).
+**Prepojenie s upomienkami** — `overdue_reminder_days` na `User` (predvolene 14, rozsah
+1–365) sa **nečíta žiadnym naplánovaným príkazom**; slúži len `DashboardService`u na výpočet
+zoznamu faktúr po splatnosti nad prahom používateľa (`GET /api/v1/dashboard`), s príznakom
+`can_remind` na položku. Samotné odoslanie upomienky je vždy **manuálna akcia na faktúru**
+(`POST invoices/{invoice}/remind` → `RemindInvoiceAction`, kapitola 13) — automatický cron
+na hromadné rozposielanie upomienok neexistuje.
 
 ---
 
@@ -769,30 +860,23 @@ subscription/permission tabuľky, stĺpce `owner_id` na `users`, a seedery
 
 ## 17. Známe medzery / rozpracované časti
 
-Pre úplnosť je dobré vedieť, čo je v kóde pripravené, ale ešte nie je (plne) zapojené:
+Pre úplnosť je dobré vedieť, čo je v kóde pripravené, ale ešte nie je (plne) zapojené —
+alebo je vedomé zjednodušenie pre MVP:
 
-- **2FA**: stĺpce existujú na `AdminUser` (`two_factor_secret`, `two_factor_recovery_codes`,
-  `two_factor_enabled`), ale žiadny controller/akcia ich reálne neoveruje.
-- **Subscriptions modul**: chýba `SubscriptionController`, checkout endpoint aj Stripe
-  webhook handler — očividne súčasť uzavretého `qasa_saas` repozitára, tento repozitár
-  nesie len dátový model.
-- **Admin oprávnenia**: deklarované Spatie oprávnenia (`admin.*`) v `PermissionCatalog`
-  sa v kóde reálne nekontrolujú — autorizácia beží cez pole `AdminUser.role` a middleware
-  `admin.role:...` (`EnsureAdminRole`).
+- **2FA**: neimplementované vôbec (žiadne stĺpce, žiadna akcia) pre bežných používateľov
+  ani pre back-office (ten je aj tak mimo tohto repozitára — kapitola 7).
+- **Scan inbox — OCR fallback pre skenované PDF**: `CompositeExtractor` skúsi textovú
+  vrstvu PDF (`smalot/pdfparser`); ak dokument nemá dostatok textu (napr. čisto obrázkové
+  skenované PDF bez OCR vrstvy), vráti prázdny text namiesto rasterizácie a OCR — položka
+  skončí v stave `failed`. Fotky/JPEG/PNG cez Tesseract fungujú, PDF-sken zatiaľ nie.
+  (Kapitola 13.)
+- **GDPR — export dát a zmazanie účtu**: `GET /api/v1/profile/export` a
+  `DELETE /api/v1/profile` (kapitola 6) robia len minimálny rozsah — dáta pri zmazaní účtu
+  ostávajú v DB (vystavené faktúry majú zákonnú retenciu), plný purge/anonymizácia je
+  vedomé produktové rozhodnutie mimo rozsahu jadra.
+- **Kalendár — presahy udalostí**: `OverlapPolicyInterface` je pripravené rozhranie, OSS
+  edícia (`AllowOverlapPolicy`) presahy vôbec nerieši — kontrola je hák pre SaaS (kapitola 12).
 
-Nedávno doplnené (predtým uvádzané ako medzery, dnes už zapojené):
-
-- **TimeTracking V2 routy** — `ExpenseController` (`apiResource expenses`) a
-  `ExchangeRateController` (`exchange-rates`, `index`/`store`/`destroy`) sú registrované
-  v `routes/time-tracking.php`.
-- **Dashboard** — `DashboardController`/`DashboardService` sú napojené na
-  `GET /api/v1/dashboard` (`auth.php`, middleware `auth:sanctum`).
-- **Google OAuth konfigurácia** — `config/services.php` obsahuje kľúč `google` a
-  `.env.example` má `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`.
-- **Invoice number mask** — používatelia si môžu definovať vlastnú masku číslovania faktúr
-  (napr. `{YYYY}{NNNN}`), podporuje reset podľa roku/mesiaca, spätne kompatibilný (null maska
-  = doterajší formát).
-- **Hromadný export faktúr** — endpointy `invoices/export/pohoda` (Stormware XML) a
-  `invoices/export/csv` s filtrom podľa obdobia a typu dokladu — určeno pre účtovníkov.
-- **Exports pre Pohodu** — mapovanie DPH sadzieb na `rateVAT`, zmrazené snapshoty,
-  CZK prepočet cez `czkRecap()` pre cudzie meny.
+SaaS-only funkcionalita (Team, Admin back-office, Subscriptions/Stripe checkout, plná
+matica rolí) **nie je medzerou tohto repozitára** — žije zámerne v `qasa_saas` (kapitola 7),
+tento repozitár nesie len integračné háky (model zámena, `Gate::before`, `AbilityCatalog`).

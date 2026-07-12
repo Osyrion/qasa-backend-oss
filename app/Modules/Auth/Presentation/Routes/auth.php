@@ -32,6 +32,8 @@ Route::prefix('api/v1')->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::put('auth/profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
         Route::post('auth/profile/logo', [AuthController::class, 'uploadLogo'])->name('auth.profile.logo');
+        Route::get('profile/export', [AuthController::class, 'exportData'])->name('auth.profile.export');
+        Route::delete('profile', [AuthController::class, 'deleteAccount'])->name('auth.profile.delete');
         Route::post('auth/email/verification-notification', [EmailVerificationController::class, 'resend'])
             ->middleware('throttle:6,1')
             ->name('verification.send');

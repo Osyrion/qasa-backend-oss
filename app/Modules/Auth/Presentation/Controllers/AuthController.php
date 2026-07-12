@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Presentation\Controllers;
 
+use App\Modules\Auth\Application\Actions\DeleteAccountAction;
 use App\Modules\Auth\Application\Actions\LoginAction;
 use App\Modules\Auth\Application\Actions\RegisterUserAction;
 use App\Modules\Auth\Application\Actions\UpdateProfileAction;
+use App\Modules\Auth\Application\DTOs\DeleteAccountData;
 use App\Modules\Auth\Application\DTOs\LoginData;
 use App\Modules\Auth\Application\DTOs\RegisterUserData;
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
+use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Resources\UserResource;
 use App\Modules\Shared\Exceptions\DomainException;
@@ -18,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 class AuthController extends Controller
@@ -26,6 +30,8 @@ class AuthController extends Controller
         private readonly RegisterUserAction $registerAction,
         private readonly LoginAction $loginAction,
         private readonly UpdateProfileAction $updateProfileAction,
+        private readonly AccountExportService $exportService,
+        private readonly DeleteAccountAction $deleteAccountAction,
     ) {}
 
     /**
@@ -294,5 +300,76 @@ class AuthController extends Controller
         $user->update(['logo_path' => $path]);
 
         return response()->json(UserResource::make($user->fresh()));
+    }
+
+    #[OA\Get(
+        path: '/api/v1/profile/export',
+        summary: 'Export all account data as JSON (GDPR data portability)',
+        security: [['sanctum' => []]],
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(response: 200, description: 'JSON export of the account'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Only the account owner can export data'),
+        ]
+    )]
+    public function exportData(Request $request): StreamedResponse|JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user->accountOwnerId() !== $user->id) {
+            return response()->json(['message' => __('auth.export_owner_only')], 403);
+        }
+
+        $data = $this->exportService->build($user);
+        $filename = 'qasa-export-'.now()->toDateString().'.json';
+
+        return response()->streamDownload(function () use ($data): void {
+            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }, $filename, ['Content-Type' => 'application/json']);
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Delete(
+        path: '/api/v1/profile',
+        summary: 'Delete (soft-delete) the account and revoke all tokens',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'password', type: 'string', nullable: true, description: 'Required for accounts with a password'),
+                new OA\Property(property: 'confirmation', type: 'string', nullable: true, description: 'Must be "DELETE" for Google-only accounts'),
+            ])
+        ),
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(response: 204, description: 'Account deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Only the account owner can delete the account'),
+            new OA\Response(response: 422, description: 'Invalid password or confirmation'),
+        ]
+    )]
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user->accountOwnerId() !== $user->id) {
+            return response()->json(['message' => __('auth.export_owner_only')], 403);
+        }
+
+        $request->validate(DeleteAccountData::rules());
+        $data = DeleteAccountData::fromRequest($request);
+
+        try {
+            $this->deleteAccountAction->execute($user, $data);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(null, 204);
     }
 }
