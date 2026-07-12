@@ -33,6 +33,7 @@ final class AbilityCatalog
             'reports.view',
             'calendar.view',
             'calendar.manage',
+            'integrations.manage',
         ];
     }
 

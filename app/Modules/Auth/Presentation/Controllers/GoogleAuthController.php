@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Presentation\Controllers;
 
 use App\Modules\Auth\Application\Actions\LoginWithGoogleAction;
+use App\Modules\Auth\Presentation\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -66,10 +67,13 @@ class GoogleAuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Google login successful',
+                description: 'Google login successful, or a 2FA challenge if the account has two-factor authentication enabled',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'token', type: 'string', example: '1|abc123...'),
+                        new OA\Property(property: 'two_factor_required', type: 'boolean'),
+                        new OA\Property(property: 'token', type: 'string', example: '1|abc123...', nullable: true),
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User', nullable: true),
+                        new OA\Property(property: 'challenge_token', type: 'string', nullable: true, description: 'Present only when two_factor_required is true; pass to POST /auth/2fa/verify'),
                     ]
                 )
             ),
@@ -97,8 +101,19 @@ class GoogleAuthController extends Controller
         }
 
         $deviceName = $request->input('device_name', 'google-oauth');
-        $token = $this->loginWithGoogleAction->execute($googleUser, $deviceName);
+        $result = $this->loginWithGoogleAction->execute($googleUser, $deviceName);
 
-        return response()->json(['token' => $token]);
+        if ($result->twoFactorRequired) {
+            return response()->json([
+                'two_factor_required' => true,
+                'challenge_token' => $result->challengeToken,
+            ]);
+        }
+
+        return response()->json([
+            'two_factor_required' => false,
+            'token' => $result->token,
+            'user' => UserResource::make($result->user),
+        ]);
     }
 }

@@ -117,9 +117,12 @@ class AuthController extends Controller
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Login successful',
+                description: 'Login successful, or a 2FA challenge if the account has two-factor authentication enabled',
                 content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'token', type: 'string', example: '1|abc123...'),
+                    new OA\Property(property: 'two_factor_required', type: 'boolean'),
+                    new OA\Property(property: 'token', type: 'string', example: '1|abc123...', nullable: true),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User', nullable: true),
+                    new OA\Property(property: 'challenge_token', type: 'string', nullable: true, description: 'Present only when two_factor_required is true; pass to POST /auth/2fa/verify'),
                 ])
             ),
             new OA\Response(
@@ -139,9 +142,17 @@ class AuthController extends Controller
             $data = LoginData::fromRequest($request);
             $result = $this->loginAction->execute($data);
 
+            if ($result->twoFactorRequired) {
+                return response()->json([
+                    'two_factor_required' => true,
+                    'challenge_token' => $result->challengeToken,
+                ]);
+            }
+
             return response()->json([
-                'token' => $result['token'],
-                'user' => UserResource::make($result['user']),
+                'two_factor_required' => false,
+                'token' => $result->token,
+                'user' => UserResource::make($result->user),
             ]);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

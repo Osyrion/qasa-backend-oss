@@ -19,6 +19,8 @@ return [
     'qr_hint' => 'You can pay by scanning the QR code below.',
     'qr_alt' => 'Payment QR code',
     'view_online' => 'View invoice online',
+    'reminders_exhausted_subject' => 'Invoice :number is still unpaid after :count reminders',
+    'reminders_exhausted_intro' => 'Invoice no. :number is still unpaid after :count automatic reminders (limit :max). No further automatic reminders will be sent — you may want to follow up manually.',
     'quote_subject' => 'Quote :number',
     'quote_intro' => 'please find attached our quote no. :number.',
     'quote_total' => 'Total',

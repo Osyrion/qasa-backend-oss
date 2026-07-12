@@ -129,14 +129,25 @@ paths:
               type: object
       responses:
         200:
-          description: 'Login successful'
+          description: 'Login successful, or a 2FA challenge if the account has two-factor authentication enabled'
           content:
             application/json:
               schema:
                 properties:
+                  two_factor_required:
+                    type: boolean
                   token:
                     type: string
                     example: 1|abc123...
+                    nullable: true
+                  user:
+                    oneOf:
+                      - $ref: '#/components/schemas/User'
+                    nullable: true
+                  challenge_token:
+                    description: 'Present only when two_factor_required is true; pass to POST /auth/2fa/verify'
+                    type: string
+                    nullable: true
                 type: object
         422:
           description: 'Invalid credentials'
@@ -515,14 +526,25 @@ paths:
               type: object
       responses:
         200:
-          description: 'Google login successful'
+          description: 'Google login successful, or a 2FA challenge if the account has two-factor authentication enabled'
           content:
             application/json:
               schema:
                 properties:
+                  two_factor_required:
+                    type: boolean
                   token:
                     type: string
                     example: 1|abc123...
+                    nullable: true
+                  user:
+                    oneOf:
+                      - $ref: '#/components/schemas/User'
+                    nullable: true
+                  challenge_token:
+                    description: 'Present only when two_factor_required is true; pass to POST /auth/2fa/verify'
+                    type: string
+                    nullable: true
                 type: object
         422:
           description: 'Invalid Google token'
@@ -606,6 +628,267 @@ paths:
                 type: object
         422:
           description: 'Invalid or expired token'
+  /api/v1/auth/tokens:
+    get:
+      tags:
+        - Tokens
+      summary: 'List personal access tokens'
+      operationId: 756f005f5d05495eedc67a4db546b89e
+      responses:
+        200:
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PersonalAccessToken'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+    post:
+      tags:
+        - Tokens
+      summary: 'Create a scoped personal access token'
+      description: 'The plaintext token is returned only in this response and cannot be retrieved again.'
+      operationId: 081f7536bbcd58af8ab8bacf03da7923
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - abilities
+              properties:
+                name:
+                  type: string
+                  example: zapier-integration
+                  maxLength: 100
+                abilities:
+                  type: array
+                  items:
+                    type: string
+                    example: invoices.view
+              type: object
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:
+                    type: string
+                    example: 1|abc123...
+                  access_token:
+                    $ref: '#/components/schemas/PersonalAccessToken'
+                type: object
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  '/api/v1/auth/tokens/{id}':
+    delete:
+      tags:
+        - Tokens
+      summary: 'Revoke a personal access token'
+      operationId: 944ba05cba1bebea20af1d4298ca994f
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Deleted
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/2fa/enable:
+    post:
+      tags:
+        - TwoFactor
+      summary: 'Start 2FA setup — generates an unconfirmed secret'
+      operationId: 0d164f9c66d36796a33251aaee841bce
+      responses:
+        200:
+          description: 'Secret and provisioning QR code'
+          content:
+            application/json:
+              schema:
+                properties:
+                  secret:
+                    type: string
+                  otpauth_uri:
+                    type: string
+                  qr_svg:
+                    description: 'data: URI, SVG'
+                    type: string
+                type: object
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Already enabled'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/2fa/confirm:
+    post:
+      tags:
+        - TwoFactor
+      summary: 'Confirm 2FA setup with a TOTP code — activates it and returns recovery codes'
+      operationId: 0fbbe8e51f9ec0112e40ab04905a2b9a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  example: '123456'
+              type: object
+      responses:
+        200:
+          description: 'Recovery codes — shown only once'
+          content:
+            application/json:
+              schema:
+                properties:
+                  recovery_codes:
+                    type: array
+                    items:
+                      type: string
+                type: object
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Invalid code or not started'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/2fa:
+    delete:
+      tags:
+        - TwoFactor
+      summary: 'Disable 2FA — requires password and a valid TOTP or recovery code'
+      operationId: a9e77ac027eac3fab8379ecd93d2bc0a
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - code
+              properties:
+                password:
+                  description: 'Required unless the account has no password (Google-only)'
+                  type: string
+                  nullable: true
+                code:
+                  type: string
+                  example: '123456'
+              type: object
+      responses:
+        204:
+          description: Disabled
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Invalid password or code'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/2fa/recovery-codes:
+    post:
+      tags:
+        - TwoFactor
+      summary: 'Regenerate recovery codes — invalidates the previous set'
+      operationId: 5278656561b8405d36f06e7e47d4b4f8
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  example: '123456'
+              type: object
+      responses:
+        200:
+          description: 'New recovery codes — shown only once'
+          content:
+            application/json:
+              schema:
+                properties:
+                  recovery_codes:
+                    type: array
+                    items:
+                      type: string
+                type: object
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Invalid code or 2FA not enabled'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/2fa/verify:
+    post:
+      tags:
+        - TwoFactor
+      summary: 'Complete login by verifying a 2FA code against a login challenge'
+      operationId: 2a79c7064becebc841c47f08b57096e4
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - challenge_token
+                - code
+              properties:
+                challenge_token:
+                  type: string
+                code:
+                  type: string
+                  example: '123456'
+                device_name:
+                  type: string
+                  example: mobile-app
+              type: object
+      responses:
+        200:
+          description: 'Login successful'
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:
+                    type: string
+                    example: 1|abc123...
+                  user:
+                    $ref: '#/components/schemas/User'
+                type: object
+        422:
+          description: 'Invalid/expired challenge or invalid code'
   /api/v1/events:
     get:
       tags:
@@ -1630,6 +1913,237 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/webhook-endpoints:
+    get:
+      tags:
+        - WebhookEndpoints
+      summary: 'List webhook endpoints'
+      operationId: bd68c88d16ff2dda51fdb32a67e27581
+      responses:
+        200:
+          description: 'Webhook endpoints'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookEndpoint'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+    post:
+      tags:
+        - WebhookEndpoints
+      summary: 'Create webhook endpoint'
+      description: 'The secret is returned only in this response and cannot be retrieved again.'
+      operationId: ee859386f0853c8787bd1cfc0721b06c
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                  example: 'https://example.com/webhooks/qasa'
+                events:
+                  type: array
+                  items:
+                    type: string
+                    example: invoice.paid
+                is_active:
+                  type: boolean
+              type: object
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/WebhookEndpoint'
+                  -
+                    properties:
+                      secret:
+                        type: string
+                    type: object
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  '/api/v1/webhook-endpoints/{id}':
+    get:
+      tags:
+        - WebhookEndpoints
+      summary: 'Show webhook endpoint'
+      operationId: 900d52df962375cc70c677697ed40fff
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Webhook endpoint'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpoint'
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+    put:
+      tags:
+        - WebhookEndpoints
+      summary: 'Update webhook endpoint'
+      operationId: 80cd8f56e2497e215cb4c38dd85bacd9
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                events:
+                  type: array
+                  items:
+                    type: string
+                is_active:
+                  type: boolean
+              type: object
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEndpoint'
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
+    delete:
+      tags:
+        - WebhookEndpoints
+      summary: 'Delete webhook endpoint'
+      operationId: 6587d7e7207574fb8e6231ee2a4b5efb
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Deleted
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/webhook-endpoints/{id}/test':
+    post:
+      tags:
+        - WebhookEndpoints
+      summary: 'Send a synchronous test (ping) delivery'
+      operationId: dc3a37788027a2113cbe7aa43d2d5723
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Test delivery result'
+          content:
+            application/json:
+              schema:
+                properties:
+                  success:
+                    type: boolean
+                  status:
+                    type: integer
+                    nullable: true
+                  body:
+                    type: string
+                    nullable: true
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/webhook-endpoints/{id}/deliveries':
+    get:
+      tags:
+        - WebhookEndpoints
+      summary: 'List delivery attempts for a webhook endpoint'
+      operationId: 7735bce0c3041f214a03eecd7ceae83b
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Delivery attempts'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookDelivery'
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
   /api/v1/bank-accounts:
     get:
       tags:
@@ -2630,6 +3144,129 @@ paths:
           description: Unauthenticated
         422:
           description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  /api/v1/invoices/export/omega:
+    get:
+      tags:
+        - 'Invoice Export'
+      summary: 'Export issued invoices as a KROS Omega text-import file'
+      description: 'Unverified against the current KROS column specification — see config/omega.php.'
+      operationId: 51beb5d9c3c9a219f498bd8dbda93fb3
+      parameters:
+        -
+          name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: period_basis
+          in: query
+          schema:
+            type: string
+            enum:
+              - issue
+              - tax
+        -
+          name: 'types[]'
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - invoice
+                - credit_note
+                - storno
+      responses:
+        200:
+          description: 'KROS Omega text-import file download (Windows-1250 encoded)'
+          content:
+            text/plain: []
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  /api/v1/supplier-invoices/export/omega:
+    get:
+      tags:
+        - 'Invoice Export'
+      summary: 'Export received (supplier) invoices as a KROS Omega text-import file'
+      description: 'Unverified against the current KROS column specification — see config/omega.php.'
+      operationId: 6b18af88c9616ba681e5eab253f638f4
+      parameters:
+        -
+          name: date_from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: date_to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        -
+          name: period_basis
+          in: query
+          schema:
+            type: string
+            enum:
+              - issue
+              - tax
+      responses:
+        200:
+          description: 'KROS Omega text-import file download (Windows-1250 encoded)'
+          content:
+            text/plain: []
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  '/api/v1/invoices/{invoice}/export/isdoc':
+    get:
+      tags:
+        - 'Invoice Export'
+      summary: 'Export a single issued invoice or credit note as ISDOC 6.0.2 XML'
+      operationId: 66a64f5d5c532182171d28872885464e
+      parameters:
+        -
+          name: invoice
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'ISDOC XML file download'
+          content:
+            application/xml: []
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Draft, storno or proforma invoices are not exportable'
       security:
         -
           sanctum: []
@@ -4361,6 +4998,106 @@ paths:
           description: Unauthenticated
         422:
           description: 'Validation error'
+      security:
+        -
+          sanctum: []
+  /api/v1/reports/vat-control-statement:
+    get:
+      tags:
+        - VatReports
+      summary: 'VAT control statement basis (SK: kontrolný výkaz DPH / CZ: kontrolní hlášení) — data preparation only, not a filing'
+      operationId: e41295ca52bdf24c617c0f6766b86667
+      parameters:
+        -
+          name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - SK
+              - CZ
+        -
+          name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 2026
+        -
+          name: quarter
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 4
+            minimum: 1
+        -
+          name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 12
+            minimum: 1
+      responses:
+        200:
+          description: 'VAT control statement sections'
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error or the account is not a VAT payer'
+      security:
+        -
+          sanctum: []
+  /api/v1/reports/vat-control-statement/xml:
+    get:
+      tags:
+        - VatReports
+      summary: 'VAT control statement XML draft (CZ: DPHKH1 / SK: KVDPH_2025) — draft for review before filing, not a submission-ready document'
+      operationId: d6a42cff2c8635bd2f4d50c420ebfb70
+      parameters:
+        -
+          name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - SK
+              - CZ
+        -
+          name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 2026
+        -
+          name: quarter
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 4
+            minimum: 1
+        -
+          name: month
+          in: query
+          required: false
+          schema:
+            type: integer
+            maximum: 12
+            minimum: 1
+      responses:
+        200:
+          description: 'XML document'
+          content:
+            application/xml: []
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Validation error or the account is not a VAT payer'
       security:
         -
           sanctum: []
@@ -6305,6 +7042,27 @@ paths:
           sanctum: []
 components:
   schemas:
+    PersonalAccessToken:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: zapier-integration
+        abilities:
+          type: array
+          items:
+            type: string
+            example: invoices.view
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+      type: object
     User:
       properties:
         id:
@@ -6415,6 +7173,15 @@ components:
         overdue_reminder_days:
           type: integer
           example: 14
+        auto_remind_enabled:
+          type: boolean
+          example: false
+        auto_remind_max:
+          type: integer
+          example: 3
+        auto_remind_interval_days:
+          type: integer
+          example: 7
         has_clockify_api_key:
           type: boolean
           example: false
@@ -6425,6 +7192,9 @@ components:
           type: boolean
           example: true
         has_google_auth:
+          type: boolean
+          example: false
+        two_factor_enabled:
           type: boolean
           example: false
         uses_flat_rate:
@@ -6652,6 +7422,73 @@ components:
         is_primary:
           type: boolean
         created_at:
+          type: string
+          format: date-time
+          nullable: true
+      type: object
+    WebhookDelivery:
+      properties:
+        id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          example: invoice.paid
+        attempt:
+          type: integer
+        response_status:
+          type: integer
+          nullable: true
+        response_excerpt:
+          type: string
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        failed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+      type: object
+    WebhookEndpoint:
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          example: 'https://example.com/webhooks/qasa'
+        events:
+          type: array
+          items:
+            type: string
+            example: invoice.paid
+        is_active:
+          type: boolean
+        consecutive_failures:
+          type: integer
+        disabled_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_success_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_failure_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+        updated_at:
           type: string
           format: date-time
           nullable: true
@@ -7759,6 +8596,10 @@ components:
       name: Authorization
       in: header
 tags:
+  - name: Tokens
+    description: 'Scoped personal access tokens for third-party integrations'
+  - name: TwoFactor
+    description: 'TOTP-based two-factor authentication'
   - name: Calendar
     description: 'Tenant calendar events'
   - name: 'Calendar Export'
@@ -7769,6 +8610,8 @@ tags:
     description: 'Client management endpoints'
   - name: 'Contact Persons'
     description: 'Contact person management endpoints'
+  - name: WebhookEndpoints
+    description: 'Outbound webhook subscriptions for third-party integrations'
   - name: BankAccounts
     description: 'Supplier bank accounts printed on invoices'
   - name: Invoices

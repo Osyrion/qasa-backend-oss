@@ -24,8 +24,13 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
 
     Route::get('invoices/export/pohoda', [InvoiceExportController::class, 'pohoda'])->name('invoices.export.pohoda');
     Route::get('invoices/export/csv', [InvoiceExportController::class, 'csv'])->name('invoices.export.csv');
+    Route::get('invoices/export/omega', [InvoiceExportController::class, 'omega'])->name('invoices.export.omega');
+    Route::get('supplier-invoices/export/omega', [InvoiceExportController::class, 'supplierOmega'])->name('supplier-invoices.export.omega');
+    Route::get('invoices/{invoice}/export/isdoc', [InvoiceExportController::class, 'isdoc'])->name('invoices.export.isdoc');
 
     Route::get('reports/eu-sales-list', [VatReportController::class, 'euSalesList'])->name('reports.eu-sales-list');
+    Route::get('reports/vat-control-statement', [VatReportController::class, 'vatControlStatement'])->name('reports.vat-control-statement');
+    Route::get('reports/vat-control-statement/xml', [VatReportController::class, 'vatControlStatementXml'])->name('reports.vat-control-statement.xml');
 
     Route::prefix('statistics')->name('statistics.')->group(function (): void {
         Route::get('overview', [StatisticsController::class, 'overview'])->name('overview');

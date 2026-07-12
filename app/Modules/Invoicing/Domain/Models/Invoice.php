@@ -58,6 +58,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $email_failed_at Set when the queued email job permanently failed; cleared on the next send
  * @property Carbon|null $last_reminded_at Last time a payment reminder was sent
  * @property int $reminder_count Number of payment reminders sent
+ * @property Carbon|null $overdue_notified_at First time this invoice was detected past due; idempotency marker for the invoice.overdue event
+ * @property Carbon|null $reminders_exhausted_notified_at Set once the owner has been notified that auto-reminders hit the limit
  * @property string|null $public_token Grants read-only public access; set exclusively by CreateInvoicePublicLinkAction
  * @property Carbon|null $public_first_viewed_at First time the public page was opened
  * @property int $public_view_count Number of times the public page was opened
@@ -142,6 +144,8 @@ class Invoice extends Model
         'email_failed_at',
         'last_reminded_at',
         'reminder_count',
+        'overdue_notified_at',
+        'reminders_exhausted_notified_at',
     ];
 
     protected function casts(): array
@@ -167,6 +171,8 @@ class Invoice extends Model
             'emailed_cc' => 'array',
             'email_failed_at' => 'datetime',
             'last_reminded_at' => 'datetime',
+            'overdue_notified_at' => 'datetime',
+            'reminders_exhausted_notified_at' => 'datetime',
             'public_first_viewed_at' => 'datetime',
             'public_view_count' => 'integer',
         ];

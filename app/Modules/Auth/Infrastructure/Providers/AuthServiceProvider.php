@@ -26,6 +26,25 @@ class AuthServiceProvider extends ServiceProvider
             $this->commands([CreateUserCommand::class]);
         }
 
+        // Token scopes: a scoped personal access token (created via
+        // POST /auth/tokens) can only use the abilities it was granted.
+        // Registered before the OSS/SaaS grants below so a deny here wins —
+        // both editions restrict scoped tokens without further changes.
+        // Login/2FA tokens keep the default '*' ability and are unaffected.
+        Gate::before(function (User $user, string $ability): ?bool {
+            if (! AbilityCatalog::handles($ability)) {
+                return null;
+            }
+
+            $token = $user->currentAccessToken();
+
+            if ($token !== null && ! $token->can($ability)) {
+                return false;
+            }
+
+            return null;
+        });
+
         // The OSS edition has no roles — grant every core ability and leave
         // data isolation to HasUserScope and the policies' account checks.
         if (config('qasa.edition') === 'oss') {

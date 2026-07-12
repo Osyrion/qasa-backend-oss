@@ -9,6 +9,7 @@ use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use PragmaRX\Google2FA\Google2FA;
 
 /**
  * @extends Factory<User>
@@ -85,6 +86,21 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'vat_status' => VatStatus::NonPayer->value,
             'is_vat_payer' => false,
+        ]);
+    }
+
+    /**
+     * Confirmed 2FA with a known secret (so tests can compute valid TOTP
+     * codes) and optional known plaintext recovery codes (hashed here).
+     *
+     * @param  list<string>  $recoveryCodes
+     */
+    public function withTwoFactor(?string $secret = null, array $recoveryCodes = ['recovery-code-1', 'recovery-code-2']): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'two_factor_secret' => $secret ?? (new Google2FA)->generateSecretKey(),
+            'two_factor_confirmed_at' => now(),
+            'two_factor_recovery_codes' => array_map(static fn (string $code): string => Hash::make($code), $recoveryCodes),
         ]);
     }
 }

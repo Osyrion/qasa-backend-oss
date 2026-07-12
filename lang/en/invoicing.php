@@ -18,6 +18,8 @@ return [
     'credit_note_only_for_sent_or_paid' => 'A credit note can only be issued for a sent or paid invoice.',
     'cannot_invoice_personal_order' => 'A personal order cannot be invoiced.',
     'order_no_billable_items' => 'The order has no billable items or uninvoiced time.',
+    'isdoc_draft_not_exportable' => 'A draft invoice cannot be exported to ISDOC — issue it first.',
+    'isdoc_type_not_exportable' => 'Only invoices and credit notes can be exported to ISDOC.',
     'items_only_for_draft' => 'Items can only be added to a draft invoice.',
     'work_report_only_editable_for_draft' => 'The work report can only be edited for a draft invoice.',
     'work_report_only_generatable_for_draft' => 'The work report can only be generated for a draft invoice.',
@@ -39,6 +41,9 @@ return [
     'quote_already_converted' => 'This quote has already been converted.',
     'quote_convert_invalid_status' => 'Only a sent or accepted quote can be converted.',
     'quote_client_email_missing' => 'The client has no email address. Add one or specify a recipient.',
+    'vat_report_payer_only' => 'The VAT control statement is only available to VAT payers.',
+    'vat_control_statement_country_invalid' => 'The VAT control statement is only available for SK or CZ.',
+    'vat_control_statement_period_required' => 'The SK KV DPH XML draft requires either a month or a quarter — it cannot be generated for a whole year at once.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'The selected client is not marked as a vendor.',

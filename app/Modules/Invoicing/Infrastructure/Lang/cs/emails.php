@@ -19,6 +19,8 @@ return [
     'qr_hint' => 'Zaplatit můžete naskenováním QR kódu níže.',
     'qr_alt' => 'Platební QR kód',
     'view_online' => 'Zobrazit fakturu online',
+    'reminders_exhausted_subject' => 'Faktura :number je stále neuhrazena po :count upomínkách',
+    'reminders_exhausted_intro' => 'Faktura č. :number je stále neuhrazena i po :count automatických upomínkách (limit :max). Další automatické upomínky se již nebudou odesílat — doporučujeme kontaktovat klienta manuálně.',
     'quote_subject' => 'Cenová nabídka :number',
     'quote_intro' => 'v příloze vám zasíláme cenovou nabídku č. :number.',
     'quote_total' => 'Celkem',

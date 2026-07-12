@@ -9,6 +9,7 @@ use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Domain\Contracts\InvoiceTextExtractor;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
+use App\Modules\Invoicing\Domain\Events\InboxItemCreated;
 use App\Modules\Invoicing\Domain\Services\SupplierInvoiceParser;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -85,7 +86,7 @@ readonly class ScanInboxAction
 
                 $fileData = $this->processFile($userId, $absolutePath, $mime);
 
-                $this->repository->create([
+                $item = $this->repository->create([
                     ...[
                         'user_id' => $userId,
                         'disk' => 'local',
@@ -103,6 +104,8 @@ readonly class ScanInboxAction
 
                 if ($fileData['status'] === InvoiceInboxStatus::Failed->value) {
                     $failed++;
+                } else {
+                    event(new InboxItemCreated($item));
                 }
 
                 Storage::disk($disk)->move($path, $processedDir.'/'.basename($path));

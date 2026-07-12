@@ -47,6 +47,9 @@ class UpdateProfileAction
                 'website' => $data->website,
                 'invoice_footer_text' => $data->invoice_footer_text,
                 'overdue_reminder_days' => $data->overdue_reminder_days,
+                'auto_remind_enabled' => $data->auto_remind_enabled,
+                'auto_remind_max' => $data->auto_remind_max,
+                'auto_remind_interval_days' => $data->auto_remind_interval_days,
                 'clockify_api_key' => $data->clockify_api_key,
                 'clockify_workspace_id' => $data->clockify_workspace_id,
             ], fn ($value) => $value !== null);

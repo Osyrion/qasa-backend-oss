@@ -61,3 +61,6 @@ jobs:
 
     - name: Run PHPStan
       run: composer phpstan
+
+    - name: Generate API docs (Swagger)
+      run: php artisan l5-swagger:generate

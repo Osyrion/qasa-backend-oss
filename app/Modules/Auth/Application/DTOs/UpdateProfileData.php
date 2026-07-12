@@ -120,6 +120,15 @@ class UpdateProfileData extends Data
         #[Sometimes]
         public readonly ?int $overdue_reminder_days = null,
 
+        #[Sometimes]
+        public readonly ?bool $auto_remind_enabled = null,
+
+        #[Sometimes]
+        public readonly ?int $auto_remind_max = null,
+
+        #[Sometimes]
+        public readonly ?int $auto_remind_interval_days = null,
+
         #[Sometimes, Max(100)]
         public readonly ?string $clockify_api_key = null,
 
@@ -159,6 +168,9 @@ class UpdateProfileData extends Data
             'website' => ['sometimes', 'nullable', 'string', 'max:150'],
             'invoice_footer_text' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'overdue_reminder_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
+            'auto_remind_enabled' => ['sometimes', 'boolean'],
+            'auto_remind_max' => ['sometimes', 'integer', 'min:1', 'max:10'],
+            'auto_remind_interval_days' => ['sometimes', 'integer', 'min:'.config('invoicing.reminder_cooldown_days', 3), 'max:90'],
             'clockify_api_key' => ['sometimes', 'nullable', 'string', 'max:100'],
             'clockify_workspace_id' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
@@ -199,6 +211,9 @@ class UpdateProfileData extends Data
             website: $request->filled('website') ? $request->string('website')->toString() : null,
             invoice_footer_text: $request->filled('invoice_footer_text') ? $request->string('invoice_footer_text')->toString() : null,
             overdue_reminder_days: $request->filled('overdue_reminder_days') ? $request->integer('overdue_reminder_days') : null,
+            auto_remind_enabled: $request->filled('auto_remind_enabled') ? $request->boolean('auto_remind_enabled') : null,
+            auto_remind_max: $request->filled('auto_remind_max') ? $request->integer('auto_remind_max') : null,
+            auto_remind_interval_days: $request->filled('auto_remind_interval_days') ? $request->integer('auto_remind_interval_days') : null,
             clockify_api_key: $request->filled('clockify_api_key') ? $request->string('clockify_api_key')->toString() : null,
             clockify_workspace_id: $request->filled('clockify_workspace_id') ? $request->string('clockify_workspace_id')->toString() : null,
         );

@@ -26,5 +26,12 @@ parameters:
         - '#Call to an undefined method.*#'
         - '#Access to an undefined property.*#'
         - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*#'
+        -
+            # Sanctum's HasApiTokens::currentAccessToken() docblock claims a
+            # non-nullable TToken, but at runtime it's null whenever the user
+            # wasn't authenticated via an actual token (e.g. tests using
+            # actingAs()) — the null check here is real and load-bearing.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Auth/Infrastructure/Providers/AuthServiceProvider.php
     bootstrapFiles:
         - vendor/autoload.php

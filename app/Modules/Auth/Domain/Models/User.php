@@ -72,8 +72,14 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $website
  * @property string|null $invoice_footer_text
  * @property int $overdue_reminder_days Dashboard overdue-reminder threshold in days
+ * @property bool $auto_remind_enabled Whether overdue invoices get automatic reminder emails
+ * @property int $auto_remind_max Max automatic reminders sent per invoice, 1-10
+ * @property int $auto_remind_interval_days Minimum days between automatic reminders
  * @property string|null $clockify_api_key
  * @property string|null $clockify_workspace_id
+ * @property string|null $two_factor_secret Base32 TOTP secret; unconfirmed until two_factor_confirmed_at is set
+ * @property list<string>|null $two_factor_recovery_codes Hashed one-time recovery codes
+ * @property Carbon|null $two_factor_confirmed_at
  * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -160,10 +166,13 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'overdue_reminder_days', 'clockify_api_key', 'clockify_workspace_id',
+        'auto_remind_enabled', 'auto_remind_max', 'auto_remind_interval_days',
+        'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
     ];
 
     protected $hidden = [
         'password', 'remember_token', 'google_id', 'clockify_api_key',
+        'two_factor_secret', 'two_factor_recovery_codes',
     ];
 
     // Mirrors the DB defaults so freshly created (not yet re-fetched)
@@ -171,6 +180,9 @@ class User extends Authenticatable implements ProvidesAccountMeta
     protected $attributes = [
         'overdue_reminder_days' => 14,
         'vat_status' => 'non_payer',
+        'auto_remind_enabled' => false,
+        'auto_remind_max' => 3,
+        'auto_remind_interval_days' => 7,
     ];
 
     protected function casts(): array
@@ -185,8 +197,14 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'supplier_invoice_number_start' => 'integer',
             'invoice_inbox_enabled' => 'boolean',
             'overdue_reminder_days' => 'integer',
+            'auto_remind_enabled' => 'boolean',
+            'auto_remind_max' => 'integer',
+            'auto_remind_interval_days' => 'integer',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
     }
 
@@ -225,6 +243,11 @@ class User extends Authenticatable implements ProvidesAccountMeta
     public function hasGoogleAuth(): bool
     {
         return $this->google_id !== null;
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_confirmed_at !== null;
     }
 
     public function hasPassword(): bool

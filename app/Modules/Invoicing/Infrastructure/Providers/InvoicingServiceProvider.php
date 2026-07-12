@@ -33,6 +33,7 @@ use App\Modules\Invoicing\Infrastructure\Repositories\EloquentSupplierInvoiceRep
 use App\Modules\Invoicing\Presentation\Console\BackfillVatRatesCommand;
 use App\Modules\Invoicing\Presentation\Console\GenerateRecurringInvoicesCommand;
 use App\Modules\Invoicing\Presentation\Console\ScanInboxCommand;
+use App\Modules\Invoicing\Presentation\Console\SendAutoRemindersCommand;
 use App\Modules\Invoicing\Presentation\Policies\BankAccountPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoiceInboxItemPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoicePolicy;
@@ -129,7 +130,7 @@ class InvoicingServiceProvider extends ServiceProvider
         Event::listen(QuoteRejected::class, SendQuoteDecisionNotification::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([GenerateRecurringInvoicesCommand::class, ScanInboxCommand::class, BackfillVatRatesCommand::class]);
+            $this->commands([GenerateRecurringInvoicesCommand::class, ScanInboxCommand::class, BackfillVatRatesCommand::class, SendAutoRemindersCommand::class]);
         }
     }
 }

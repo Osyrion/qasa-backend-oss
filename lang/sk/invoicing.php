@@ -18,6 +18,8 @@ return [
     'credit_note_only_for_sent_or_paid' => 'Dobropis je možné vystaviť len k odoslanej alebo zaplatenej faktúre.',
     'cannot_invoice_personal_order' => 'Osobnú zákazku nie je možné fakturovať.',
     'order_no_billable_items' => 'Zákazka neobsahuje žiadne fakturovateľné položky ani nevyfakturovaný čas.',
+    'isdoc_draft_not_exportable' => 'Koncept faktúry nie je možné exportovať do ISDOC — najprv ho vystavte.',
+    'isdoc_type_not_exportable' => 'Do ISDOC je možné exportovať len faktúry a dobropisy.',
     'items_only_for_draft' => 'Položky je možné pridávať len ku konceptu faktúry.',
     'work_report_only_editable_for_draft' => 'Výkaz je možné upravovať len pre koncept faktúry.',
     'work_report_only_generatable_for_draft' => 'Výkaz je možné generovať len pre koncept faktúry.',
@@ -39,6 +41,9 @@ return [
     'quote_already_converted' => 'Táto cenová ponuka už bola konvertovaná.',
     'quote_convert_invalid_status' => 'Konvertovať je možné len odoslanú alebo prijatú cenovú ponuku.',
     'quote_client_email_missing' => 'Klient nemá e-mailovú adresu. Doplňte ju alebo zadajte príjemcu.',
+    'vat_report_payer_only' => 'Kontrolný výkaz DPH je dostupný len pre platiteľov DPH.',
+    'vat_control_statement_country_invalid' => 'Kontrolný výkaz DPH je dostupný len pre krajiny SK alebo CZ.',
+    'vat_control_statement_period_required' => 'XML návrh SK KV DPH vyžaduje mesiac alebo štvrťrok — nie je možné ho vygenerovať naraz za celý rok.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'Vybraný klient nie je označený ako dodávateľ.',

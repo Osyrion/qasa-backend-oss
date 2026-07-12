@@ -17,4 +17,9 @@ return [
     'export_owner_only' => 'Only the account owner can perform this action.',
     'invalid_password' => 'Incorrect password.',
     'invalid_delete_confirmation' => 'Type "DELETE" to confirm deleting a Google-only account.',
+    'two_factor_not_started' => 'Call the enable endpoint first to generate a secret.',
+    'two_factor_already_enabled' => 'Two-factor authentication is already enabled. Disable it first to set up a new authenticator.',
+    'two_factor_not_enabled' => 'Two-factor authentication is not enabled.',
+    'invalid_2fa_code' => 'Invalid authentication code.',
+    'challenge_expired' => 'This login challenge has expired or was already used. Please log in again.',
 ];
