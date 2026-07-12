@@ -45,4 +45,6 @@ return [
     'reverse_charge_clause_domestic_sk' => 'Reverse charge — this supply is subject to reverse charge under §69(12) of Act No. 222/2004 Coll.',
     'reverse_charge_clause_domestic_cz' => 'Reverse charge — this supply is subject to reverse charge under §92a of Act No. 235/2004 Coll.',
     'reverse_charge_clause_eu' => 'Reverse charge — Article 196 of Council Directive 2006/112/EC.',
+    'title_quote' => 'Quote',
+    'valid_until' => 'Valid until',
 ];

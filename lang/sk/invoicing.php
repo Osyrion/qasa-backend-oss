@@ -32,6 +32,13 @@ return [
     'reverse_charge_not_allowed_for_client' => 'Tento klient nepovoľuje tuzemské prenesenie daňovej povinnosti na svojich faktúrach.',
     'eu_rc_requires_vies' => 'IČ DPH klienta sa nepodarilo overiť cez VIES. Overte ho pred vystavením faktúry s prenesením daňovej povinnosti v rámci EÚ.',
     'non_payer_cannot_charge_vat' => 'Dodávateľ nie je platiteľom DPH a nemôže účtovať DPH — použite sadzbu 0 %.',
+    'public_link_draft_forbidden' => 'Verejný odkaz je možné vytvoriť len pre vystavený doklad, nie pre koncept.',
+    'quote_not_editable' => 'Upravovať je možné len koncept cenovej ponuky.',
+    'quote_expired' => 'Platnosť tejto cenovej ponuky vypršala.',
+    'quote_already_decided' => 'K tejto cenovej ponuke už bolo zaznamenané rozhodnutie.',
+    'quote_already_converted' => 'Táto cenová ponuka už bola konvertovaná.',
+    'quote_convert_invalid_status' => 'Konvertovať je možné len odoslanú alebo prijatú cenovú ponuku.',
+    'quote_client_email_missing' => 'Klient nemá e-mailovú adresu. Doplňte ju alebo zadajte príjemcu.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'Vybraný klient nie je označený ako dodávateľ.',

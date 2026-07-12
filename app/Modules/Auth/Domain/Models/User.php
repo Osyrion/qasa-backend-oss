@@ -59,6 +59,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property int|null $invoice_number_start
  * @property string|null $supplier_invoice_number_mask
  * @property int|null $supplier_invoice_number_start
+ * @property string|null $quote_number_mask
+ * @property int|null $quote_number_start
  * @property bool $invoice_inbox_enabled
  * @property string $locale UI language
  * @property string $country ISO 3166-1 alpha-2
@@ -154,6 +156,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'ico', 'dic', 'is_vat_payer', 'vat_status', 'tax_flat_rate',
         'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
         'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
+        'quote_number_mask', 'quote_number_start',
         'country', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'overdue_reminder_days', 'clockify_api_key', 'clockify_workspace_id',

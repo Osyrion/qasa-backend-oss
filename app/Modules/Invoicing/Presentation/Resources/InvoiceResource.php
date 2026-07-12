@@ -45,6 +45,16 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'reminder_count', type: 'integer'),
         new OA\Property(property: 'balance', type: 'number', format: 'float', description: 'Outstanding amount — total minus recorded payments'),
         new OA\Property(property: 'payment_status', type: 'string', enum: ['unpaid', 'partial', 'paid', 'overpaid']),
+        new OA\Property(
+            property: 'public_link',
+            type: 'object',
+            nullable: true,
+            properties: [
+                new OA\Property(property: 'url', type: 'string'),
+                new OA\Property(property: 'first_viewed_at', type: 'string', format: 'date-time', nullable: true),
+                new OA\Property(property: 'view_count', type: 'integer'),
+            ]
+        ),
         new OA\Property(property: 'client', ref: '#/components/schemas/Client', nullable: true),
         new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/InvoiceItem'), nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
@@ -95,6 +105,11 @@ class InvoiceResource extends JsonResource
                 (float) $this->resource->total,
                 (float) $this->resource->total - $this->resource->balance(),
             )->value,
+            'public_link' => $this->resource->hasPublicLink() ? [
+                'url' => $this->resource->publicUrl(),
+                'first_viewed_at' => $this->resource->public_first_viewed_at?->toISOString(),
+                'view_count' => $this->resource->public_view_count,
+            ] : null,
 
             'client' => $this->when(
                 $this->resource->relationLoaded('client'),

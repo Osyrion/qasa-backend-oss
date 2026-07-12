@@ -45,4 +45,6 @@ return [
     'reverse_charge_clause_domestic_sk' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa § 69 ods. 12 zákona č. 222/2004 Z. z.',
     'reverse_charge_clause_domestic_cz' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa § 92a zákona č. 235/2004 Zb.',
     'reverse_charge_clause_eu' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa čl. 196 smernice Rady 2006/112/ES.',
+    'title_quote' => 'Cenová ponuka',
+    'valid_until' => 'Platnosť do',
 ];

@@ -60,6 +60,16 @@ class InvoicePolicy
             && $user->can('invoices.manage');
     }
 
+    /**
+     * Public link creation only makes sense on issued (non-draft) invoices,
+     * so this mirrors email()/remind() rather than update().
+     */
+    public function publicLink(User $user, Invoice $invoice): bool
+    {
+        return $this->sameAccount($user, $invoice->user_id)
+            && $user->can('invoices.manage');
+    }
+
     public function recordPayment(User $user, Invoice $invoice): bool
     {
         return $this->sameAccount($user, $invoice->user_id)

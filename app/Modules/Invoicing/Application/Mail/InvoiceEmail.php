@@ -24,6 +24,7 @@ class InvoiceEmail extends Mailable implements ShouldQueue
     public function __construct(
         public readonly Invoice $invoice,
         public readonly ?string $customMessage = null,
+        public readonly ?string $publicUrl = null,
     ) {
         $this->afterCommit();
     }
@@ -43,6 +44,7 @@ class InvoiceEmail extends Mailable implements ShouldQueue
                 'invoice' => $this->invoice,
                 'customMessage' => $this->customMessage,
                 'supplierName' => $this->invoice->supplier_snapshot['name'] ?? null,
+                'publicUrl' => $this->publicUrl,
             ],
         );
     }

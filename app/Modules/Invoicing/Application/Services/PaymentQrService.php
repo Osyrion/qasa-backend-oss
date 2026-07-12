@@ -28,9 +28,9 @@ class PaymentQrService
         private readonly EpcQrBuilder $epcBuilder,
     ) {}
 
-    public function dataUri(Invoice $invoice): ?string
+    public function dataUri(Invoice $invoice, ?float $amountOverride = null): ?string
     {
-        $payload = $this->payload($invoice);
+        $payload = $this->payload($invoice, $amountOverride);
 
         if ($payload === null) {
             return null;

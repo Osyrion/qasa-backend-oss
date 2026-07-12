@@ -22,6 +22,7 @@ class InvoiceReminderMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public readonly Invoice $invoice,
+        public readonly ?string $publicUrl = null,
     ) {
         $this->afterCommit();
     }
@@ -51,6 +52,7 @@ class InvoiceReminderMail extends Mailable implements ShouldQueue
                 'iban' => isset($bank['iban']) && $bank['iban'] !== '' ? (string) $bank['iban'] : null,
                 'bic' => isset($bank['bic']) && $bank['bic'] !== '' ? (string) $bank['bic'] : null,
                 'qrPng' => $qrService->png($this->invoice, $this->invoice->balance()),
+                'publicUrl' => $this->publicUrl,
             ],
         );
     }

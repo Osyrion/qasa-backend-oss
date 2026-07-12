@@ -29,6 +29,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Quote number mask fallback
+    |--------------------------------------------------------------------------
+    |
+    | Used when a user has not configured their own quote_number_mask.
+    |
+    */
+
+    'quote_number_mask' => env('INVOICING_QUOTE_NUMBER_MASK', 'CP-{YYYY}-{NNN}'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Public link in outbound emails
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, SendInvoiceEmailAction and RemindInvoiceAction create (or
+    | reuse) a public link and include a "view online" button in the email
+    | body. Tenants who don't want a shareable link can disable this.
+    |
+    */
+
+    'public_link_in_emails' => env('INVOICING_PUBLIC_LINK_IN_EMAILS', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Invoice inbox scanner
     |--------------------------------------------------------------------------
     |

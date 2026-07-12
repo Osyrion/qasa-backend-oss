@@ -59,6 +59,14 @@ class UpdateProfileAction
                 $updateData['invoice_number_start'] = $data->invoice_number_start;
             }
 
+            if ($data->quote_number_mask_provided) {
+                $updateData['quote_number_mask'] = $data->quote_number_mask;
+            }
+
+            if ($data->quote_number_start_provided) {
+                $updateData['quote_number_start'] = $data->quote_number_start;
+            }
+
             // Hash password if provided
             if ($data->password !== null) {
                 $updateData['password'] = Hash::make($data->password);

@@ -32,6 +32,13 @@ return [
     'reverse_charge_not_allowed_for_client' => 'This client does not allow domestic reverse charge on their invoices.',
     'eu_rc_requires_vies' => "The client's EU VAT ID could not be verified via VIES. Verify it before issuing an intra-EU reverse-charge invoice.",
     'non_payer_cannot_charge_vat' => 'The supplier is not a VAT payer and cannot charge VAT — use a 0% rate.',
+    'public_link_draft_forbidden' => 'A public link can only be created for an issued document, not a draft.',
+    'quote_not_editable' => 'Only a draft quote can be edited.',
+    'quote_expired' => 'This quote has expired.',
+    'quote_already_decided' => 'A decision has already been recorded for this quote.',
+    'quote_already_converted' => 'This quote has already been converted.',
+    'quote_convert_invalid_status' => 'Only a sent or accepted quote can be converted.',
+    'quote_client_email_missing' => 'The client has no email address. Add one or specify a recipient.',
 
     'supplier_invoice' => [
         'client_must_be_vendor' => 'The selected client is not marked as a vendor.',

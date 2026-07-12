@@ -627,6 +627,55 @@ zdieľajúce rovnaký filter DTO:
 - **Stĺpce** (lokalizované): `invoice_number`, `type`, `status`, `issued_at`, `taxable_supply_at`, `due_at`, `client_name`, `client_ico`, `client_dic`, `client_vat_id`, `currency`, `subtotal`, `discount_amount`, `vat_amount`, `total`, `paid_amount`, `balance`, `variable_symbol`, `exchange_rate`.
 - **Sumárne hodnoty**: zo snapshoty / `VatRecapCalculator` (aby sa zhodovali s PDF).
 
+### Verejný odkaz na faktúru
+
+Klient bez prihlásenia vidí faktúru, stiahne PDF a vidí stav úhrady; tenant vidí, či ju klient
+otvoril.
+
+- **Token, nie signed URL** — `public_token` (`Str::random(64)`, ~380 bitov), uložený
+  v plaintexte (unique index); odvolanie = `NULL`, nový odkaz = nový token. Draft nikdy nemá
+  odkaz (`CreateInvoicePublicLinkAction` naň hádže `DomainException`) — verejná stránka číta
+  výhradne zo zmrazených snapshotov.
+- **Vznik**: explicitne (`POST invoices/{invoice}/public-link`, idempotentné, voliteľné
+  `regenerate`) alebo automaticky pri odoslaní e-mailom (`SendInvoiceEmailAction`/
+  `RemindInvoiceAction`), podľa configu `invoicing.public_link_in_emails`.
+- **`PublicInvoiceController`** (`api/v1/public/invoices/{token}`, mimo `auth:sanctum`,
+  limiter `public-doc` 30/min/IP) — payload = presne to, čo je na PDF (žiadne `user_id`,
+  `client_id`, interné polia), `public_status` (zjednodušená mapa `InvoiceStatus`), QR na
+  **zostatok** (`balance()`), nie na `total`. Sleduje `public_first_viewed_at`/
+  `public_view_count`; neznámy token → 404 (rovnako ako neexistujúca routa).
+
+### Cenové ponuky (Quotes)
+
+Chýbajúci začiatok obchodného lievika: ponuka → odoslanie → verejná akceptácia/odmietnutie →
+konverzia na zákazku alebo faktúru jedným klikom. Samostatný model `Quote`/`QuoteItem`
+(vlastné tabuľky, vlastná číselná maska `quote_number_mask`, config default `CP-{YYYY}-{NNN}`)
+— nie nový `InvoiceType`, keďže ponuka má iný životný cyklus (accepted/rejected/expired), bez
+platieb, DUZP či dobropisov.
+
+- **Stavy** (`QuoteStatus`): `Draft → Sent → Accepted|Rejected|Expired`. `effectiveStatus()`
+  počíta expiráciu za behu z `valid_until` (žiadny denný cron) — `Sent` po termíne sa javí a
+  správa ako `Expired`, bez fyzického prepnutia stĺpca `status`.
+- **Snapshoty** sa zmrazia pri prvom prechode `draft → sent` (`UpdateQuoteStatusAction`) —
+  ponuka nemá samostatný krok "vystaviť" ako faktúra.
+- **Verejné rozhodnutie je jednorazové**: `DecideQuoteAction::accept()/reject()` cez
+  `api/v1/public/quotes/{token}/accept|reject` (limiter `public-decide`, 10/min/IP), len zo
+  stavu `Sent` a pred `valid_until`; druhý pokus → `invoicing.quote_already_decided`. Ukladá
+  `decision_note`/`decision_ip`; vyvolá `QuoteAccepted`/`QuoteRejected` → e-mail vlastníkovi.
+- **Konverzia** povolená zo `Sent` aj `Accepted` (telefonické odsúhlasenie), nikdy z
+  `Draft`/`Rejected`/`Expired`; dvojitá konverzia rovnakého typu → `invoicing.quote_already_converted`.
+  - **`ConvertQuoteToInvoiceAction`** — vytvorí **draft** faktúru cez `CreateInvoiceAction`
+    (rovnaké položky, zľava), uloží `converted_invoice_id`.
+  - **`ConvertQuoteToOrderAction`** — vytvorí `Order` s `billing_type = mixed` (jediný typ bez
+    povinnej sadzby) cez `Orders\Application\Contracts\CreateOrderActionInterface` (modulová
+    hranica: Invoicing smie závisieť len na Orders kontraktoch, nie na jeho Actions/Services),
+    uloží `converted_order_id`.
+- **PDF** (`QuotePdfService` + `quote-pdf.blade.php`) — vždy „Nie je daňový doklad", bez QR
+  a bankových údajov; zdieľa VAT rekapituláciu s faktúrou cez `VatRecapCalculator`.
+- **Zdieľaná VAT matematika**: `VatRecapCalculator` bol rozšírený o item-based jadro
+  (`recapFromItems`/`subtotalFromItems`/…), ktoré `Invoice`- aj `Quote`-typované metódy
+  volajú ako tenké wrappery — jedna implementácia zaokrúhľovania pre oba typy dokladov.
+
 ---
 
 ## 14. Moduly Subscriptions a Saas — predplatné a edícia

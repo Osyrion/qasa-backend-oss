@@ -14,6 +14,10 @@ use Throwable;
 
 readonly class RemindInvoiceAction
 {
+    public function __construct(
+        private CreateInvoicePublicLinkAction $createPublicLinkAction,
+    ) {}
+
     /**
      * Send a payment reminder for a sent (and still unpaid) invoice.
      * Repeat reminders are throttled by the configured cooldown.
@@ -49,9 +53,15 @@ readonly class RemindInvoiceAction
             throw DomainException::because(__('invoicing.client_email_missing_for_reminder'));
         }
 
+        $publicUrl = null;
+
+        if (config('invoicing.public_link_in_emails')) {
+            $publicUrl = $this->createPublicLinkAction->execute($invoice)->publicUrl();
+        }
+
         $locale = $invoice->client->locale ?? $invoice->user->locale ?? (string) config('app.locale');
 
-        Mail::to($email)->queue((new InvoiceReminderMail($invoice))->locale($locale));
+        Mail::to($email)->queue((new InvoiceReminderMail($invoice, $publicUrl))->locale($locale));
 
         $invoice->update([
             'status' => InvoiceStatus::Reminded->value,

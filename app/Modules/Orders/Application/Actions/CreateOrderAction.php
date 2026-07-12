@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Application\Actions;
 
+use App\Modules\Orders\Application\Contracts\CreateOrderActionInterface;
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Application\DTOs\OrderData;
 use App\Modules\Orders\Domain\Events\OrderCreated;
@@ -13,7 +14,7 @@ use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-readonly class CreateOrderAction
+readonly class CreateOrderAction implements CreateOrderActionInterface
 {
     public function __construct(
         private OrderRepositoryInterface $repository,
