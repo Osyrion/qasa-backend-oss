@@ -31,8 +31,9 @@ readonly class UpdateInvoiceStatusAction
         $this->assertTransition($currentStatus, $newStatus);
 
         // The ČNB fetch is external I/O — resolve it before the transaction
-        // below holds a row lock and an open connection.
-        $exchangeRate = $currentStatus === InvoiceStatus::Draft && $newStatus === InvoiceStatus::Sent
+        // below holds a row lock and an open connection. Leaving Draft always
+        // means issuance (Draft only transitions to Issued or Sent).
+        $exchangeRate = $currentStatus === InvoiceStatus::Draft
             ? $this->issueAction->resolveExchangeRateSnapshot($invoice)
             : null;
 
@@ -46,7 +47,8 @@ readonly class UpdateInvoiceStatusAction
             $this->assertTransition($currentStatus, $newStatus);
 
             // Issuance side effects (snapshots, ČNB rate, VS/DUZP defaults)
-            if ($currentStatus === InvoiceStatus::Draft && $newStatus === InvoiceStatus::Sent) {
+            // apply on any exit from Draft — both Draft → Issued and Draft → Sent.
+            if ($currentStatus === InvoiceStatus::Draft) {
                 $invoice = $this->issueAction->execute($invoice, $exchangeRate);
             }
 

@@ -569,7 +569,7 @@ class InvoiceController extends Controller
             content: new OA\JsonContent(
                 required: ['status'],
                 properties: [
-                    new OA\Property(property: 'status', type: 'string', enum: ['sent', 'paid', 'cancelled']),
+                    new OA\Property(property: 'status', type: 'string', enum: ['issued', 'sent', 'paid', 'cancelled']),
                 ]
             )
         ),
@@ -597,8 +597,10 @@ class InvoiceController extends Controller
     {
         $this->authorize('updateStatus', $invoice);
 
+        // Only statuses a user may set directly — reminded/credited are owned
+        // by the remind and corrective actions and must not be set by hand.
         $request->validate([
-            'status' => ['required', 'in:sent,paid,cancelled'],
+            'status' => ['required', 'in:issued,sent,paid,cancelled'],
         ]);
 
         try {

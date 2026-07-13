@@ -115,6 +115,27 @@ it('freezes supplier, client and bank snapshots at issue', function (): void {
     expect($invoice->refresh()->supplier_snapshot['ico'] ?? null)->toBe('12345678');
 });
 
+it('freezes snapshots on draft → issued too, not only draft → sent', function (): void {
+    fakeCnb();
+
+    [$user, $invoice] = draftInvoice('EUR');
+
+    $this->actingAs($user)->postJson("/api/v1/invoices/{$invoice->id}/status", [
+        'status' => 'issued',
+    ])->assertOk();
+
+    $invoice->refresh();
+
+    expect($invoice->status)->toBe('issued')
+        ->and($invoice->supplier_snapshot)->not->toBeNull()
+        ->and($invoice->supplier_snapshot['ico'] ?? null)->toBe('12345678')
+        ->and($invoice->client_snapshot['country'] ?? null)->toBe('SK')
+        ->and($invoice->bank_account_snapshot['iban'] ?? null)->not->toBeNull()
+        ->and((float) $invoice->exchange_rate_snapshot)->toBe(24.755)
+        ->and($invoice->variable_symbol)->not->toBeNull()
+        ->and($invoice->taxable_supply_at)->not->toBeNull();
+});
+
 it('defaults the variable symbol and DUZP at issue', function (): void {
     fakeCnb();
 
