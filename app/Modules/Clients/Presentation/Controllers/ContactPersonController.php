@@ -9,7 +9,6 @@ use App\Modules\Clients\Application\DTOs\ContactPersonData;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Clients\Domain\Models\ContactPerson;
 use App\Modules\Clients\Presentation\Resources\ContactPersonResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -114,14 +113,10 @@ class ContactPersonController extends Controller
     {
         $this->authorize('update', $client);
 
-        try {
-            $data = ContactPersonData::fromRequest($request);
-            $person = $this->addAction->execute($client, $data);
+        $data = ContactPersonData::fromRequest($request);
+        $person = $this->addAction->execute($client, $data);
 
-            return response()->json(ContactPersonResource::make($person), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(ContactPersonResource::make($person), 201);
     }
 
     #[OA\Put(

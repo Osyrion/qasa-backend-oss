@@ -52,7 +52,7 @@ final class InvoiceCsvBuilder
         return [
             $invoice->invoice_number,
             $invoice->type->value,
-            $invoice->status,
+            $invoice->status->value,
             $invoice->issued_at->format('Y-m-d'),
             $invoice->taxable_supply_at?->format('Y-m-d') ?? '',
             $invoice->due_at->format('Y-m-d'),

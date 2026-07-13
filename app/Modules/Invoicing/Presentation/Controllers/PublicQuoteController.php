@@ -10,7 +10,6 @@ use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Invoicing\Domain\Services\VatRecapRow;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -157,18 +156,14 @@ class PublicQuoteController extends Controller
 
         $note = $request->filled('decision_note') ? $request->string('decision_note')->toString() : null;
 
-        try {
-            $updated = $accept
-                ? $this->decideAction->accept($quote, $note, $request->ip())
-                : $this->decideAction->reject($quote, $note, $request->ip());
+        $updated = $accept
+            ? $this->decideAction->accept($quote, $note, $request->ip())
+            : $this->decideAction->reject($quote, $note, $request->ip());
 
-            return response()->json([
-                'status' => $updated->status,
-                'accepted_at' => $updated->accepted_at?->toISOString(),
-                'rejected_at' => $updated->rejected_at?->toISOString(),
-            ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'status' => $updated->status,
+            'accepted_at' => $updated->accepted_at?->toISOString(),
+            'rejected_at' => $updated->rejected_at?->toISOString(),
+        ]);
     }
 }

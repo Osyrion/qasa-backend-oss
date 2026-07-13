@@ -27,7 +27,7 @@ use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
 use App\Modules\Invoicing\Presentation\Resources\QuoteItemResource;
 use App\Modules\Invoicing\Presentation\Resources\QuoteResource;
 use App\Modules\Orders\Presentation\Resources\OrderResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -74,7 +74,7 @@ class QuoteController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $quotes = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['status', 'client_id', 'date_from', 'date_to', 'sort', 'direction']),
         );
 
@@ -154,14 +154,10 @@ class QuoteController extends Controller
             ],
         ]);
 
-        try {
-            $data = QuoteData::fromRequest($request);
-            $updated = $this->updateAction->execute($quote, $data);
+        $data = QuoteData::fromRequest($request);
+        $updated = $this->updateAction->execute($quote, $data);
 
-            return response()->json(QuoteResource::make($updated->load(['client', 'items'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(QuoteResource::make($updated->load(['client', 'items'])));
     }
 
     #[OA\Delete(
@@ -212,14 +208,10 @@ class QuoteController extends Controller
             ],
         ]);
 
-        try {
-            $data = QuoteItemData::fromRequest($request);
-            $item = $this->addItemAction->execute($quote, $data);
+        $data = QuoteItemData::fromRequest($request);
+        $item = $this->addItemAction->execute($quote, $data);
 
-            return response()->json(QuoteItemResource::make($item), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(QuoteItemResource::make($item), 201);
     }
 
     #[OA\Delete(
@@ -236,13 +228,9 @@ class QuoteController extends Controller
     {
         $this->authorize('update', $quote);
 
-        try {
-            $this->removeItemAction->execute($quote, $item);
+        $this->removeItemAction->execute($quote, $item);
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 
     #[OA\Post(
@@ -263,14 +251,10 @@ class QuoteController extends Controller
             'status' => ['required', 'in:sent,accepted,rejected,expired'],
         ]);
 
-        try {
-            $newStatus = QuoteStatus::from($request->input('status'));
-            $updated = $this->updateStatusAction->execute($quote, $newStatus);
+        $newStatus = QuoteStatus::from($request->input('status'));
+        $updated = $this->updateStatusAction->execute($quote, $newStatus);
 
-            return response()->json(QuoteResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(QuoteResource::make($updated));
     }
 
     #[OA\Post(
@@ -290,14 +274,10 @@ class QuoteController extends Controller
 
         $request->validate(SendInvoiceEmailData::rules());
 
-        try {
-            $data = SendInvoiceEmailData::fromRequest($request);
-            $updated = $this->sendEmailAction->execute($quote, $data);
+        $data = SendInvoiceEmailData::fromRequest($request);
+        $updated = $this->sendEmailAction->execute($quote, $data);
 
-            return response()->json(QuoteResource::make($updated->load(['client', 'items'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(QuoteResource::make($updated->load(['client', 'items'])));
     }
 
     #[OA\Get(
@@ -359,16 +339,12 @@ class QuoteController extends Controller
             'regenerate' => ['nullable', 'boolean'],
         ]);
 
-        try {
-            $updated = $this->createPublicLinkAction->execute($quote, $request->boolean('regenerate'));
+        $updated = $this->createPublicLinkAction->execute($quote, $request->boolean('regenerate'));
 
-            return response()->json([
-                'token' => $updated->public_token,
-                'url' => $updated->publicUrl(),
-            ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'token' => $updated->public_token,
+            'url' => $updated->publicUrl(),
+        ]);
     }
 
     #[OA\Delete(
@@ -401,16 +377,12 @@ class QuoteController extends Controller
     {
         $this->authorize('convert', $quote);
 
-        try {
-            $invoice = $this->convertToInvoiceAction->execute($quote);
+        $invoice = $this->convertToInvoiceAction->execute($quote);
 
-            return response()->json(
-                InvoiceResource::make($invoice->load(['client', 'items'])),
-                201,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(
+            InvoiceResource::make($invoice->load(['client', 'items'])),
+            201,
+        );
     }
 
     #[OA\Post(
@@ -427,15 +399,11 @@ class QuoteController extends Controller
     {
         $this->authorize('convert', $quote);
 
-        try {
-            $order = $this->convertToOrderAction->execute($quote);
+        $order = $this->convertToOrderAction->execute($quote);
 
-            return response()->json(
-                OrderResource::make($order->load('items')),
-                201,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(
+            OrderResource::make($order->load('items')),
+            201,
+        );
     }
 }

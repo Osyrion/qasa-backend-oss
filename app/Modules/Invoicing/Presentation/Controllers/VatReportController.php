@@ -124,11 +124,7 @@ class VatReportController extends Controller
         $user = $request->user();
         $country = strtoupper((string) $request->string('country'));
 
-        try {
-            $report = $this->buildVatControlStatement($request, $user);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $report = $this->buildVatControlStatement($request, $user);
 
         $xmlAssumptions = $country === 'CZ' ? $this->dphKh1XmlBuilder->assumptions() : $this->kvDphXmlBuilder->assumptions();
 
@@ -169,11 +165,7 @@ class VatReportController extends Controller
             return response()->json(['message' => __('invoicing.vat_control_statement_period_required')], 422);
         }
 
-        try {
-            $report = $this->buildVatControlStatement($request, $user);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $report = $this->buildVatControlStatement($request, $user);
 
         $body = $country === 'CZ'
             ? $this->dphKh1XmlBuilder->build($report, $user)

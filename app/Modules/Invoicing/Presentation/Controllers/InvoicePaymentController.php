@@ -10,7 +10,6 @@ use App\Modules\Invoicing\Application\DTOs\PaymentData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use App\Modules\Invoicing\Presentation\Resources\InvoicePaymentResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,13 +71,9 @@ class InvoicePaymentController extends Controller
 
         $request->validate(PaymentData::rules());
 
-        try {
-            $payment = $this->recordAction->execute($invoice, PaymentData::fromRequest($request));
+        $payment = $this->recordAction->execute($invoice, PaymentData::fromRequest($request));
 
-            return response()->json(InvoicePaymentResource::make($payment), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoicePaymentResource::make($payment), 201);
     }
 
     /**

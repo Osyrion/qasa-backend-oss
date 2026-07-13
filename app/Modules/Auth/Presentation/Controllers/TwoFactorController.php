@@ -14,7 +14,6 @@ use App\Modules\Auth\Application\DTOs\TwoFactorCodeData;
 use App\Modules\Auth\Application\DTOs\VerifyTwoFactorChallengeData;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Resources\UserResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -50,11 +49,7 @@ class TwoFactorController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            return response()->json($action->execute($user));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json($action->execute($user));
     }
 
     #[OA\Post(
@@ -87,13 +82,9 @@ class TwoFactorController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $recoveryCodes = $action->execute($user, TwoFactorCodeData::fromRequest($request));
+        $recoveryCodes = $action->execute($user, TwoFactorCodeData::fromRequest($request));
 
-            return response()->json(['recovery_codes' => $recoveryCodes]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(['recovery_codes' => $recoveryCodes]);
     }
 
     #[OA\Delete(
@@ -121,13 +112,9 @@ class TwoFactorController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $action->execute($user, DisableTwoFactorData::fromRequest($request));
+        $action->execute($user, DisableTwoFactorData::fromRequest($request));
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 
     #[OA\Post(
@@ -160,13 +147,9 @@ class TwoFactorController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $recoveryCodes = $action->execute($user, TwoFactorCodeData::fromRequest($request));
+        $recoveryCodes = $action->execute($user, TwoFactorCodeData::fromRequest($request));
 
-            return response()->json(['recovery_codes' => $recoveryCodes]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(['recovery_codes' => $recoveryCodes]);
     }
 
     #[OA\Post(
@@ -197,15 +180,11 @@ class TwoFactorController extends Controller
     {
         $request->validate(VerifyTwoFactorChallengeData::rules());
 
-        try {
-            $result = $action->execute(VerifyTwoFactorChallengeData::fromRequest($request));
+        $result = $action->execute(VerifyTwoFactorChallengeData::fromRequest($request));
 
-            return response()->json([
-                'token' => $result['token'],
-                'user' => UserResource::make($result['user']),
-            ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'token' => $result['token'],
+            'user' => UserResource::make($result['user']),
+        ]);
     }
 }

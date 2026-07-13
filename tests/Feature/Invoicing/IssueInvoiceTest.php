@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
@@ -126,7 +127,7 @@ it('freezes snapshots on draft → issued too, not only draft → sent', functio
 
     $invoice->refresh();
 
-    expect($invoice->status)->toBe('issued')
+    expect($invoice->status)->toBe(InvoiceStatus::Issued)
         ->and($invoice->supplier_snapshot)->not->toBeNull()
         ->and($invoice->supplier_snapshot['ico'] ?? null)->toBe('12345678')
         ->and($invoice->client_snapshot['country'] ?? null)->toBe('SK')
@@ -156,7 +157,7 @@ it('still issues the invoice when ČNB is down', function (): void {
 
     $invoice->refresh();
 
-    expect($invoice->status)->toBe('sent')
+    expect($invoice->status)->toBe(InvoiceStatus::Sent)
         ->and($invoice->exchange_rate_snapshot)->toBeNull();
 });
 

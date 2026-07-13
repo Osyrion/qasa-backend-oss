@@ -12,7 +12,7 @@ use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceInboxItemResource;
 use App\Modules\Invoicing\Presentation\Resources\SupplierInvoiceResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,7 +92,7 @@ class InvoiceInboxController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $items = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['status', 'date_from', 'date_to', 'sort', 'direction']),
         );
 
@@ -231,17 +231,13 @@ class InvoiceInboxController extends Controller
             ],
         ]);
 
-        try {
-            $data = SupplierInvoiceData::fromRequest($request);
-            $supplierInvoice = $this->convertAction->execute($inboxItem, $data, $user);
+        $data = SupplierInvoiceData::fromRequest($request);
+        $supplierInvoice = $this->convertAction->execute($inboxItem, $data, $user);
 
-            return response()->json(
-                SupplierInvoiceResource::make($supplierInvoice->load(['client', 'vatLines'])),
-                201,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(
+            SupplierInvoiceResource::make($supplierInvoice->load(['client', 'vatLines'])),
+            201,
+        );
     }
 
     #[OA\Post(
@@ -272,13 +268,9 @@ class InvoiceInboxController extends Controller
     {
         $this->authorize('ignore', $inboxItem);
 
-        try {
-            $updated = $this->ignoreAction->execute($inboxItem);
+        $updated = $this->ignoreAction->execute($inboxItem);
 
-            return response()->json(InvoiceInboxItemResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceInboxItemResource::make($updated));
     }
 
     #[OA\Delete(

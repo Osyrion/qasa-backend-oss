@@ -6,7 +6,6 @@ namespace App\Modules\TimeTracking\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Domain\Models\Order;
-use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\TimeTracking\Application\Actions\ImportCsvAction;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -84,8 +83,6 @@ class TimeEntryImportController extends Controller
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json(['message' => __('time_tracking.csv_format_unknown')], 422);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
         }
 
         return response()->json($result);

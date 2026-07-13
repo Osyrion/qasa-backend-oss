@@ -70,7 +70,7 @@ class InvoiceResource extends JsonResource
             'invoice_number' => $this->resource->invoice_number,
             'type' => $this->resource->type?->value,
             'related_invoice_id' => $this->resource->related_invoice_id,
-            'status' => $this->resource->status,
+            'status' => $this->resource->status->value,
             'issued_at' => $this->resource->issued_at?->toDateString(),
             'taxable_supply_at' => $this->resource->taxable_supply_at?->toDateString(),
             'due_at' => $this->resource->due_at?->toDateString(),

@@ -11,7 +11,7 @@ use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Clients\Presentation\Resources\ClientResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,7 +110,7 @@ class ClientController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $clients = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['role', 'client_type', 'search', 'currency', 'sort', 'direction']),
         );
 
@@ -195,14 +195,10 @@ class ClientController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        try {
-            $data = ClientData::validateAndCreate($request->all());
-            $client = $this->createAction->execute($data, $request->user()->accountOwnerId());
+        $data = ClientData::validateAndCreate($request->all());
+        $client = $this->createAction->execute($data, $request->user()->accountOwnerId());
 
-            return response()->json(ClientResource::make($client), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(ClientResource::make($client), 201);
     }
 
     /**
@@ -264,14 +260,10 @@ class ClientController extends Controller
     )]
     public function update(Request $request, Client $client): JsonResponse
     {
-        try {
-            $data = ClientData::validateAndCreate($request->all());
-            $updated = $this->updateAction->execute($client, $data);
+        $data = ClientData::validateAndCreate($request->all());
+        $updated = $this->updateAction->execute($client, $data);
 
-            return response()->json(ClientResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(ClientResource::make($updated));
     }
 
     /**
@@ -300,12 +292,8 @@ class ClientController extends Controller
     )]
     public function destroy(Client $client): JsonResponse
     {
-        try {
-            $this->deleteAction->execute($client);
+        $this->deleteAction->execute($client);
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 }

@@ -16,7 +16,7 @@ use App\Modules\Invoicing\Application\Services\SupplierPaymentQrService;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Presentation\Resources\SupplierInvoiceResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -133,7 +133,7 @@ class SupplierInvoiceController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $supplierInvoices = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only([
                 'status', 'client_id', 'search', 'handed',
                 'date_from', 'date_to',
@@ -235,17 +235,13 @@ class SupplierInvoiceController extends Controller
             ],
         ]);
 
-        try {
-            $data = SupplierInvoiceData::fromRequest($request);
-            $supplierInvoice = $this->createAction->execute($data, $user);
+        $data = SupplierInvoiceData::fromRequest($request);
+        $supplierInvoice = $this->createAction->execute($data, $user);
 
-            return response()->json(
-                SupplierInvoiceResource::make($supplierInvoice->load(['client', 'vatLines'])),
-                201,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(
+            SupplierInvoiceResource::make($supplierInvoice->load(['client', 'vatLines'])),
+            201,
+        );
     }
 
     /**
@@ -321,14 +317,10 @@ class SupplierInvoiceController extends Controller
             ],
         ]);
 
-        try {
-            $data = SupplierInvoiceData::fromRequest($request);
-            $updated = $this->updateAction->execute($supplierInvoice, $data);
+        $data = SupplierInvoiceData::fromRequest($request);
+        $updated = $this->updateAction->execute($supplierInvoice, $data);
 
-            return response()->json(SupplierInvoiceResource::make($updated->load(['client', 'vatLines'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(SupplierInvoiceResource::make($updated->load(['client', 'vatLines'])));
     }
 
     #[OA\Delete(
@@ -354,13 +346,9 @@ class SupplierInvoiceController extends Controller
     )]
     public function destroy(SupplierInvoice $supplierInvoice): JsonResponse
     {
-        try {
-            $this->deleteAction->execute($supplierInvoice);
+        $this->deleteAction->execute($supplierInvoice);
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 
     /**
@@ -409,18 +397,14 @@ class SupplierInvoiceController extends Controller
             'paid_at' => ['nullable', 'date'],
         ]);
 
-        try {
-            $newStatus = SupplierInvoiceStatus::from($request->input('status'));
-            $updated = $this->updateStatusAction->execute(
-                $supplierInvoice,
-                $newStatus,
-                $request->filled('paid_at') ? $request->string('paid_at')->toString() : null,
-            );
+        $newStatus = SupplierInvoiceStatus::from($request->input('status'));
+        $updated = $this->updateStatusAction->execute(
+            $supplierInvoice,
+            $newStatus,
+            $request->filled('paid_at') ? $request->string('paid_at')->toString() : null,
+        );
 
-            return response()->json(SupplierInvoiceResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(SupplierInvoiceResource::make($updated));
     }
 
     #[OA\Post(
@@ -458,11 +442,7 @@ class SupplierInvoiceController extends Controller
     {
         $this->authorize('verifyAccount', $supplierInvoice);
 
-        try {
-            return response()->json($this->verifyAccountAction->execute($supplierInvoice));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json($this->verifyAccountAction->execute($supplierInvoice));
     }
 
     #[OA\Get(
@@ -498,12 +478,8 @@ class SupplierInvoiceController extends Controller
     {
         $this->authorize('view', $supplierInvoice);
 
-        try {
-            return response()->json([
-                'data_uri' => $this->paymentQrService->dataUri($supplierInvoice),
-            ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'data_uri' => $this->paymentQrService->dataUri($supplierInvoice),
+        ]);
     }
 }

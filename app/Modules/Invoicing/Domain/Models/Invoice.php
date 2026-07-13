@@ -31,7 +31,7 @@ use Illuminate\Support\Carbon;
  * @property string $invoice_number e.g. FA-2024-001
  * @property InvoiceType $type
  * @property string|null $related_invoice_id Original invoice for credit_note/storno
- * @property string $status
+ * @property InvoiceStatus $status
  * @property Carbon $issued_at
  * @property Carbon|null $taxable_supply_at DUZP
  * @property Carbon $due_at
@@ -153,6 +153,7 @@ class Invoice extends Model
         return [
             'currency' => Currency::class,
             'type' => InvoiceType::class,
+            'status' => InvoiceStatus::class,
             'issued_at' => 'date',
             'taxable_supply_at' => 'date',
             'due_at' => 'date',
@@ -182,22 +183,22 @@ class Invoice extends Model
 
     public function scopeDraft($query)
     {
-        return $query->where('status', 'draft');
+        return $query->where('status', InvoiceStatus::Draft->value);
     }
 
     public function scopeSent($query)
     {
-        return $query->where('status', 'sent');
+        return $query->where('status', InvoiceStatus::Sent->value);
     }
 
     public function scopePaid($query)
     {
-        return $query->where('status', 'paid');
+        return $query->where('status', InvoiceStatus::Paid->value);
     }
 
     public function scopeOverdue($query)
     {
-        return $query->where('status', 'sent')
+        return $query->where('status', InvoiceStatus::Sent->value)
             ->where('due_at', '<', now()->toDateString());
     }
 
@@ -205,22 +206,22 @@ class Invoice extends Model
 
     public function isDraft(): bool
     {
-        return $this->status === 'draft';
+        return $this->status === InvoiceStatus::Draft;
     }
 
     public function isSent(): bool
     {
-        return $this->status === 'sent';
+        return $this->status === InvoiceStatus::Sent;
     }
 
     public function isPaid(): bool
     {
-        return $this->status === 'paid';
+        return $this->status === InvoiceStatus::Paid;
     }
 
     public function isCancelled(): bool
     {
-        return $this->status === 'cancelled';
+        return $this->status === InvoiceStatus::Cancelled;
     }
 
     public function isCreditNote(): bool
@@ -230,7 +231,7 @@ class Invoice extends Model
 
     public function statusEnum(): InvoiceStatus
     {
-        return InvoiceStatus::from($this->status);
+        return $this->status;
     }
 
     /**

@@ -11,7 +11,7 @@ use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Application\DTOs\OrderData;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Presentation\Resources\OrderResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -124,7 +124,7 @@ class OrderController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $orders = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only([
                 'status',
                 'client_id',
@@ -210,14 +210,10 @@ class OrderController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        try {
-            $data = OrderData::fromRequest($request);
-            $order = $this->createAction->execute($data, $request->user()->accountOwnerId());
+        $data = OrderData::fromRequest($request);
+        $order = $this->createAction->execute($data, $request->user()->accountOwnerId());
 
-            return response()->json(OrderResource::make($order), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(OrderResource::make($order), 201);
     }
 
     /**
@@ -269,14 +265,10 @@ class OrderController extends Controller
     )]
     public function update(Request $request, Order $order): JsonResponse
     {
-        try {
-            $data = OrderData::fromRequest($request);
-            $updated = $this->updateAction->execute($order, $data);
+        $data = OrderData::fromRequest($request);
+        $updated = $this->updateAction->execute($order, $data);
 
-            return response()->json(OrderResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(OrderResource::make($updated));
     }
 
     /**
@@ -305,12 +297,8 @@ class OrderController extends Controller
     )]
     public function destroy(Order $order): JsonResponse
     {
-        try {
-            $this->deleteAction->execute($order);
+        $this->deleteAction->execute($order);
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 }

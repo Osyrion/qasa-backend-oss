@@ -44,7 +44,7 @@ readonly class CreateCorrectiveInvoiceAction
             ? [InvoiceStatus::Sent]
             : [InvoiceStatus::Sent, InvoiceStatus::Paid];
 
-        if (! in_array(InvoiceStatus::from($original->status), $allowedStatuses, true)) {
+        if (! in_array($original->status, $allowedStatuses, true)) {
             throw DomainException::because(
                 $type === InvoiceType::Storno
                     ? __('invoicing.storno_only_for_sent')

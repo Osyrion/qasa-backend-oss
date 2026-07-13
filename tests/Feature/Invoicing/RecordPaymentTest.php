@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 
 it('tracks a partial payment without flipping the invoice to paid', function (): void {
@@ -106,13 +107,13 @@ it('reopens the invoice when a payment that covered it is deleted', function ():
         'paid_at' => today()->toDateString(),
     ])->assertCreated()->json('id');
 
-    expect($invoice->refresh()->status)->toBe('paid');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Paid);
 
     $this->actingAs($user)
         ->deleteJson("/api/v1/invoices/{$invoice->id}/payments/{$paymentId}")
         ->assertNoContent();
 
-    expect($invoice->refresh()->status)->toBe('sent');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Sent);
 });
 
 it('does not let a user record a payment on another account invoice', function (): void {

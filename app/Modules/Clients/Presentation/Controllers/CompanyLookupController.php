@@ -12,7 +12,6 @@ use App\Modules\Clients\Application\DTOs\LookupCompanyData;
 use App\Modules\Clients\Application\DTOs\VatValidationData;
 use App\Modules\Clients\Application\DTOs\VerifyVatData;
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,11 +53,7 @@ class CompanyLookupController extends Controller
 
         $data = LookupCompanyData::validateAndCreate($request->all());
 
-        try {
-            return $this->fetchCompanyData->execute($data->country, $data->ico);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return $this->fetchCompanyData->execute($data->country, $data->ico);
     }
 
     #[OA\Get(
@@ -84,11 +79,7 @@ class CompanyLookupController extends Controller
 
         $data = VerifyVatData::validateAndCreate($request->all());
 
-        try {
-            $result = $this->verifyVat->execute($data->country, $data->vat_id);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $result = $this->verifyVat->execute($data->country, $data->vat_id);
 
         if ($result->valid && $data->client_id !== null) {
             /** @var User $user */

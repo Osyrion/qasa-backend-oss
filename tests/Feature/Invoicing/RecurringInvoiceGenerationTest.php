@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
@@ -55,7 +56,7 @@ it('generates a draft invoice from a due template', function (): void {
     $invoice = Invoice::withoutGlobalScope('user')->firstOrFail();
     $today = today();
 
-    expect($invoice->status)->toBe('draft')
+    expect($invoice->status)->toBe(InvoiceStatus::Draft)
         ->and($invoice->invoice_number)->toBe('FA-'.now()->format('Y').'-001')
         ->and($invoice->recurring_template_id)->toBe($template->id)
         ->and($invoice->issued_at->toDateString())->toBe($today->toDateString())

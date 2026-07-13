@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Mail\InvoiceEmail;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 use Illuminate\Support\Facades\Mail;
@@ -51,7 +52,7 @@ it('issues and queues the email for an auto_send template', function (): void {
 
     $invoice = Invoice::withoutGlobalScope('user')->firstOrFail();
 
-    expect($invoice->status)->toBe('sent')
+    expect($invoice->status)->toBe(InvoiceStatus::Sent)
         ->and($invoice->supplier_snapshot)->not->toBeNull()
         ->and($invoice->emailed_at)->not->toBeNull()
         ->and($invoice->emailed_to)->toBe('klient@example.com');
@@ -71,7 +72,7 @@ it('leaves invoices as draft without the auto_send flag', function (): void {
 
     $invoice = Invoice::withoutGlobalScope('user')->firstOrFail();
 
-    expect($invoice->status)->toBe('draft')
+    expect($invoice->status)->toBe(InvoiceStatus::Draft)
         ->and($invoice->emailed_at)->toBeNull();
 
     Mail::assertNothingQueued();
@@ -90,7 +91,7 @@ it('auto-sends only the newest invoice after a catch-up', function (): void {
 
     $invoices = Invoice::withoutGlobalScope('user')->orderBy('issued_at')->get();
 
-    expect($invoices->pluck('status')->all())->toBe(['draft', 'draft', 'sent'])
+    expect($invoices->pluck('status')->all())->toBe([InvoiceStatus::Draft, InvoiceStatus::Draft, InvoiceStatus::Sent])
         ->and($invoices->first()?->emailed_at)->toBeNull()
         ->and($invoices->last()?->emailed_at)->not->toBeNull();
 
@@ -106,7 +107,7 @@ it('keeps the generated invoice when auto-send fails on a client without email',
 
     $invoice = Invoice::withoutGlobalScope('user')->firstOrFail();
 
-    expect($invoice->status)->toBe('draft')
+    expect($invoice->status)->toBe(InvoiceStatus::Draft)
         ->and($invoice->emailed_at)->toBeNull();
 
     Mail::assertNothingQueued();

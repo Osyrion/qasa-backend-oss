@@ -10,7 +10,6 @@ use App\Modules\Pricing\Application\Actions\UpdatePriceListAction;
 use App\Modules\Pricing\Application\DTOs\PriceListData;
 use App\Modules\Pricing\Domain\Models\PriceList;
 use App\Modules\Pricing\Presentation\Resources\PriceListResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -123,14 +122,10 @@ class PriceListController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $data = PriceListData::fromRequest($request);
-            $priceList = $this->createAction->execute($data, $user->accountOwnerId());
+        $data = PriceListData::fromRequest($request);
+        $priceList = $this->createAction->execute($data, $user->accountOwnerId());
 
-            return response()->json(PriceListResource::make($priceList), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(PriceListResource::make($priceList), 201);
     }
 
     /**
@@ -168,14 +163,10 @@ class PriceListController extends Controller
     {
         $request->validate(PriceListData::rules());
 
-        try {
-            $data = PriceListData::fromRequest($request);
-            $updated = $this->updateAction->execute($priceList, $data);
+        $data = PriceListData::fromRequest($request);
+        $updated = $this->updateAction->execute($priceList, $data);
 
-            return response()->json(PriceListResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(PriceListResource::make($updated));
     }
 
     #[OA\Delete(

@@ -6,7 +6,6 @@ namespace App\Modules\TimeTracking\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Domain\Models\Order;
-use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\TimeTracking\Application\Actions\SyncClockifyAction;
 use App\Modules\TimeTracking\Application\DTOs\ClockifySyncData;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
@@ -76,12 +75,8 @@ class ClockifySyncController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $result = $this->syncAction->execute($user, $order, $data);
+        $result = $this->syncAction->execute($user, $order, $data);
 
-            return response()->json($result);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json($result);
     }
 }

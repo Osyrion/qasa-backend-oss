@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceOverdue;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Presentation\Mail\InvoiceReminderMail;
@@ -51,7 +52,7 @@ it('sends an automatic reminder to the client and increments reminder_count', fu
 
     expect($invoice->refresh())
         ->reminder_count->toBe(1)
-        ->status->toBe('reminded')
+        ->status->toBe(InvoiceStatus::Reminded)
         ->last_reminded_at->not->toBeNull();
 });
 

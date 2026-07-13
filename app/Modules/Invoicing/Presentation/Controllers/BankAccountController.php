@@ -11,7 +11,6 @@ use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\BankAccountData;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Presentation\Resources\BankAccountResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -115,14 +114,10 @@ class BankAccountController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $data = BankAccountData::fromRequest($request);
-            $account = $this->createAction->execute($data, $user->accountOwnerId());
+        $data = BankAccountData::fromRequest($request);
+        $account = $this->createAction->execute($data, $user->accountOwnerId());
 
-            return response()->json(BankAccountResource::make($account), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(BankAccountResource::make($account), 201);
     }
 
     /**
@@ -162,14 +157,10 @@ class BankAccountController extends Controller
     {
         $request->validate(BankAccountData::rules());
 
-        try {
-            $data = BankAccountData::fromRequest($request);
-            $updated = $this->updateAction->execute($bankAccount, $data);
+        $data = BankAccountData::fromRequest($request);
+        $updated = $this->updateAction->execute($bankAccount, $data);
 
-            return response()->json(BankAccountResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(BankAccountResource::make($updated));
     }
 
     #[OA\Delete(

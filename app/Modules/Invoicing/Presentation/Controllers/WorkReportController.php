@@ -9,7 +9,6 @@ use App\Modules\Invoicing\Application\Actions\SyncWorkReportLinesAction;
 use App\Modules\Invoicing\Application\DTOs\WorkReportLineData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Presentation\Resources\WorkReportLineResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -78,13 +77,9 @@ class WorkReportController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        try {
-            $lines = $this->generateAction->execute($invoice);
+        $lines = $this->generateAction->execute($invoice);
 
-            return response()->json(WorkReportLineResource::collection($lines));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(WorkReportLineResource::collection($lines));
     }
 
     /**
@@ -146,12 +141,8 @@ class WorkReportController extends Controller
             (array) $request->input('lines', []),
         ));
 
-        try {
-            $replaced = $this->syncAction->execute($invoice, $lines);
+        $replaced = $this->syncAction->execute($invoice, $lines);
 
-            return response()->json(WorkReportLineResource::collection($replaced));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(WorkReportLineResource::collection($replaced));
     }
 }

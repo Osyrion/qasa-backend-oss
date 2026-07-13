@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Presentation\Middleware\SetLocale;
 use App\Providers\AppServiceProvider;
 use App\Providers\TelescopeServiceProvider;
@@ -26,5 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Business-rule violations surface as 422 with the translated message,
+        // so controllers don't need per-action try/catch blocks.
+        $exceptions->render(
+            fn (DomainException $e) => response()->json(['message' => $e->getMessage()], 422)
+        );
     })->create();

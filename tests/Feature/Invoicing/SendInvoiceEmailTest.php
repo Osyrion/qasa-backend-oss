@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Mail\InvoiceEmail;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Facades\Mail;
 
@@ -45,7 +46,7 @@ it('issues a draft invoice and queues the email to the client', function (): voi
 
     $invoice->refresh();
 
-    expect($invoice->status)->toBe('sent')
+    expect($invoice->status)->toBe(InvoiceStatus::Sent)
         ->and($invoice->supplier_snapshot)->not->toBeNull()
         ->and($invoice->emailed_at)->not->toBeNull()
         ->and($invoice->emailed_to)->toBe('klient@example.com')
@@ -70,7 +71,7 @@ it('emails an already sent invoice without changing its status', function (): vo
 
     $this->actingAs($user)->postJson("/api/v1/invoices/{$invoice->id}/email")->assertOk();
 
-    expect($invoice->refresh()->status)->toBe('sent');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Sent);
 
     Mail::assertQueued(InvoiceEmail::class);
 });
@@ -100,7 +101,7 @@ it('emails a paid invoice without changing its status', function (): void {
 
     $this->actingAs($user)->postJson("/api/v1/invoices/{$invoice->id}/email")->assertOk();
 
-    expect($invoice->refresh()->status)->toBe('paid');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Paid);
 
     Mail::assertQueued(InvoiceEmail::class);
 });
@@ -183,7 +184,7 @@ it('rejects a client without an email and leaves the draft untouched', function 
         ->postJson("/api/v1/invoices/{$invoice->id}/email")
         ->assertUnprocessable();
 
-    expect($invoice->refresh()->status)->toBe('draft')
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Draft)
         ->and($invoice->emailed_at)->toBeNull();
 
     Mail::assertNothingQueued();

@@ -11,7 +11,6 @@ use App\Modules\Invoicing\Application\Actions\UpdateVatRateAction;
 use App\Modules\Invoicing\Application\DTOs\VatRateData;
 use App\Modules\Invoicing\Domain\Models\VatRate;
 use App\Modules\Invoicing\Presentation\Resources\VatRateResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -118,14 +117,10 @@ class VatRateController extends Controller
 
         $request->validate(VatRateData::rules($user->accountOwnerId()));
 
-        try {
-            $data = VatRateData::fromRequest($request);
-            $vatRate = $this->createAction->execute($data, $user->accountOwnerId());
+        $data = VatRateData::fromRequest($request);
+        $vatRate = $this->createAction->execute($data, $user->accountOwnerId());
 
-            return response()->json(VatRateResource::make($vatRate), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(VatRateResource::make($vatRate), 201);
     }
 
     /**
@@ -165,14 +160,10 @@ class VatRateController extends Controller
     {
         $request->validate(VatRateData::rules($vatRate->user_id, $vatRate->id));
 
-        try {
-            $data = VatRateData::fromRequest($request);
-            $updated = $this->updateAction->execute($vatRate, $data);
+        $data = VatRateData::fromRequest($request);
+        $updated = $this->updateAction->execute($vatRate, $data);
 
-            return response()->json(VatRateResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(VatRateResource::make($updated));
     }
 
     #[OA\Delete(

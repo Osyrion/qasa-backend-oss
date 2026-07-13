@@ -12,6 +12,7 @@ use App\Modules\Calendar\Application\DTOs\EventData;
 use App\Modules\Calendar\Application\DTOs\EventRangeData;
 use App\Modules\Calendar\Domain\Models\Event;
 use App\Modules\Calendar\Presentation\Resources\EventResource;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,7 @@ class EventController extends Controller
         $range = EventRangeData::validateAndCreate($request->all());
 
         $events = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             from: $range->from !== null ? Carbon::parse($range->from) : null,
             to: $range->to !== null ? Carbon::parse($range->to) : null,
         );

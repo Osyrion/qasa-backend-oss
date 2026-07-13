@@ -13,7 +13,7 @@ use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateReposito
 use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 use App\Modules\Invoicing\Presentation\Resources\RecurringInvoiceTemplateResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,7 +86,7 @@ class RecurringInvoiceTemplateController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $templates = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['status', 'client_id']),
         );
 
@@ -176,14 +176,10 @@ class RecurringInvoiceTemplateController extends Controller
             'client_id' => $this->clientRule($user),
         ]);
 
-        try {
-            $data = RecurringTemplateData::fromRequest($request);
-            $template = $this->createAction->execute($data, $user);
+        $data = RecurringTemplateData::fromRequest($request);
+        $template = $this->createAction->execute($data, $user);
 
-            return response()->json(RecurringInvoiceTemplateResource::make($template), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(RecurringInvoiceTemplateResource::make($template), 201);
     }
 
     /**
@@ -237,14 +233,10 @@ class RecurringInvoiceTemplateController extends Controller
             'client_id' => $this->clientRule($user),
         ]);
 
-        try {
-            $data = RecurringTemplateData::fromRequest($request);
-            $updated = $this->updateAction->execute($template, $data);
+        $data = RecurringTemplateData::fromRequest($request);
+        $updated = $this->updateAction->execute($template, $data);
 
-            return response()->json(RecurringInvoiceTemplateResource::make($updated->load('client')));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(RecurringInvoiceTemplateResource::make($updated->load('client')));
     }
 
     #[OA\Delete(
@@ -302,13 +294,9 @@ class RecurringInvoiceTemplateController extends Controller
     {
         $this->authorize('update', $template);
 
-        try {
-            $paused = $this->pauseAction->execute($template);
+        $paused = $this->pauseAction->execute($template);
 
-            return response()->json(RecurringInvoiceTemplateResource::make($paused));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(RecurringInvoiceTemplateResource::make($paused));
     }
 
     #[OA\Post(
@@ -339,13 +327,9 @@ class RecurringInvoiceTemplateController extends Controller
     {
         $this->authorize('update', $template);
 
-        try {
-            $resumed = $this->resumeAction->execute($template);
+        $resumed = $this->resumeAction->execute($template);
 
-            return response()->json(RecurringInvoiceTemplateResource::make($resumed));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(RecurringInvoiceTemplateResource::make($resumed));
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Facades\Http;
 
@@ -169,7 +170,7 @@ it('blocks issuance when VIES has never verified the client and is unreachable',
         ->postJson("/api/v1/invoices/{$invoice->id}/status", ['status' => 'sent'])
         ->assertStatus(422);
 
-    expect($invoice->refresh()->status)->toBe('draft');
+    expect($invoice->refresh()->status)->toBe(InvoiceStatus::Draft);
 });
 
 it('blocks issuance when VIES actively rejects the vat id regardless of a past grace verification', function (): void {

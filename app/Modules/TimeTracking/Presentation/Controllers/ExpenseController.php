@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Presentation\Controllers;
 
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Application\Contracts\ExpenseRepositoryInterface;
 use App\Modules\TimeTracking\Application\DTOs\ExpenseData;
 use App\Modules\TimeTracking\Domain\Models\Expense;
@@ -25,7 +26,7 @@ class ExpenseController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $expenses = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['category', 'currency', 'date_from', 'date_to', 'year']),
         );
 

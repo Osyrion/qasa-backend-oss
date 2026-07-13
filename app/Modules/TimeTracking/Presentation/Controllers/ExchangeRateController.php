@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Presentation\Controllers;
 
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Application\DTOs\ExchangeRateData;
 use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,7 @@ class ExchangeRateController extends Controller
     {
         $rates = ExchangeRate::query()
             ->orderBy('date', 'desc')
-            ->paginate((int) $request->input('per_page', 20));
+            ->paginate(Pagination::perPage($request));
 
         return response()->json($rates);
     }

@@ -45,7 +45,7 @@ it('maps every invoice lifecycle event to a thin invoice payload', function (): 
             ->and(WebhookEventMap::payloadFor($event))->toMatchArray([
                 'id' => $invoice->id,
                 'invoice_number' => $invoice->invoice_number,
-                'status' => $invoice->status,
+                'status' => $invoice->status->value,
             ]);
     }
 });

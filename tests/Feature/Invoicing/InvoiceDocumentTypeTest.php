@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -101,7 +102,7 @@ it('creates a dobropis with negated items referencing the original', function ()
         ->and($response->json('invoice_number'))->toStartWith('DB-')
         ->and((float) $response->json('items.0.quantity'))->toBe(-2.0)
         ->and((float) $response->json('total'))->toBe(-120.0)
-        ->and($original->refresh()->status)->toBe('sent');
+        ->and($original->refresh()->status)->toBe(InvoiceStatus::Sent);
 });
 
 it('storno cancels the original invoice', function (): void {
@@ -115,7 +116,7 @@ it('storno cancels the original invoice', function (): void {
     $response->assertCreated();
 
     expect($response->json('invoice_number'))->toStartWith('ST-')
-        ->and($original->refresh()->status)->toBe('cancelled');
+        ->and($original->refresh()->status)->toBe(InvoiceStatus::Cancelled);
 });
 
 it('rejects a corrective document for a draft invoice', function (): void {

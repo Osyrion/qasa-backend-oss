@@ -16,7 +16,7 @@ use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\PaymentOrder;
 use App\Modules\Invoicing\Domain\Services\AboKpcBuilder;
 use App\Modules\Invoicing\Presentation\Resources\PaymentOrderResource;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,7 +74,7 @@ class PaymentOrderController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $orders = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['date_from', 'date_to', 'direction']),
         );
 
@@ -184,16 +184,12 @@ class PaymentOrderController extends Controller
 
         $request->validate(PaymentOrderData::rules());
 
-        try {
-            $result = $this->createAction->execute(PaymentOrderData::fromRequest($request), $user);
+        $result = $this->createAction->execute(PaymentOrderData::fromRequest($request), $user);
 
-            return PaymentOrderResource::make($result['order'])
-                ->additional(['due_date_adjusted' => $result['due_date_adjusted']])
-                ->response()
-                ->setStatusCode(201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return PaymentOrderResource::make($result['order'])
+            ->additional(['due_date_adjusted' => $result['due_date_adjusted']])
+            ->response()
+            ->setStatusCode(201);
     }
 
     #[OA\Get(
@@ -269,24 +265,20 @@ class PaymentOrderController extends Controller
 
         $date = $paymentOrder->due_date->format('Y-m-d');
 
-        try {
-            return match ($format) {
-                'abo' => response($this->aboBuilder->build($paymentOrder), 200, [
-                    'Content-Type' => 'text/plain; charset=US-ASCII',
-                    'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.kpc"',
-                ]),
-                'csv' => response($this->csvBuilder->build($paymentOrder), 200, [
-                    'Content-Type' => 'text/csv; charset=UTF-8',
-                    'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.csv"',
-                ]),
-                'pdf' => response($this->pdfService->generate($paymentOrder), 200, [
-                    'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'attachment; filename="'.$this->pdfService->filename($paymentOrder).'"',
-                ]),
-                default => abort(404),
-            };
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return match ($format) {
+            'abo' => response($this->aboBuilder->build($paymentOrder), 200, [
+                'Content-Type' => 'text/plain; charset=US-ASCII',
+                'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.kpc"',
+            ]),
+            'csv' => response($this->csvBuilder->build($paymentOrder), 200, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.csv"',
+            ]),
+            'pdf' => response($this->pdfService->generate($paymentOrder), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$this->pdfService->filename($paymentOrder).'"',
+            ]),
+            default => abort(404),
+        };
     }
 }

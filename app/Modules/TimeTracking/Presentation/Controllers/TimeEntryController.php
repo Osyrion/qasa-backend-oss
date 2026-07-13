@@ -7,6 +7,7 @@ namespace App\Modules\TimeTracking\Presentation\Controllers;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Application\Contracts\WorkLogRepositoryInterface;
 use App\Modules\TimeTracking\Application\DTOs\TimeEntryData;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
@@ -55,7 +56,7 @@ class TimeEntryController extends Controller
         $this->authorize('viewAny', TimeEntry::class);
 
         $timeEntries = $this->repository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only(['order_id', 'is_billable', 'is_invoiced', 'date_from', 'date_to', 'year']),
         );
 
@@ -123,29 +124,25 @@ class TimeEntryController extends Controller
         $request->validate(TimeEntryData::rules($owner->id, $owner->country));
         $data = TimeEntryData::fromRequest($request);
 
-        try {
-            // Global user scope 404s orders of other accounts
-            $order = Order::query()->findOrFail($data->order_id);
-            $this->assertItemBelongsToOrder($order, $data->order_item_id);
+        // Global user scope 404s orders of other accounts
+        $order = Order::query()->findOrFail($data->order_id);
+        $this->assertItemBelongsToOrder($order, $data->order_item_id);
 
-            $timeEntry = $this->repository->create([
-                'user_id' => $owner->id,
-                'order_id' => $order->id,
-                'order_item_id' => $data->order_item_id,
-                'description' => $data->description,
-                'started_at' => $data->started_at,
-                'ended_at' => $data->ended_at,
-                'duration_seconds' => $this->resolveDuration($data),
-                'rate_override' => $data->rate_override,
-                'vat_rate' => $data->vat_rate,
-                'is_billable' => $data->is_billable,
-                'is_invoiced' => false,
-                'source' => 'manual',
-                'external_id' => null,
-            ]);
-        } catch (DomainException $e) {
-            return $this->domainErrorResponse($e);
-        }
+        $timeEntry = $this->repository->create([
+            'user_id' => $owner->id,
+            'order_id' => $order->id,
+            'order_item_id' => $data->order_item_id,
+            'description' => $data->description,
+            'started_at' => $data->started_at,
+            'ended_at' => $data->ended_at,
+            'duration_seconds' => $this->resolveDuration($data),
+            'rate_override' => $data->rate_override,
+            'vat_rate' => $data->vat_rate,
+            'is_billable' => $data->is_billable,
+            'is_invoiced' => false,
+            'source' => 'manual',
+            'external_id' => null,
+        ]);
 
         return response()->json(TimeEntryResource::make($timeEntry), 201);
     }
@@ -170,7 +167,7 @@ class TimeEntryController extends Controller
         $this->authorize('update', $timeEntry);
 
         if ($timeEntry->isInvoiced()) {
-            return $this->domainErrorResponse(DomainException::because(__('time_tracking.entry_already_invoiced')));
+            throw DomainException::because(__('time_tracking.entry_already_invoiced'));
         }
 
         /** @var User $user */
@@ -180,24 +177,20 @@ class TimeEntryController extends Controller
         $request->validate(TimeEntryData::rules($owner->id, $owner->country));
         $data = TimeEntryData::fromRequest($request);
 
-        try {
-            $order = Order::query()->findOrFail($data->order_id);
-            $this->assertItemBelongsToOrder($order, $data->order_item_id);
+        $order = Order::query()->findOrFail($data->order_id);
+        $this->assertItemBelongsToOrder($order, $data->order_item_id);
 
-            $updated = $this->repository->update($timeEntry, [
-                'order_id' => $order->id,
-                'order_item_id' => $data->order_item_id,
-                'description' => $data->description,
-                'started_at' => $data->started_at,
-                'ended_at' => $data->ended_at,
-                'duration_seconds' => $this->resolveDuration($data),
-                'rate_override' => $data->rate_override,
-                'vat_rate' => $data->vat_rate,
-                'is_billable' => $data->is_billable,
-            ]);
-        } catch (DomainException $e) {
-            return $this->domainErrorResponse($e);
-        }
+        $updated = $this->repository->update($timeEntry, [
+            'order_id' => $order->id,
+            'order_item_id' => $data->order_item_id,
+            'description' => $data->description,
+            'started_at' => $data->started_at,
+            'ended_at' => $data->ended_at,
+            'duration_seconds' => $this->resolveDuration($data),
+            'rate_override' => $data->rate_override,
+            'vat_rate' => $data->vat_rate,
+            'is_billable' => $data->is_billable,
+        ]);
 
         return response()->json(TimeEntryResource::make($updated));
     }
@@ -222,7 +215,7 @@ class TimeEntryController extends Controller
         $this->authorize('delete', $timeEntry);
 
         if ($timeEntry->isInvoiced()) {
-            return $this->domainErrorResponse(DomainException::because(__('time_tracking.entry_already_invoiced')));
+            throw DomainException::because(__('time_tracking.entry_already_invoiced'));
         }
 
         $this->repository->delete($timeEntry);
@@ -267,32 +260,28 @@ class TimeEntryController extends Controller
         $user = $request->user();
         $ownerId = $user->accountOwnerId();
 
-        try {
-            if (TimeEntry::query()->running()->exists()) {
-                throw DomainException::because(__('time_tracking.timer_already_running'));
-            }
-
-            // Global user scope 404s orders of other accounts
-            $order = Order::query()->findOrFail($request->string('order_id')->toString());
-
-            $timeEntry = $this->repository->create([
-                'user_id' => $ownerId,
-                'order_id' => $order->id,
-                'order_item_id' => null,
-                'description' => $request->filled('description') ? $request->string('description')->toString() : null,
-                'started_at' => now(),
-                'ended_at' => null,
-                'duration_seconds' => null,
-                'rate_override' => null,
-                'vat_rate' => 0,
-                'is_billable' => $request->boolean('is_billable', true),
-                'is_invoiced' => false,
-                'source' => 'manual',
-                'external_id' => null,
-            ]);
-        } catch (DomainException $e) {
-            return $this->domainErrorResponse($e);
+        if (TimeEntry::query()->running()->exists()) {
+            throw DomainException::because(__('time_tracking.timer_already_running'));
         }
+
+        // Global user scope 404s orders of other accounts
+        $order = Order::query()->findOrFail($request->string('order_id')->toString());
+
+        $timeEntry = $this->repository->create([
+            'user_id' => $ownerId,
+            'order_id' => $order->id,
+            'order_item_id' => null,
+            'description' => $request->filled('description') ? $request->string('description')->toString() : null,
+            'started_at' => now(),
+            'ended_at' => null,
+            'duration_seconds' => null,
+            'rate_override' => null,
+            'vat_rate' => 0,
+            'is_billable' => $request->boolean('is_billable', true),
+            'is_invoiced' => false,
+            'source' => 'manual',
+            'external_id' => null,
+        ]);
 
         return response()->json(TimeEntryResource::make($timeEntry), 201);
     }
@@ -317,7 +306,7 @@ class TimeEntryController extends Controller
         $this->authorize('update', $timeEntry);
 
         if (! $timeEntry->isRunning()) {
-            return $this->domainErrorResponse(DomainException::because(__('time_tracking.timer_not_running')));
+            throw DomainException::because(__('time_tracking.timer_not_running'));
         }
 
         $timeEntry->stop()->save();
@@ -350,10 +339,5 @@ class TimeEntryController extends Controller
         if (! $order->items()->whereKey($orderItemId)->exists()) {
             throw DomainException::because(__('time_tracking.item_not_in_order'));
         }
-    }
-
-    private function domainErrorResponse(DomainException $e): JsonResponse
-    {
-        return response()->json(['message' => $e->getMessage()], 422);
     }
 }

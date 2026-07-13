@@ -15,7 +15,6 @@ use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Resources\UserResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -138,25 +137,21 @@ class AuthController extends Controller
     {
         $request->validate(LoginData::rules());
 
-        try {
-            $data = LoginData::fromRequest($request);
-            $result = $this->loginAction->execute($data);
+        $data = LoginData::fromRequest($request);
+        $result = $this->loginAction->execute($data);
 
-            if ($result->twoFactorRequired) {
-                return response()->json([
-                    'two_factor_required' => true,
-                    'challenge_token' => $result->challengeToken,
-                ]);
-            }
-
+        if ($result->twoFactorRequired) {
             return response()->json([
-                'two_factor_required' => false,
-                'token' => $result->token,
-                'user' => UserResource::make($result->user),
+                'two_factor_required' => true,
+                'challenge_token' => $result->challengeToken,
             ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        return response()->json([
+            'two_factor_required' => false,
+            'token' => $result->token,
+            'user' => UserResource::make($result->user),
+        ]);
     }
 
     #[OA\Post(
@@ -257,11 +252,7 @@ class AuthController extends Controller
 
         $data = UpdateProfileData::fromRequest($request);
 
-        try {
-            $user = $this->updateProfileAction->execute($user, $data);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $user = $this->updateProfileAction->execute($user, $data);
 
         return response()->json(UserResource::make($user));
     }
@@ -375,11 +366,7 @@ class AuthController extends Controller
         $request->validate(DeleteAccountData::rules());
         $data = DeleteAccountData::fromRequest($request);
 
-        try {
-            $this->deleteAccountAction->execute($user, $data);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        $this->deleteAccountAction->execute($user, $data);
 
         return response()->json(null, 204);
     }

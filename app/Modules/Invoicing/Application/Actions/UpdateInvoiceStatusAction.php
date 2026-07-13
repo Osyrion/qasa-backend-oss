@@ -26,7 +26,7 @@ readonly class UpdateInvoiceStatusAction
      */
     public function execute(Invoice $invoice, InvoiceStatus $newStatus): Invoice
     {
-        $currentStatus = InvoiceStatus::from($invoice->status);
+        $currentStatus = $invoice->status;
 
         $this->assertTransition($currentStatus, $newStatus);
 
@@ -42,7 +42,7 @@ readonly class UpdateInvoiceStatusAction
             // (e.g. two parallel send calls) may have advanced the status
             // since the check above.
             $invoice = Invoice::query()->lockForUpdate()->whereKey($invoice->getKey())->firstOrFail();
-            $currentStatus = InvoiceStatus::from($invoice->status);
+            $currentStatus = $invoice->status;
 
             $this->assertTransition($currentStatus, $newStatus);
 

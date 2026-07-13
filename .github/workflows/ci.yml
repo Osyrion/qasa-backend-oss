@@ -49,6 +49,14 @@ jobs:
     - name: Generate key
       run: php artisan key:generate
 
+    - name: Check code style (Pint)
+      run: ./vendor/bin/pint --test
+
+    # --abandoned=report: fail only on security advisories; the abandoned
+    # nunomaduro/larastan -> larastan/larastan rename is a separate cleanup.
+    - name: Audit dependencies
+      run: composer audit --abandoned=report
+
     - name: Execute tests
       run: php artisan test
       env:

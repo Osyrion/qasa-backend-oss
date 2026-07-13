@@ -13,7 +13,6 @@ use App\Modules\Pricing\Application\Contracts\RateResolverInterface;
 use App\Modules\Pricing\Application\DTOs\RateData;
 use App\Modules\Pricing\Domain\Models\Rate;
 use App\Modules\Pricing\Presentation\Resources\RateResource;
-use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -112,14 +111,10 @@ class RateController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $data = RateData::fromRequest($request);
-            $rate = $this->createAction->execute($data, $user);
+        $data = RateData::fromRequest($request);
+        $rate = $this->createAction->execute($data, $user);
 
-            return response()->json(RateResource::make($rate), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(RateResource::make($rate), 201);
     }
 
     #[OA\Delete(
@@ -142,13 +137,9 @@ class RateController extends Controller
     {
         $this->authorize('delete', $rate);
 
-        try {
-            $this->deleteAction->execute($rate);
+        $this->deleteAction->execute($rate);
 
-            return response()->json(null, 204);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(null, 204);
     }
 
     #[OA\Get(

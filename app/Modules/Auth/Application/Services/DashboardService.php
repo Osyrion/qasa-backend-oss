@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Application\Services;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use App\Modules\Orders\Domain\Models\Order;
@@ -231,7 +232,7 @@ class DashboardService
         $nextAllowed = $invoice->last_reminded_at?->copy()->addDays($cooldownDays);
 
         [$canRemind, $reason] = match (true) {
-            ! in_array($invoice->status, ['sent', 'reminded'], true) => [
+            ! in_array($invoice->status, [InvoiceStatus::Sent, InvoiceStatus::Reminded], true) => [
                 false,
                 __('invoicing.reminder_only_for_sent', ['status' => $invoice->statusEnum()->label()]),
             ],

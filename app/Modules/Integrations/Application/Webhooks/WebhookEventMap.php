@@ -97,7 +97,7 @@ final class WebhookEventMap
         return [
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number,
-            'status' => $invoice->status,
+            'status' => $invoice->status->value,
             'total' => (string) $invoice->total,
             'currency' => $invoice->currency->value,
         ];

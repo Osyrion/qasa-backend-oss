@@ -27,7 +27,7 @@ use App\Modules\Invoicing\Presentation\Resources\InvoiceItemResource;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Shared\Enums\Currency;
-use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -152,7 +152,7 @@ class InvoiceController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $invoices = $this->invoiceRepository->paginate(
-            perPage: (int) $request->input('per_page', 20),
+            perPage: Pagination::perPage($request),
             filters: $request->only([
                 'status', 'client_id', 'currency',
                 'date_from', 'date_to', 'overdue',
@@ -243,14 +243,10 @@ class InvoiceController extends Controller
             ],
         ]);
 
-        try {
-            $data = InvoiceData::fromRequest($request);
-            $invoice = $this->createAction->execute($data, $user);
+        $data = InvoiceData::fromRequest($request);
+        $invoice = $this->createAction->execute($data, $user);
 
-            return response()->json(InvoiceResource::make($invoice), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($invoice), 201);
     }
 
     /**
@@ -314,14 +310,10 @@ class InvoiceController extends Controller
             ],
         ]);
 
-        try {
-            $data = InvoiceData::fromRequest($request);
-            $updated = $this->updateAction->execute($invoice, $data);
+        $data = InvoiceData::fromRequest($request);
+        $updated = $this->updateAction->execute($invoice, $data);
 
-            return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
     }
 
     #[OA\Delete(
@@ -429,17 +421,13 @@ class InvoiceController extends Controller
             ],
         ]);
 
-        try {
-            $data = InvoiceItemData::fromRequest($request);
-            $item = $this->addItemAction->execute($invoice, $data);
+        $data = InvoiceItemData::fromRequest($request);
+        $item = $this->addItemAction->execute($invoice, $data);
 
-            return response()->json(
-                InvoiceItemResource::make($item),
-                201,
-            );
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(
+            InvoiceItemResource::make($item),
+            201,
+        );
     }
 
     #[OA\Delete(
@@ -537,24 +525,20 @@ class InvoiceController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            // The invoice is always billed to the order's client.
-            $data = new InvoiceData(
-                client_id: (string) $order->client_id,
-                issued_at: $request->string('issued_at')->toString(),
-                due_at: $request->string('due_at')->toString(),
-                currency: Currency::from($request->string('currency')->toString()),
-                note: $request->filled('note') ? $request->string('note')->toString() : null,
-            );
+        // The invoice is always billed to the order's client.
+        $data = new InvoiceData(
+            client_id: (string) $order->client_id,
+            issued_at: $request->string('issued_at')->toString(),
+            due_at: $request->string('due_at')->toString(),
+            currency: Currency::from($request->string('currency')->toString()),
+            note: $request->filled('note') ? $request->string('note')->toString() : null,
+        );
 
-            $invoice = $this->generateFromOrderAction->execute($order, $user, $data);
+        $invoice = $this->generateFromOrderAction->execute($order, $user, $data);
 
-            $invoice->load(['client', 'items']);
+        $invoice->load(['client', 'items']);
 
-            return response()->json(InvoiceResource::make($invoice), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($invoice), 201);
     }
 
     /**
@@ -603,14 +587,10 @@ class InvoiceController extends Controller
             'status' => ['required', 'in:issued,sent,paid,cancelled'],
         ]);
 
-        try {
-            $newStatus = InvoiceStatus::from($request->input('status'));
-            $updated = $this->updateStatusAction->execute($invoice, $newStatus);
+        $newStatus = InvoiceStatus::from($request->input('status'));
+        $updated = $this->updateStatusAction->execute($invoice, $newStatus);
 
-            return response()->json(InvoiceResource::make($updated));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($updated));
     }
 
     /**
@@ -659,14 +639,10 @@ class InvoiceController extends Controller
 
         $request->validate(SendInvoiceEmailData::rules());
 
-        try {
-            $data = SendInvoiceEmailData::fromRequest($request);
-            $updated = $this->sendEmailAction->execute($invoice, $data);
+        $data = SendInvoiceEmailData::fromRequest($request);
+        $updated = $this->sendEmailAction->execute($invoice, $data);
 
-            return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
     }
 
     /**
@@ -702,13 +678,9 @@ class InvoiceController extends Controller
     {
         $this->authorize('remind', $invoice);
 
-        try {
-            $updated = $this->remindAction->execute($invoice);
+        $updated = $this->remindAction->execute($invoice);
 
-            return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($updated->load(['client', 'items'])));
     }
 
     /**
@@ -760,14 +732,10 @@ class InvoiceController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        try {
-            $type = InvoiceType::from($request->input('type'));
-            $corrective = $this->correctiveAction->execute($invoice, $type, $user);
+        $type = InvoiceType::from($request->input('type'));
+        $corrective = $this->correctiveAction->execute($invoice, $type, $user);
 
-            return response()->json(InvoiceResource::make($corrective->load(['client', 'items'])), 201);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json(InvoiceResource::make($corrective->load(['client', 'items'])), 201);
     }
 
     #[OA\Post(
@@ -816,16 +784,12 @@ class InvoiceController extends Controller
             'regenerate' => ['nullable', 'boolean'],
         ]);
 
-        try {
-            $updated = $this->createPublicLinkAction->execute($invoice, $request->boolean('regenerate'));
+        $updated = $this->createPublicLinkAction->execute($invoice, $request->boolean('regenerate'));
 
-            return response()->json([
-                'token' => $updated->public_token,
-                'url' => $updated->publicUrl(),
-            ]);
-        } catch (DomainException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'token' => $updated->public_token,
+            'url' => $updated->publicUrl(),
+        ]);
     }
 
     #[OA\Delete(
