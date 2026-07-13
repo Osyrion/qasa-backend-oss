@@ -36,7 +36,7 @@ class CalendarServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/calendar.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/calendar.php');
 
         Gate::policy(Event::class, EventPolicy::class);
 

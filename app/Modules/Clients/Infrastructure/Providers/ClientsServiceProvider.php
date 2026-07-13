@@ -45,7 +45,7 @@ class ClientsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/clients.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/clients.php');
 
         Gate::policy(Client::class, ClientPolicy::class);
     }

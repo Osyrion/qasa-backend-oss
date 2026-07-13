@@ -18,7 +18,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'type', type: 'string', enum: ['invoice', 'proforma', 'credit_note', 'storno']),
         new OA\Property(property: 'related_invoice_id', type: 'string', format: 'uuid', nullable: true),
         new OA\Property(property: 'settled_invoice_id', type: 'string', format: 'uuid', nullable: true, description: 'Set on a proforma once settled into an ordinary invoice'),
-        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'sent', 'paid', 'cancelled']),
+        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'issued', 'sent', 'reminded', 'paid', 'cancelled', 'credited']),
         new OA\Property(property: 'issued_at', type: 'string', format: 'date', nullable: true),
         new OA\Property(property: 'taxable_supply_at', type: 'string', format: 'date', nullable: true),
         new OA\Property(property: 'due_at', type: 'string', format: 'date', nullable: true),

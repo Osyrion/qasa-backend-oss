@@ -66,7 +66,7 @@ class TimeTrackingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/time-tracking.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/time-tracking.php');
 
         Gate::policy(TimeEntry::class, TimeEntryPolicy::class);
         Gate::policy(Expense::class, ExpensePolicy::class);

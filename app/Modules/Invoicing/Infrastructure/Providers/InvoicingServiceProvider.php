@@ -99,7 +99,7 @@ class InvoicingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/invoicing.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/invoicing.php');
 
         // Register Blade views for PDF
         $this->loadViewsFrom(__DIR__.'/../Views', 'invoices');

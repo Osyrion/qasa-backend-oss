@@ -30,7 +30,7 @@ class OrdersServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/orders.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/orders.php');
 
         Gate::policy(Order::class, OrderPolicy::class);
     }

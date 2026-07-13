@@ -32,7 +32,7 @@ class PricingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/pricing.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/pricing.php');
 
         Gate::policy(Rate::class, RatePolicy::class);
         Gate::policy(PriceList::class, PriceListPolicy::class);

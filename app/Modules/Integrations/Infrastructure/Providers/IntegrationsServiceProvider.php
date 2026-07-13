@@ -28,7 +28,7 @@ class IntegrationsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        $this->loadRoutesFrom(base_path('routes/integrations.php'));
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/integrations.php');
 
         Gate::policy(WebhookEndpoint::class, WebhookEndpointPolicy::class);
 
