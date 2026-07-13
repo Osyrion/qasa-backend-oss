@@ -15,6 +15,7 @@ use App\Modules\Invoicing\Application\Services\PaymentOrderPdfService;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\PaymentOrder;
 use App\Modules\Invoicing\Domain\Services\AboKpcBuilder;
+use App\Modules\Invoicing\Domain\Services\SepaPain001Builder;
 use App\Modules\Invoicing\Presentation\Resources\PaymentOrderResource;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -40,6 +41,7 @@ class PaymentOrderController extends Controller
         private readonly CreatePaymentOrderAction $createAction,
         private readonly DeletePaymentOrderAction $deleteAction,
         private readonly AboKpcBuilder $aboBuilder,
+        private readonly SepaPain001Builder $sepaBuilder,
         private readonly PaymentOrderCsvBuilder $csvBuilder,
         private readonly PaymentOrderPdfService $pdfService,
     ) {
@@ -109,6 +111,7 @@ class PaymentOrderController extends Controller
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'abo_eligible', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(property: 'sepa_eligible', type: 'array', items: new OA\Items(type: 'object')),
                         new OA\Property(property: 'other', type: 'array', items: new OA\Items(type: 'object')),
                     ]
                 )
@@ -243,18 +246,18 @@ class PaymentOrderController extends Controller
 
     #[OA\Get(
         path: '/api/v1/payment-orders/{payment_order}/export/{format}',
-        summary: 'Download the batch as ABO (KPC), CSV or PDF — always from the frozen snapshot',
+        summary: 'Download the batch as ABO (KPC), SEPA (pain.001) XML, CSV or PDF — always from the frozen snapshot',
         security: [['sanctum' => []]],
         tags: ['PaymentOrders'],
         parameters: [
             new OA\Parameter(name: 'payment_order', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
-            new OA\Parameter(name: 'format', in: 'path', required: true, schema: new OA\Schema(type: 'string', enum: ['abo', 'csv', 'pdf'])),
+            new OA\Parameter(name: 'format', in: 'path', required: true, schema: new OA\Schema(type: 'string', enum: ['abo', 'sepa', 'csv', 'pdf'])),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Export file'),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Payment order not found'),
-            new OA\Response(response: 422, description: 'ABO is not applicable to this batch'),
+            new OA\Response(response: 422, description: 'ABO/SEPA is not applicable to this batch'),
         ]
     )]
     public function export(PaymentOrder $paymentOrder, string $format): Response|JsonResponse
@@ -269,6 +272,10 @@ class PaymentOrderController extends Controller
             'abo' => response($this->aboBuilder->build($paymentOrder), 200, [
                 'Content-Type' => 'text/plain; charset=US-ASCII',
                 'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.kpc"',
+            ]),
+            'sepa' => response($this->sepaBuilder->build($paymentOrder), 200, [
+                'Content-Type' => 'application/xml',
+                'Content-Disposition' => 'attachment; filename="prikaz_'.$date.'.xml"',
             ]),
             'csv' => response($this->csvBuilder->build($paymentOrder), 200, [
                 'Content-Type' => 'text/csv; charset=UTF-8',

@@ -69,8 +69,13 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
         ->only(['index', 'store', 'show', 'destroy']);
 
     Route::get('payment-orders/{payment_order}/export/{format}', [PaymentOrderController::class, 'export'])
-        ->whereIn('format', ['abo', 'csv', 'pdf'])
+        ->whereIn('format', ['abo', 'sepa', 'csv', 'pdf'])
         ->name('payment-orders.export');
+
+    // Before the resource so "upload" isn't captured as {inbox_item}.
+    Route::post('invoice-inbox/upload', [InvoiceInboxController::class, 'upload'])
+        ->middleware('throttle:30,1')
+        ->name('invoice-inbox.upload');
 
     Route::apiResource('invoice-inbox', InvoiceInboxController::class)
         ->parameters(['invoice-inbox' => 'inbox_item'])
@@ -92,6 +97,7 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
             ->middleware('throttle:invoice-email')
             ->name('invoices.remind');
         Route::post('corrective', [InvoiceController::class, 'createCorrective'])->name('invoices.corrective');
+        Route::post('settle', [InvoiceController::class, 'settle'])->name('invoices.settle');
         Route::post('items', [InvoiceController::class, 'addItem'])->name('invoices.items.store');
         Route::delete('items/{item}', [InvoiceController::class, 'removeItem'])->name('invoices.items.destroy');
         Route::post('public-link', [InvoiceController::class, 'createPublicLink'])->name('invoices.public-link.store');

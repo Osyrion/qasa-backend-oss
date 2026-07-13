@@ -7,6 +7,7 @@ namespace App\Modules\Invoicing\Presentation\Controllers;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\ConvertInboxItemAction;
 use App\Modules\Invoicing\Application\Actions\IgnoreInboxItemAction;
+use App\Modules\Invoicing\Application\Actions\ProcessInboxFileAction;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
@@ -17,8 +18,10 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -155,6 +158,68 @@ class InvoiceInboxController extends Controller
         $this->authorize('view', $inboxItem);
 
         return Storage::disk($inboxItem->disk)->download($inboxItem->path, $inboxItem->original_filename);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/invoice-inbox/upload',
+        summary: 'Upload a document directly into the invoice inbox',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['file'],
+                    properties: [
+                        new OA\Property(property: 'file', description: 'PDF, JPEG, or PNG document', type: 'string', format: 'binary'),
+                    ]
+                )
+            )
+        ),
+        tags: ['InvoiceInbox'],
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Invoice inbox item created from the uploaded file',
+                content: new OA\JsonContent(ref: '#/components/schemas/InvoiceInboxItem')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Invalid file type/size, or the file was already uploaded before'),
+        ]
+    )]
+    public function upload(Request $request, ProcessInboxFileAction $processInboxFile): JsonResponse
+    {
+        $this->authorize('create', InvoiceInboxItem::class);
+
+        $request->validate(['file' => ['required', 'file']]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+        $mime = (string) ($file->getMimeType() ?? 'application/octet-stream');
+        $maxBytes = (int) config('invoicing.inbox.max_bytes', 20 * 1024 * 1024);
+
+        if (! in_array($mime, ProcessInboxFileAction::ALLOWED_MIMES, true) || $file->getSize() > $maxBytes) {
+            return response()->json(['message' => __('invoicing.inbox.upload_invalid_file')], 422);
+        }
+
+        /** @var User $user */
+        $user = $request->user();
+        $disk = (string) config('invoicing.inbox.disk', 'local');
+        $basePath = (string) config('invoicing.inbox.path', 'inbox');
+        $extension = $file->getClientOriginalExtension();
+        $storedPath = "{$basePath}/{$user->accountOwnerId()}/".Str::uuid()->toString().($extension !== '' ? '.'.$extension : '');
+
+        Storage::disk($disk)->put($storedPath, (string) file_get_contents($file->getRealPath()));
+
+        $item = $processInboxFile->execute($user, $disk, $storedPath, $file->getClientOriginalName());
+
+        Storage::disk($disk)->delete($storedPath);
+
+        if ($item === null) {
+            return response()->json(['message' => __('invoicing.inbox.duplicate_file')], 422);
+        }
+
+        return response()->json(InvoiceInboxItemResource::make($item->load('matchedClient')), 201);
     }
 
     /**

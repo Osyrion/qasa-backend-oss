@@ -76,6 +76,16 @@ class InvoicePolicy
             && $user->can('invoices.manage');
     }
 
+    /**
+     * Settling a proforma creates a new, separate invoice, so this mirrors
+     * updateStatus()/recordPayment() rather than update().
+     */
+    public function settle(User $user, Invoice $invoice): bool
+    {
+        return $this->sameAccount($user, $invoice->user_id)
+            && $user->can('invoices.manage');
+    }
+
     public function delete(User $user, Invoice $invoice): bool
     {
         return $this->sameAccount($user, $invoice->user_id)

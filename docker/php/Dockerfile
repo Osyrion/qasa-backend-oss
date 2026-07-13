@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     libmagickwand-dev \
+    poppler-utils \
     tesseract-ocr \
     tesseract-ocr-slk \
     tesseract-ocr-ces \

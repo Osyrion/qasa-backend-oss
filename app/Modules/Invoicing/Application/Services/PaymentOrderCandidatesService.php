@@ -10,13 +10,18 @@ use App\Modules\Shared\Enums\Currency;
 
 /**
  * Unpaid supplier invoices grouped for the payment-order builder screen:
- * `abo_eligible` (CZK with a domestic account — exportable as ABO/KPC) and
- * `other` (everything else — CSV/PDF only).
+ * `abo_eligible` (CZK with a domestic account — exportable as ABO/KPC),
+ * `sepa_eligible` (EUR with an IBAN on file — exportable as SEPA pain.001)
+ * and `other` (everything else — CSV/PDF only). Groups are mutually
+ * exclusive. sepa_eligible only checks for a direct IBAN — it deliberately
+ * does not attempt the CzechIbanConverter fallback the export builder uses,
+ * to keep this a simple heuristic for the UI rather than duplicating the
+ * builder's conversion logic.
  */
 class PaymentOrderCandidatesService
 {
     /**
-     * @return array{abo_eligible: list<array<string, mixed>>, other: list<array<string, mixed>>}
+     * @return array{abo_eligible: list<array<string, mixed>>, sepa_eligible: list<array<string, mixed>>, other: list<array<string, mixed>>}
      */
     public function candidates(?BankAccount $payerAccount, bool $hideHanded = false): array
     {
@@ -31,6 +36,7 @@ class PaymentOrderCandidatesService
         }
 
         $aboEligible = [];
+        $sepaEligible = [];
         $other = [];
 
         foreach ($query->get() as $invoice) {
@@ -38,12 +44,14 @@ class PaymentOrderCandidatesService
 
             if ($invoice->currency === Currency::CZK && $invoice->hasDomesticVendorAccount()) {
                 $aboEligible[] = $row;
+            } elseif ($invoice->currency === Currency::EUR && $invoice->vendor_iban !== null && $invoice->vendor_iban !== '') {
+                $sepaEligible[] = $row;
             } else {
                 $other[] = $row;
             }
         }
 
-        return ['abo_eligible' => $aboEligible, 'other' => $other];
+        return ['abo_eligible' => $aboEligible, 'sepa_eligible' => $sepaEligible, 'other' => $other];
     }
 
     /**

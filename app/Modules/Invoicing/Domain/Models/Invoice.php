@@ -30,7 +30,8 @@ use Illuminate\Support\Carbon;
  * @property string $client_id
  * @property string $invoice_number e.g. FA-2024-001
  * @property InvoiceType $type
- * @property string|null $related_invoice_id Original invoice for credit_note/storno
+ * @property string|null $related_invoice_id Original invoice for credit_note/storno, or the settled proforma for a settlement invoice
+ * @property string|null $settled_invoice_id Set on a proforma once settled; points at the ordinary invoice created from it
  * @property InvoiceStatus $status
  * @property Carbon $issued_at
  * @property Carbon|null $taxable_supply_at DUZP
@@ -117,6 +118,7 @@ class Invoice extends Model
         'invoice_number',
         'type',
         'related_invoice_id',
+        'settled_invoice_id',
         'status',
         'issued_at',
         'taxable_supply_at',
@@ -227,6 +229,16 @@ class Invoice extends Model
     public function isCreditNote(): bool
     {
         return $this->type === InvoiceType::CreditNote;
+    }
+
+    public function isProforma(): bool
+    {
+        return $this->type === InvoiceType::Proforma;
+    }
+
+    public function isSettled(): bool
+    {
+        return $this->settled_invoice_id !== null;
     }
 
     public function statusEnum(): InvoiceStatus
@@ -352,6 +364,14 @@ class Invoice extends Model
     public function relatedInvoice(): BelongsTo
     {
         return $this->belongsTo(self::class, 'related_invoice_id');
+    }
+
+    /**
+     * @return BelongsTo<Invoice, $this>
+     */
+    public function settledInvoice(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'settled_invoice_id');
     }
 
     /**

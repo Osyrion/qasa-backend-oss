@@ -68,6 +68,12 @@ return [
         'path' => env('INVOICING_INBOX_PATH', 'inbox'),
         'ocr_languages' => env('INVOICING_INBOX_OCR_LANGS', 'slk+ces+eng'),
         'max_bytes' => env('INVOICING_INBOX_MAX_BYTES', 20 * 1024 * 1024),
+        // OCR fallback for scanned (image-only) PDFs: rasterize via
+        // poppler-utils' pdftoppm, then run the same Tesseract OCR used
+        // for photos on each page image.
+        'pdftoppm_path' => env('INVOICING_INBOX_PDFTOPPM_PATH', 'pdftoppm'),
+        'ocr_max_pages' => env('INVOICING_INBOX_OCR_MAX_PAGES', 5),
+        'ocr_dpi' => env('INVOICING_INBOX_OCR_DPI', 200),
     ],
 
 ];

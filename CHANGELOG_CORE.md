@@ -11,6 +11,34 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Pridané (Added)
 
+#### OCR fallback pre skenované PDF (scan inbox)
+- Nová `PdfRasterizer` (Infrastructure/Ocr): skenované PDF bez textovej vrstvy sa už neukončí rovno ako `failed` — stránky sa prevedú na PNG cez `pdftoppm` (poppler-utils, `Illuminate\Support\Facades\Process`, limit 5 strán/200 DPI, konfigurovateľné) a OCR-ujú rovnakým `thiagoalessio/tesseract_ocr` ako fotky (`ocr_engine = 'pdftoppm+tesseract'`)
+- Chýbajúca binárka alebo zlyhaný proces sa nikdy nevyhodí ako výnimka — degraduje na pôvodné správanie (prázdny text → `failed`)
+- `docker/php/Dockerfile`: pridaný `poppler-utils` (tesseract + jazykové balíky tam už boli)
+- Nové config kľúče `invoicing.inbox.pdftoppm_path`/`ocr_max_pages`/`ocr_dpi`
+
+#### Výdavky v štatistikách nákladov
+- `RevenueCostAggregator` teraz počíta náklady zo `supplier_invoices` **aj** z evidovaných výdavkov (`Expense`) — celá suma bez rozpadu DPH, datovaná podľa vlastného `date`; cudzia mena bez zmrazeného kurzu ide cez existujúci `StatisticsCurrencyConverter` fallback
+- `GET /statistics/overview` a `/statistics/tables` majú nové pole `assumptions` s upozornením na vedomé riziko dvojitého započítania (výdavok + prijatá faktúra za tú istú vec — aplikácia to nededupuje)
+- Cache kľúč `stats:overview:*` verzovaný na `v2`, aby sa po nasadení nečítal starý výpočet
+
+#### SEPA XML export platobných príkazov
+- **`GET /api/v1/payment-orders/{id}/export/sepa`**: nový formát `SepaPain001Builder` (ISO 20022 pain.001.001.03) popri ABO/CSV/PDF — otvára platobné príkazy pre SK/EUR polovicu trhu (ABO je len CZK/tuzemské účty)
+- Guardy: len EUR dávka, IBAN na platcovi aj na každom riadku (fallback cez `CzechIbanConverter` z tuzemského účtu dodávateľa), inak `422`
+- `GET /api/v1/payment-orders/candidates` má novú skupinu `sepa_eligible` (EUR + IBAN na faktúre) popri `abo_eligible`/`other`
+- XSD overené testom proti oficiálnej schéme (`tests/Fixtures/payment-order/pain.001.001.03.xsd`)
+
+#### Vyúčtovanie proformy
+- **`POST /api/v1/invoices/{invoice}/settle`**: zaplatená proforma → jedným krokom ostrá faktúra (`type = invoice`, vlastná číselná rada, `related_invoice_id` na proformu) s plnými položkami (žiadne záporné odpočítanie zálohy — tržba sa tak v štatistikách započíta správne raz), vystavená hneď cez `IssueInvoiceAction`, platby proformy prenesené ako nové `InvoicePayment` riadky, stav rovno `Paid` (`InvoicePaid` event/webhook)
+- Nový stĺpec `invoices.settled_invoice_id` (na proforme) — idempotencia, druhé vyúčtovanie tej istej proformy vráti `422`
+- Guardy: len typ `proforma`, len po úplnom zaplatení (čiastočné úhrady zatiaľ nevyúčtovávame)
+- Migrácia: `2026_07_18_000001_add_settled_invoice_id_to_invoices`
+
+#### Invoice inbox — manuálny upload
+- **`POST /api/v1/invoice-inbox/upload`**: nahranie PDF/JPEG/PNG priamo cez API, spracované synchrónne (bez čakania na `qasa:invoices:scan-inbox`) a nezávisle od `invoice_inbox_enabled` — rovnaký MIME/veľkostný limit aj SHA-256 dedupe ako cron scan
+- Zdieľaná logika spracovania jedného súboru extrahovaná do `ProcessInboxFileAction`; `ScanInboxAction` ju teraz volá per súbor, správanie cronu (presun do `processed/`, skip nepodporovaných) sa nemení
+- Duplicita hashu → `422` (`invoicing.inbox.duplicate_file`), nepodporovaný typ/veľkosť → `422` (`invoicing.inbox.upload_invalid_file`)
+
 #### Platobné príkazy — hromadná úhrada prijatých faktúr
 - **Dávka (`PaymentOrder`)**: výber neuhradených prijatých faktúr → platobný príkaz so zmrazenými riadkami (`payment_order_items` — dodávateľ, účet, VS, suma); opakované stiahnutie je totožné s pôvodným exportom bez ohľadu na neskoršie zmeny faktúr
   - Jeden príkaz = jedna mena = mena účtu platcu (`BankAccount`); splatnosť v minulosti sa posunie na dnešok (`due_date_adjusted` v response)

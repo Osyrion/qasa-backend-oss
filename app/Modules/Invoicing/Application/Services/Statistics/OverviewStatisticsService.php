@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Cache;
  */
 final readonly class OverviewStatisticsService
 {
+    /**
+     * @var list<string>
+     */
+    private const ASSUMPTIONS = [
+        'Náklady zahŕňajú prijaté faktúry aj evidované výdavky (v plnej sume, bez rozpadu DPH) — pri zaevidovaní tej istej položky oboma spôsobmi (výdavok aj prijatá faktúra) sa náklad započíta dvakrát; aplikácia duplicitu nekontroluje, ide o disciplínu používateľa.',
+    ];
+
     public function __construct(
         private RevenueCostAggregator $aggregator,
     ) {}
@@ -30,7 +37,7 @@ final readonly class OverviewStatisticsService
         $today = Carbon::now()->toDateString();
 
         return Cache::remember(
-            "stats:overview:{$ownerId}:{$currency}:{$today}",
+            "stats:overview:v2:{$ownerId}:{$currency}:{$today}",
             300,
             fn (): array => $this->compute($user),
         );
@@ -80,6 +87,7 @@ final readonly class OverviewStatisticsService
             ],
             'monthly_trend' => $monthlyTrend,
             'profit_chart' => $profitChart,
+            'assumptions' => self::ASSUMPTIONS,
         ];
     }
 

@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\TimeTracking\Domain\Models\Expense;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -17,8 +18,11 @@ use Illuminate\Support\Collection;
  * notes (proformas and storno excluded — see class doc on the exclusions),
  * counted on the tax-payer basis (subtotal for VAT payers, total otherwise),
  * dated by DUZP with an issued_at fallback. Costs mirror this over
- * supplier_invoices. All monetary figures are returned converted into the
- * user's default currency.
+ * supplier_invoices, plus recorded expenses (full amount, no VAT split —
+ * Expense carries none) dated by their own date column. A receipt logged as
+ * both an expense and a supplier invoice double-counts — the application
+ * does not deduplicate between the two, it's on the user's discipline. All
+ * monetary figures are returned converted into the user's default currency.
  */
 final readonly class RevenueCostAggregator
 {
@@ -90,7 +94,12 @@ final readonly class RevenueCostAggregator
             ->selectRaw('DISTINCT EXTRACT(YEAR FROM COALESCE(taxable_supply_at, issued_at))::int AS year')
             ->pluck('year');
 
-        return array_values($invoiceYears->merge($supplierYears)
+        $expenseYears = Expense::withoutGlobalScope('user')
+            ->where('user_id', $userId)
+            ->selectRaw('DISTINCT EXTRACT(YEAR FROM date)::int AS year')
+            ->pluck('year');
+
+        return array_values($invoiceYears->merge($supplierYears)->merge($expenseYears)
             ->map(fn (mixed $year): int => (int) $year)
             ->unique()
             ->sortDesc()
@@ -123,6 +132,21 @@ final readonly class RevenueCostAggregator
                 ->selectRaw($amountColumn === 'subtotal' ? self::MONTHLY_SELECT_SUBTOTAL_RATE : self::MONTHLY_SELECT_TOTAL_RATE)
                 ->groupBy('month', 'currency')
                 ->get();
+
+        if (! $revenue) {
+            $expenseRows = Expense::withoutGlobalScope('user')
+                ->where('user_id', $userId)
+                ->whereBetween('date', [$from, $to])
+                ->selectRaw(self::MONTHLY_SELECT_EXPENSE)
+                ->groupBy('month', 'currency')
+                ->get();
+
+            // These rows carry no primary key (pure aggregates), so
+            // Eloquent Collection::merge() — which dedupes by getKey() —
+            // would collapse them all into one row. toBase() switches to a
+            // plain array-based concat instead.
+            $rows = $rows->toBase()->merge($expenseRows);
+        }
 
         $czkByMonth = [];
 
@@ -182,6 +206,17 @@ final readonly class RevenueCostAggregator
                  WHEN exchange_rate IS NOT NULL THEN total * exchange_rate
                  END) AS converted_czk,
         COALESCE(SUM(total) FILTER (WHERE currency <> 'CZK' AND exchange_rate IS NULL), 0) AS unconverted
+    ";
+
+    /**
+     * Expense carries no frozen exchange rate at all, so a non-CZK row is
+     * always fully unconverted here — the fallback rate covers 100% of it.
+     */
+    private const MONTHLY_SELECT_EXPENSE = "
+        to_char(date, 'YYYY-MM') AS month,
+        currency,
+        SUM(CASE WHEN currency = 'CZK' THEN amount END) AS converted_czk,
+        COALESCE(SUM(amount) FILTER (WHERE currency <> 'CZK'), 0) AS unconverted
     ";
 
     /**

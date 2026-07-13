@@ -25,7 +25,7 @@ function candidateInvoice(User $user, array $overrides = []): SupplierInvoice
     ], $overrides));
 }
 
-it('splits candidates into abo eligible and other groups', function (): void {
+it('splits candidates into abo eligible, sepa eligible and other groups', function (): void {
     $user = createUser();
     $domesticCzk = candidateInvoice($user);
     $ibanOnlyCzk = candidateInvoice($user, [
@@ -34,6 +34,12 @@ it('splits candidates into abo eligible and other groups', function (): void {
         'vendor_iban' => 'CZ6508000000192000145399',
     ]);
     $eur = candidateInvoice($user, ['currency' => Currency::EUR->value]);
+    $eurWithIban = candidateInvoice($user, [
+        'currency' => Currency::EUR->value,
+        'vendor_account_number' => null,
+        'vendor_bank_code' => null,
+        'vendor_iban' => 'CZ6508000000192000145399',
+    ]);
     candidateInvoice($user, ['status' => 'paid']); // not a candidate at all
 
     $response = $this->actingAs($user)->getJson('/api/v1/payment-orders/candidates');
@@ -41,9 +47,11 @@ it('splits candidates into abo eligible and other groups', function (): void {
     $response->assertOk();
 
     $aboIds = array_column($response->json('abo_eligible'), 'id');
+    $sepaIds = array_column($response->json('sepa_eligible'), 'id');
     $otherIds = array_column($response->json('other'), 'id');
 
     expect($aboIds)->toBe([$domesticCzk->id])
+        ->and($sepaIds)->toBe([$eurWithIban->id])
         ->and($otherIds)->toContain($ibanOnlyCzk->id, $eur->id)
         ->and($otherIds)->toHaveCount(2);
 });

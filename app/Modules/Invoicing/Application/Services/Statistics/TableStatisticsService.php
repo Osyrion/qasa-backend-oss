@@ -13,6 +13,13 @@ use Illuminate\Support\Carbon;
  */
 final readonly class TableStatisticsService
 {
+    /**
+     * @var list<string>
+     */
+    private const ASSUMPTIONS = [
+        'Náklady zahŕňajú prijaté faktúry aj evidované výdavky (v plnej sume, bez rozpadu DPH) — pri zaevidovaní tej istej položky oboma spôsobmi (výdavok aj prijatá faktúra) sa náklad započíta dvakrát; aplikácia duplicitu nekontroluje, ide o disciplínu používateľa.',
+    ];
+
     public function __construct(
         private RevenueCostAggregator $aggregator,
     ) {}
@@ -28,6 +35,7 @@ final readonly class TableStatisticsService
             'currency' => $user->default_currency->value,
             'by_year' => $this->byYear($user),
             'by_month' => $this->byMonth($user, $year),
+            'assumptions' => self::ASSUMPTIONS,
         ];
     }
 

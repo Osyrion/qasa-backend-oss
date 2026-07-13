@@ -13,6 +13,7 @@ use App\Modules\Invoicing\Application\Actions\GenerateInvoiceFromOrderAction;
 use App\Modules\Invoicing\Application\Actions\RemindInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\RevokeInvoicePublicLinkAction;
 use App\Modules\Invoicing\Application\Actions\SendInvoiceEmailAction;
+use App\Modules\Invoicing\Application\Actions\SettleProformaAction;
 use App\Modules\Invoicing\Application\Actions\UpdateInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\UpdateInvoiceStatusAction;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
@@ -57,6 +58,7 @@ class InvoiceController extends Controller
         private readonly GenerateInvoiceFromOrderAction $generateFromOrderAction,
         private readonly UpdateInvoiceStatusAction $updateStatusAction,
         private readonly CreateCorrectiveInvoiceAction $correctiveAction,
+        private readonly SettleProformaAction $settleAction,
         private readonly SendInvoiceEmailAction $sendEmailAction,
         private readonly RemindInvoiceAction $remindAction,
         private readonly CreateInvoicePublicLinkAction $createPublicLinkAction,
@@ -736,6 +738,46 @@ class InvoiceController extends Controller
         $corrective = $this->correctiveAction->execute($invoice, $type, $user);
 
         return response()->json(InvoiceResource::make($corrective->load(['client', 'items'])), 201);
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/invoices/{invoice}/settle',
+        summary: 'Settle a fully paid proforma into an ordinary tax invoice',
+        security: [['sanctum' => []]],
+        tags: ['Invoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'invoice',
+                description: 'Proforma invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Ordinary invoice created from the settled proforma, already paid',
+                content: new OA\JsonContent(ref: '#/components/schemas/Invoice')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Invoice not found'),
+            new OA\Response(response: 422, description: 'Not a proforma, not fully paid yet, or already settled'),
+        ]
+    )]
+    public function settle(Request $request, Invoice $invoice): JsonResponse
+    {
+        $this->authorize('settle', $invoice);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $settled = $this->settleAction->execute($invoice, $user);
+
+        return response()->json(InvoiceResource::make($settled->load(['client', 'items'])), 201);
     }
 
     #[OA\Post(

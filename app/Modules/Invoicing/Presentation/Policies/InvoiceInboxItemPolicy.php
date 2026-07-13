@@ -17,6 +17,11 @@ class InvoiceInboxItemPolicy
         return $user->can('invoices.view');
     }
 
+    public function create(User $user): bool
+    {
+        return $user->can('invoices.manage');
+    }
+
     public function view(User $user, InvoiceInboxItem $inboxItem): bool
     {
         return $this->sameAccount($user, $inboxItem->user_id) && $user->can('invoices.view');
