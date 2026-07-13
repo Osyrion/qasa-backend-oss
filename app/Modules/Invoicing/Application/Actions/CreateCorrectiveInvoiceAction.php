@@ -52,24 +52,18 @@ readonly class CreateCorrectiveInvoiceAction
             );
         }
 
-        return DB::transaction(function () use ($original, $type, $user): Invoice {
-            $number = $this->repository->nextInvoiceNumber(
-                userId: $original->user_id,
-                mask: $type->numberMask($user),
-                start: $user->accountOwner()->invoice_number_start ?? 1,
-            );
-
+        return DB::transaction(function () use ($original, $type): Invoice {
             $corrective = $this->repository->create([
                 'user_id' => $original->user_id,
                 'client_id' => $original->client_id,
-                'invoice_number' => $number,
+                'invoice_number' => null,
                 'type' => $type->value,
                 'related_invoice_id' => $original->id,
                 'status' => 'draft',
                 'issued_at' => now()->toDateString(),
                 'taxable_supply_at' => now()->toDateString(),
                 'due_at' => now()->addDays(14)->toDateString(),
-                'variable_symbol' => CreateInvoiceAction::variableSymbolFromNumber($number),
+                'variable_symbol' => null,
                 'bank_account_id' => $original->bank_account_id,
                 'currency' => $original->currency->value,
                 'subtotal' => 0,

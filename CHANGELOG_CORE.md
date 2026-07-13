@@ -11,6 +11,25 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Pridané (Added)
 
+#### Prepojenie kalendára so zákazkami
+- `events.order_id` (nullable, FK `nullOnDelete`) — udalosť sa dá naviazať na zákazku; klient je dosiahnuteľný tranzitívne cez `order->client` (žiadny samostatný `client_id`, jeden zdroj pravdy)
+- Cudzia zákazka pri vytvorení/úprave → `404` (globálny `HasUserScope` scope na `Order::findOrFail()`, rovnaký idiom ako pri časových záznamoch)
+- `EventResource`: `order_id`, vnorený `order: {id, name, color, client_display_name}` (eager-load, bez N+1) a `effective_color` (vlastná farba, inak farba zákazky)
+- `GET /events?order_id=` filter; `GET /events?order_id=&include=order_deadlines` primieša **virtuálne** celodenné položky za zákazky s `deadline` v rozsahu (stav `active`/`paused`) — nič sa nepersistuje, prepočítava sa pri každom requeste; export (ICS/CSV) ich nikdy nezahŕňa
+- Zmazanie zákazky (soft delete) udalosť len odviaže — `DeleteOrderAction` explicitne nuluje `events.order_id` (DB FK `nullOnDelete` samo osebe nestačí, keďže ide o soft delete, nie skutočný `DELETE`)
+- Migrácia: `2026_07_18_000005_add_order_id_to_events`
+
+#### Setup checklist pre onboarding frontendu
+- **`GET /api/v1/profile/setup-status`** (`SetupStatusController` → `SetupStatusService`, `auth:sanctum`, žiadna nová ability — rovnaký režim ako `GET /me`): sedem položiek `{key, done, optional}` — `billing_identity`, `vat_status`, `bank_account`, `first_client` (povinné), `invoice_numbering`, `logo`, `first_invoice` (nepovinné) — plus `completed` (všetky povinné hotové)
+- Nový stĺpec `users.vat_status_confirmed_at` — `vat_status` má DB default, takže samo osebe nevie rozlíšiť „potvrdené" od „nikdy nevidené"; `UpdateProfileAction` ho nastaví, keď request obsahuje `vat_status` alebo `is_vat_payer`
+- Migrácia: `2026_07_18_000004_add_vat_status_confirmed_at_to_users`
+
+#### Denný digest vlastníkovi — faktúry novo po splatnosti
+- `SendAutoRemindersCommand` po detekcii novo-po-splatnosti faktúr (marker `overdue_notified_at`) zozbiera per používateľ tie, ktorým marker práve pribudol, a po skončení jeho slučky pošle **jeden** `OverdueInvoicesDigestMail` (nie e-mail na faktúru — výpadok cronu/dovolenka by inak zaplavili inbox)
+- Nový stĺpec `users.overdue_digest_enabled`, default **zapnuté** (na rozdiel od `auto_remind_enabled` ide o notifikáciu vlastníkovi, nie klientovi) — nastaviteľné cez `PUT /api/v1/auth/profile`
+- Nezávislé od `auto_remind_enabled`; idempotencia zadarmo cez existujúci marker
+- Migrácia: `2026_07_18_000003_add_overdue_digest_enabled_to_users`
+
 #### OCR fallback pre skenované PDF (scan inbox)
 - Nová `PdfRasterizer` (Infrastructure/Ocr): skenované PDF bez textovej vrstvy sa už neukončí rovno ako `failed` — stránky sa prevedú na PNG cez `pdftoppm` (poppler-utils, `Illuminate\Support\Facades\Process`, limit 5 strán/200 DPI, konfigurovateľné) a OCR-ujú rovnakým `thiagoalessio/tesseract_ocr` ako fotky (`ocr_engine = 'pdftoppm+tesseract'`)
 - Chýbajúca binárka alebo zlyhaný proces sa nikdy nevyhodí ako výnimka — degraduje na pôvodné správanie (prázdny text → `failed`)
@@ -51,6 +70,15 @@ a projekt sa drží [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **QR platba per prijatá faktúra**: `GET /api/v1/supplier-invoices/{id}/payment-qr` (CZK → SPAYD, EUR → SEPA EPC; tuzemský účet sa deterministicky prepočíta na CZ IBAN cez `CzechIbanConverter`)
 - **Zoznam prijatých faktúr**: filter `handed=1|0`, účtové polia a stav overenia v `SupplierInvoiceResource`
 - Migrácie: `2026_07_17_000001_add_payment_fields_to_supplier_invoices`, `2026_07_17_000002_create_payment_orders_table`, `2026_07_17_000003_create_payment_order_items_table`
+
+### Zmenené (Changed)
+
+#### ⚠️ Breaking: `invoice_number` sa prideľuje pri vystavení, nie pri vytvorení draftu
+- `POST /api/v1/invoices` (a `.../corrective`, `.../settle`) teraz vracia draft s `invoice_number: null` a `variable_symbol: null` — obe polia sa naplnia až pri `POST /api/v1/invoices/{id}/status` (`sent`/`issued`), cez `IssueInvoiceAction`
+- Dôvod: draft sa dá zmazať a dlho ležiaci draft predtým dostal číslo „svojej doby" namiesto poradia podľa skutočného vystavenia — diera/nechronologickosť v číselnom rade, ktorú SK/CZ účtovná prax nepripúšťa
+- Existujúce drafty s už prideleným číslom (vytvorené pred touto zmenou) si číslo ponechávajú — nikdy sa neprepíše
+- Migrácia: `2026_07_18_000002_make_invoice_number_nullable` (stĺpec `invoices.invoice_number` je teraz `nullable`)
+- PDF draftu vykresľuje namiesto čísla lokalizovaný placeholder ("KONCEPT"/"DRAFT")
 
 ---
 

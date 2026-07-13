@@ -9,9 +9,11 @@ use App\Modules\Invoicing\Application\Actions\RemindInvoiceAction;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceOverdue;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Presentation\Mail\OverdueInvoicesDigestMail;
 use App\Modules\Invoicing\Presentation\Mail\RemindersExhaustedMail;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -33,6 +35,7 @@ class SendAutoRemindersCommand extends Command
         $sent = 0;
         $exhausted = 0;
         $failures = 0;
+        $digestsSent = 0;
 
         // Console has no auth context, so the invoice HasUserScope global
         // scope is a no-op anyway; withoutGlobalScope is belt-and-braces.
@@ -48,6 +51,9 @@ class SendAutoRemindersCommand extends Command
                 ->where('due_at', '<', $cutoff)
                 ->get();
 
+            /** @var Collection<int, Invoice> $newlyOverdue */
+            $newlyOverdue = new Collection;
+
             foreach ($invoices as $invoice) {
                 // Overdue detection runs for every tenant regardless of
                 // auto_remind_enabled — it's just an idempotent marker plus
@@ -56,6 +62,7 @@ class SendAutoRemindersCommand extends Command
                     $invoice->update(['overdue_notified_at' => now()]);
                     event(new InvoiceOverdue($invoice));
                     $overdueDetected++;
+                    $newlyOverdue->push($invoice);
                 }
 
                 if (! $user->auto_remind_enabled) {
@@ -93,9 +100,26 @@ class SendAutoRemindersCommand extends Command
                     $this->line("Invoice {$invoice->invoice_number}: reminders exhausted, owner notified.");
                 }
             }
+
+            if ($user->overdue_digest_enabled && $newlyOverdue->isNotEmpty()) {
+                try {
+                    Mail::to($user->email)->queue(
+                        (new OverdueInvoicesDigestMail($newlyOverdue))->locale($user->locale)
+                    );
+                    $digestsSent++;
+                    $this->line("Owner {$user->email}: overdue digest sent for {$newlyOverdue->count()} invoice(s).");
+                } catch (Throwable $e) {
+                    report($e);
+                    Log::error('Overdue invoices digest failed', [
+                        'user_id' => $user->id,
+                        'exception' => $e->getMessage(),
+                    ]);
+                    $this->error("Owner {$user->email}: overdue digest failed: {$e->getMessage()}");
+                }
+            }
         }
 
-        $this->info("Done: {$overdueDetected} invoices marked overdue, {$sent} reminders sent, {$exhausted} owners notified of exhausted reminders, {$failures} failures.");
+        $this->info("Done: {$overdueDetected} invoices marked overdue, {$sent} reminders sent, {$exhausted} owners notified of exhausted reminders, {$digestsSent} digests sent, {$failures} failures.");
 
         // A failed send leaves the invoice exactly as it was (no partial
         // state), so per-invoice failures don't need to fail the whole run.

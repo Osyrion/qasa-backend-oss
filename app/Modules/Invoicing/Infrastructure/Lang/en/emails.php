@@ -31,4 +31,10 @@ return [
     'quote_accepted_body' => 'Your client accepted quote no. :number.',
     'quote_rejected_subject' => 'Quote :number was rejected',
     'quote_rejected_body' => 'Your client rejected quote no. :number.',
+    'overdue_digest_subject' => ':count invoice(s) newly past due',
+    'overdue_digest_intro' => 'The following :count invoice(s) became overdue since the last check:',
+    'overdue_digest_column_number' => 'Invoice',
+    'overdue_digest_column_client' => 'Client',
+    'overdue_digest_column_amount' => 'Amount',
+    'overdue_digest_column_days_overdue' => 'Days overdue',
 ];

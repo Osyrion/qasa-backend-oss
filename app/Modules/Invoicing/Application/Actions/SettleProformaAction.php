@@ -48,21 +48,15 @@ readonly class SettleProformaAction
             throw DomainException::because(__('invoicing.proforma_already_settled'));
         }
 
-        return DB::transaction(function () use ($proforma, $user): Invoice {
+        return DB::transaction(function () use ($proforma): Invoice {
             $proforma->loadMissing(['items', 'payments']);
 
             $lastPaymentAt = $proforma->payments->max('paid_at');
 
-            $number = $this->repository->nextInvoiceNumber(
-                userId: $proforma->user_id,
-                mask: InvoiceType::Invoice->numberMask($user),
-                start: $user->accountOwner()->invoice_number_start ?? 1,
-            );
-
             $invoice = $this->repository->create([
                 'user_id' => $proforma->user_id,
                 'client_id' => $proforma->client_id,
-                'invoice_number' => $number,
+                'invoice_number' => null,
                 'type' => InvoiceType::Invoice->value,
                 'related_invoice_id' => $proforma->id,
                 'status' => InvoiceStatus::Draft->value,

@@ -57,7 +57,7 @@ it('generates a draft invoice from a due template', function (): void {
     $today = today();
 
     expect($invoice->status)->toBe(InvoiceStatus::Draft)
-        ->and($invoice->invoice_number)->toBe('FA-'.now()->format('Y').'-001')
+        ->and($invoice->invoice_number)->toBeNull()
         ->and($invoice->recurring_template_id)->toBe($template->id)
         ->and($invoice->issued_at->toDateString())->toBe($today->toDateString())
         ->and($invoice->due_at->toDateString())->toBe($today->copy()->addDays(14)->toDateString())
@@ -113,7 +113,7 @@ it('generates proforma without DUZP, placeholders against the issue date', funct
 
     expect($invoice->type->value)->toBe('proforma')
         ->and($invoice->taxable_supply_at)->toBeNull()
-        ->and($invoice->invoice_number)->toStartWith('PF-')
+        ->and($invoice->invoice_number)->toBeNull()
         ->and($invoice->items->firstOrFail()->description)->toBe('Hosting '.today()->format('m/Y'));
 });
 

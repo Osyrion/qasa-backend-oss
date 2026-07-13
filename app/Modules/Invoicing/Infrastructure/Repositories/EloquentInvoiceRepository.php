@@ -92,7 +92,15 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
             : 'issued_at';
         $direction = ($filters['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
-        $query->orderBy($sort, $direction);
+        if ($sort === 'invoice_number') {
+            // Drafts (invoice_number IS NULL) always sort last regardless of
+            // direction — Postgres' default NULL-first on DESC would
+            // otherwise surface undrafted invoices ahead of numbered ones.
+            $query->orderByRaw('invoice_number IS NULL')
+                ->orderBy($sort, $direction);
+        } else {
+            $query->orderBy($sort, $direction);
+        }
 
         return $query->paginate($perPage);
     }

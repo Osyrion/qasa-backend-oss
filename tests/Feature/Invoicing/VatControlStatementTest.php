@@ -168,7 +168,7 @@ it('classifies SK issued credit notes into C.1, referencing the original invoice
         'type' => 'credit_note',
     ])->assertCreated();
 
-    $this->actingAs($user)->postJson("/api/v1/invoices/{$creditNote->json('id')}/status", ['status' => 'sent'])
+    $issued = $this->actingAs($user)->postJson("/api/v1/invoices/{$creditNote->json('id')}/status", ['status' => 'sent'])
         ->assertOk();
 
     $response = vcsRequest($this, $user, ['country' => 'SK', 'year' => now()->year, 'month' => now()->month])->assertOk();
@@ -176,7 +176,7 @@ it('classifies SK issued credit notes into C.1, referencing the original invoice
     $rows = vcsRowsInSection($response, 'C1');
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['document_number'])->toBe($creditNote->json('invoice_number'))
+        ->and($rows[0]['document_number'])->toBe($issued->json('invoice_number'))
         ->and($rows[0]['related_document_number'])->toBe($original->invoice_number)
         ->and((float) $rows[0]['base'])->toBeLessThan(0.0);
 });

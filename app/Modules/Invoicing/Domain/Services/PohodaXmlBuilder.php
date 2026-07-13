@@ -89,7 +89,7 @@ final class PohodaXmlBuilder
         $header->appendChild($this->requiredTextEl($dom, self::NS_INV, 'inv:invoiceType', $this->invoiceTypeCode($invoice->type)));
 
         $number = $dom->createElementNS(self::NS_INV, 'inv:number');
-        $number->appendChild($this->requiredTextEl($dom, self::NS_TYP, 'typ:numberRequested', $invoice->invoice_number));
+        $number->appendChild($this->requiredTextEl($dom, self::NS_TYP, 'typ:numberRequested', (string) $invoice->invoice_number));
         $header->appendChild($number);
 
         if (($symVar = $this->textEl($dom, self::NS_INV, 'inv:symVar', $invoice->variable_symbol)) !== null) {

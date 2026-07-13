@@ -42,7 +42,7 @@ final class OmegaExportBuilder
             $lines[] = $this->row([
                 self::HEADER_ROW,
                 (string) config('omega.document_type'),
-                $invoice->invoice_number,
+                (string) $invoice->invoice_number,
                 (string) ($invoice->variable_symbol ?? ''),
                 $invoice->issued_at->format('Y-m-d'),
                 $invoice->due_at->format('Y-m-d'),

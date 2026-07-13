@@ -16,7 +16,7 @@ interface EventRepositoryInterface
     /**
      * @return LengthAwarePaginator<int, Event>
      */
-    public function paginate(int $perPage = 20, ?Carbon $from = null, ?Carbon $to = null): LengthAwarePaginator;
+    public function paginate(int $perPage = 20, ?Carbon $from = null, ?Carbon $to = null, ?string $orderId = null): LengthAwarePaginator;
 
     public function findById(string $id): ?Event;
 

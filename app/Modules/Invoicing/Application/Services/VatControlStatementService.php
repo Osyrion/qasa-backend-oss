@@ -113,7 +113,9 @@ class VatControlStatementService
                 continue;
             }
 
-            $documentNumber = $invoice->invoice_number;
+            // Drafts are excluded from the query above, so every invoice
+            // reaching this point has already been issued and carries a number.
+            $documentNumber = (string) $invoice->invoice_number;
             $dateStr = $date->format('Y-m-d');
             $partnerName = (string) ($invoice->client_snapshot['name'] ?? '');
             $partnerTaxId = $this->partnerTaxId($invoice->client_snapshot ?? []);

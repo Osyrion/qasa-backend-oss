@@ -34,17 +34,34 @@ function postInvoice(object $test, User $user, Client $client, array $overrides 
     ]);
 }
 
+/**
+ * Numbers are assigned at issue, not at draft creation — create the draft,
+ * then issue it and read the number off the issue response.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return TestResponse<Response>
+ */
+function postAndIssueInvoice(object $test, User $user, Client $client, array $overrides = []): TestResponse
+{
+    $draft = postInvoice($test, $user, $client, $overrides);
+    $draft->assertCreated();
+
+    return $test->actingAs($user)->postJson("/api/v1/invoices/{$draft->json('id')}/status", [
+        'status' => 'issued',
+    ]);
+}
+
 it('numbers invoices using the configured mask, independently per document type', function (): void {
     [$user, $client] = maskScope(['invoice_number_mask' => '{YYYY}{NNNN}']);
     $year = now()->format('Y');
 
-    $first = postInvoice($this, $user, $client);
-    $second = postInvoice($this, $user, $client);
-    $proforma = postInvoice($this, $user, $client, ['type' => 'proforma']);
+    $first = postAndIssueInvoice($this, $user, $client);
+    $second = postAndIssueInvoice($this, $user, $client);
+    $proforma = postAndIssueInvoice($this, $user, $client, ['type' => 'proforma']);
 
-    $first->assertCreated();
-    $second->assertCreated();
-    $proforma->assertCreated();
+    $first->assertOk();
+    $second->assertOk();
+    $proforma->assertOk();
 
     expect($first->json('invoice_number'))->toBe("{$year}0001")
         ->and($second->json('invoice_number'))->toBe("{$year}0002")
@@ -57,11 +74,11 @@ it('applies invoice_number_start as a floor for a migrated sequence', function (
         'invoice_number_start' => 501,
     ]);
 
-    $first = postInvoice($this, $user, $client);
-    $second = postInvoice($this, $user, $client);
+    $first = postAndIssueInvoice($this, $user, $client);
+    $second = postAndIssueInvoice($this, $user, $client);
 
-    $first->assertCreated();
-    $second->assertCreated();
+    $first->assertOk();
+    $second->assertOk();
 
     expect($first->json('invoice_number'))->toBe('00501')
         ->and($second->json('invoice_number'))->toBe('00502');
@@ -71,9 +88,9 @@ it('keeps the legacy FA-{year}-{seq} format for users without a mask', function 
     [$user, $client] = maskScope();
     $year = now()->format('Y');
 
-    $response = postInvoice($this, $user, $client);
+    $response = postAndIssueInvoice($this, $user, $client);
 
-    $response->assertCreated();
+    $response->assertOk();
     expect($response->json('invoice_number'))->toBe("FA-{$year}-001");
 });
 
@@ -85,7 +102,7 @@ it('clears the mask back to the legacy default when sent as an empty string', fu
     ])->assertOk()->assertJsonPath('invoice_number_mask', null);
 
     $year = now()->format('Y');
-    $response = postInvoice($this, $user, $client);
+    $response = postAndIssueInvoice($this, $user, $client);
 
     expect($response->json('invoice_number'))->toBe("FA-{$year}-001");
 });
@@ -113,7 +130,7 @@ it('accepts a custom mask and start on profile update and uses them for the next
         'invoice_number_mask' => '{YY}01{NNN}',
     ])->assertOk()->assertJsonPath('invoice_number_mask', '{YY}01{NNN}');
 
-    $response = postInvoice($this, $user, $client);
+    $response = postAndIssueInvoice($this, $user, $client);
 
     $shortYear = now()->format('y');
     expect($response->json('invoice_number'))->toBe("{$shortYear}01001");

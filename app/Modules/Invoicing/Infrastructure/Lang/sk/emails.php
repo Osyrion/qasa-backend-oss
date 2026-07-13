@@ -31,4 +31,10 @@ return [
     'quote_accepted_body' => 'Klient prijal cenovú ponuku č. :number.',
     'quote_rejected_subject' => 'Ponuka :number bola odmietnutá',
     'quote_rejected_body' => 'Klient odmietol cenovú ponuku č. :number.',
+    'overdue_digest_subject' => ':count faktúr(y) novo po splatnosti',
+    'overdue_digest_intro' => 'Od poslednej kontroly sa dostalo po splatnosti :count faktúr(y):',
+    'overdue_digest_column_number' => 'Faktúra',
+    'overdue_digest_column_client' => 'Klient',
+    'overdue_digest_column_amount' => 'Suma',
+    'overdue_digest_column_days_overdue' => 'Dní po splatnosti',
 ];

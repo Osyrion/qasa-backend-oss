@@ -9,10 +9,16 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-/** @return array{0: User, 1: Client} */
+/**
+ * A VAT payer — issuedInvoiceWithItem() below carries a 20% VAT item, and
+ * issuing (IssueInvoiceAction) now rejects a VAT-charging item from a
+ * non-payer, so this can't be left to the factory's random vat_status.
+ *
+ * @return array{0: User, 1: Client}
+ */
 function documentScope(): array
 {
-    $user = createUser(['invoice_prefix' => 'FA']);
+    $user = createUser(['invoice_prefix' => 'FA', 'vat_status' => 'payer', 'is_vat_payer' => true]);
     $client = Client::factory()->create(['user_id' => $user->id]);
 
     return [$user, $client];
@@ -30,6 +36,14 @@ function createDocument(object $test, User $user, Client $client, array $overrid
         'due_at' => today()->addDays(14)->toDateString(),
         'currency' => 'EUR',
         ...$overrides,
+    ]);
+}
+
+/** @return TestResponse<Response> */
+function issueDocument(object $test, User $user, string $invoiceId): TestResponse
+{
+    return $test->actingAs($user)->postJson("/api/v1/invoices/{$invoiceId}/status", [
+        'status' => 'issued',
     ]);
 }
 
@@ -59,27 +73,37 @@ function issuedInvoiceWithItem(User $user, Client $client): Invoice
     return $invoice->refresh()->recalculateTotals();
 }
 
-it('numbers proformas in their own PF series', function (): void {
+it('creates drafts without a number, assigned only once issued, in their own per-type series', function (): void {
     [$user, $client] = documentScope();
 
-    $invoice = createDocument($this, $user, $client);
-    $proforma = createDocument($this, $user, $client, ['type' => 'proforma']);
+    $invoiceDraft = createDocument($this, $user, $client);
+    $proformaDraft = createDocument($this, $user, $client, ['type' => 'proforma']);
 
-    $invoice->assertCreated();
-    $proforma->assertCreated();
+    $invoiceDraft->assertCreated();
+    $proformaDraft->assertCreated();
+
+    expect($invoiceDraft->json('invoice_number'))->toBeNull()
+        ->and($proformaDraft->json('invoice_number'))->toBeNull()
+        ->and($proformaDraft->json('type'))->toBe('proforma')
+        ->and($proformaDraft->json('taxable_supply_at'))->toBeNull();
+
+    $invoice = issueDocument($this, $user, $invoiceDraft->json('id'));
+    $proforma = issueDocument($this, $user, $proformaDraft->json('id'));
 
     $year = now()->format('Y');
 
     expect($invoice->json('invoice_number'))->toBe("FA-{$year}-001")
-        ->and($proforma->json('invoice_number'))->toBe("PF-{$year}-001")
-        ->and($proforma->json('type'))->toBe('proforma')
-        ->and($proforma->json('taxable_supply_at'))->toBeNull();
+        ->and($proforma->json('invoice_number'))->toBe("PF-{$year}-001");
 });
 
-it('defaults the variable symbol and DUZP on creation', function (): void {
+it('defaults the variable symbol and DUZP at issue, not on creation', function (): void {
     [$user, $client] = documentScope();
 
-    $response = createDocument($this, $user, $client);
+    $draft = createDocument($this, $user, $client);
+
+    expect($draft->json('variable_symbol'))->toBeNull();
+
+    $response = issueDocument($this, $user, $draft->json('id'));
 
     $year = now()->format('Y');
 
@@ -99,10 +123,14 @@ it('creates a dobropis with negated items referencing the original', function ()
 
     expect($response->json('type'))->toBe('credit_note')
         ->and($response->json('related_invoice_id'))->toBe($original->id)
-        ->and($response->json('invoice_number'))->toStartWith('DB-')
+        ->and($response->json('invoice_number'))->toBeNull()
         ->and((float) $response->json('items.0.quantity'))->toBe(-2.0)
         ->and((float) $response->json('total'))->toBe(-120.0)
         ->and($original->refresh()->status)->toBe(InvoiceStatus::Sent);
+
+    $issued = issueDocument($this, $user, $response->json('id'));
+
+    expect($issued->json('invoice_number'))->toStartWith('DB-');
 });
 
 it('storno cancels the original invoice', function (): void {
@@ -115,8 +143,12 @@ it('storno cancels the original invoice', function (): void {
 
     $response->assertCreated();
 
-    expect($response->json('invoice_number'))->toStartWith('ST-')
+    expect($response->json('invoice_number'))->toBeNull()
         ->and($original->refresh()->status)->toBe(InvoiceStatus::Cancelled);
+
+    $issued = issueDocument($this, $user, $response->json('id'));
+
+    expect($issued->json('invoice_number'))->toStartWith('ST-');
 });
 
 it('rejects a corrective document for a draft invoice', function (): void {

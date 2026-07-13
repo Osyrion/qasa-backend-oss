@@ -19,6 +19,7 @@ class EventData extends Data
         public readonly ?string $description = null,
         public readonly ?string $location = null,
         public readonly ?string $color = null,
+        public readonly ?string $order_id = null,
     ) {}
 
     /**
@@ -40,6 +41,9 @@ class EventData extends Data
             'description' => ['nullable', 'string'],
             'location' => ['nullable', 'string', 'max:255'],
             'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            // Cross-account ownership of a non-null order_id is enforced by
+            // the controller's scoped Order::findOrFail(), not here.
+            'order_id' => ['nullable', 'uuid', 'exists:orders,id'],
         ];
     }
 }

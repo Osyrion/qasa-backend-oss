@@ -31,6 +31,10 @@ class UpdateProfileAction
                 'ico' => $data->ico,
                 'dic' => $data->dic,
                 'vat_status' => $vatStatus?->value,
+                // vat_status itself always has a DB default, so this is the
+                // only way to tell "explicitly confirmed" from "never
+                // touched" — drives the onboarding setup checklist.
+                'vat_status_confirmed_at' => $vatStatus !== null ? now() : null,
                 'tax_flat_rate' => $data->tax_flat_rate,
                 'default_currency' => $data->default_currency->value,
                 'invoice_prefix' => $data->invoice_prefix,
@@ -50,6 +54,7 @@ class UpdateProfileAction
                 'auto_remind_enabled' => $data->auto_remind_enabled,
                 'auto_remind_max' => $data->auto_remind_max,
                 'auto_remind_interval_days' => $data->auto_remind_interval_days,
+                'overdue_digest_enabled' => $data->overdue_digest_enabled,
                 'clockify_api_key' => $data->clockify_api_key,
                 'clockify_workspace_id' => $data->clockify_workspace_id,
             ], fn ($value) => $value !== null);

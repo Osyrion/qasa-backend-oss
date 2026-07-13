@@ -18,11 +18,15 @@ class EloquentEventRepository implements EventRepositoryInterface
     /**
      * @return LengthAwarePaginator<int, Event>
      */
-    public function paginate(int $perPage = 20, ?Carbon $from = null, ?Carbon $to = null): LengthAwarePaginator
+    public function paginate(int $perPage = 20, ?Carbon $from = null, ?Carbon $to = null, ?string $orderId = null): LengthAwarePaginator
     {
-        $query = Event::query();
+        $query = Event::query()->with('order.client');
 
         $this->applyRange($query, $from, $to);
+
+        if ($orderId !== null) {
+            $query->where('order_id', $orderId);
+        }
 
         $query->orderBy('starts_at');
 

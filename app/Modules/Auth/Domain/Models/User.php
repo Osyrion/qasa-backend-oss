@@ -75,6 +75,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property bool $auto_remind_enabled Whether overdue invoices get automatic reminder emails
  * @property int $auto_remind_max Max automatic reminders sent per invoice, 1-10
  * @property int $auto_remind_interval_days Minimum days between automatic reminders
+ * @property bool $overdue_digest_enabled Whether the owner receives a daily digest of invoices newly past due
+ * @property Carbon|null $vat_status_confirmed_at Set when the user explicitly saves vat_status/is_vat_payer via the profile — drives the onboarding setup checklist, since vat_status itself always has a DB default
  * @property string|null $clockify_api_key
  * @property string|null $clockify_workspace_id
  * @property string|null $two_factor_secret Base32 TOTP secret; unconfirmed until two_factor_confirmed_at is set
@@ -159,7 +161,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
     protected $fillable = [
         'title', 'name', 'surname', 'email', 'phone',
         'password', 'google_id', 'avatar_path', 'color',
-        'ico', 'dic', 'is_vat_payer', 'vat_status', 'tax_flat_rate',
+        'ico', 'dic', 'is_vat_payer', 'vat_status', 'vat_status_confirmed_at', 'tax_flat_rate',
         'default_currency', 'invoice_prefix', 'invoice_number_mask', 'invoice_number_start', 'locale',
         'supplier_invoice_number_mask', 'supplier_invoice_number_start', 'invoice_inbox_enabled',
         'quote_number_mask', 'quote_number_start',
@@ -167,6 +169,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'overdue_reminder_days', 'clockify_api_key', 'clockify_workspace_id',
         'auto_remind_enabled', 'auto_remind_max', 'auto_remind_interval_days',
+        'overdue_digest_enabled',
         'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_confirmed_at',
     ];
 
@@ -183,6 +186,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
         'auto_remind_enabled' => false,
         'auto_remind_max' => 3,
         'auto_remind_interval_days' => 7,
+        'overdue_digest_enabled' => true,
     ];
 
     protected function casts(): array
@@ -192,6 +196,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
             'vat_status' => VatStatus::class,
+            'vat_status_confirmed_at' => 'datetime',
             'tax_flat_rate' => 'integer',
             'invoice_number_start' => 'integer',
             'supplier_invoice_number_start' => 'integer',
@@ -200,6 +205,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
             'auto_remind_enabled' => 'boolean',
             'auto_remind_max' => 'integer',
             'auto_remind_interval_days' => 'integer',
+            'overdue_digest_enabled' => 'boolean',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
             'two_factor_secret' => 'encrypted',

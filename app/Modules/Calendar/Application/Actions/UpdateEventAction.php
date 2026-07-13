@@ -34,6 +34,7 @@ final readonly class UpdateEventAction
         $this->overlapPolicy->assertAllowed($event->user_id, $startsAt, $endsAt, $event->id);
 
         return $this->repository->update($event, [
+            'order_id' => $data->order_id,
             'title' => $data->title,
             'description' => $data->description,
             'location' => $data->location,

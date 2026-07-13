@@ -11,10 +11,12 @@ use App\Modules\Invoicing\Presentation\Mail\RemindersExhaustedMail;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 
-it('does not send anything when auto_remind_enabled is off (default)', function (): void {
+it('does not send a client reminder when auto_remind_enabled is off (default)', function (): void {
     Mail::fake();
 
-    $user = createUser(['auto_remind_enabled' => false]);
+    // overdue_digest_enabled defaults to true and is independent of
+    // auto_remind_enabled — disabled here to isolate the reminder assertion.
+    $user = createUser(['auto_remind_enabled' => false, 'overdue_digest_enabled' => false]);
     $client = Client::factory()->create(['user_id' => $user->id]);
     $invoice = Invoice::factory()->overdue()->create([
         'user_id' => $user->id,

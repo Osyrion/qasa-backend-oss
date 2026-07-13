@@ -28,7 +28,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string $user_id
  * @property string $client_id
- * @property string $invoice_number e.g. FA-2024-001
+ * @property string|null $invoice_number e.g. FA-2024-001; null until issued
  * @property InvoiceType $type
  * @property string|null $related_invoice_id Original invoice for credit_note/storno, or the settled proforma for a settlement invoice
  * @property string|null $settled_invoice_id Set on a proforma once settled; points at the ordinary invoice created from it

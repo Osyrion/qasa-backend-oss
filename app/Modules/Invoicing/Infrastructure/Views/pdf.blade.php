@@ -330,7 +330,7 @@
     {{-- Footer --}}
     <table class="footer">
         <tr>
-            <td>{{ $invoice->invoice_number }}</td>
+            <td>{{ $invoice->invoice_number ?? __('invoices::pdf.draft_number_placeholder') }}</td>
             <td class="right">{{ __('invoices::pdf.generated') }} {{ now()->format('d.m.Y') }}</td>
         </tr>
     </table>

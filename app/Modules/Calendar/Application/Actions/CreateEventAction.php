@@ -36,6 +36,7 @@ final readonly class CreateEventAction
 
         return $this->repository->create([
             'user_id' => $userId,
+            'order_id' => $data->order_id,
             'title' => $data->title,
             'description' => $data->description,
             'location' => $data->location,

@@ -6,6 +6,7 @@ namespace App\Modules\Calendar\Domain\Models;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Calendar\Domain\Enums\EventSource;
+use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Calendar\Domain\Models\EventFactory;
 use Eloquent;
@@ -20,6 +21,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property string $id
  * @property string $user_id
+ * @property string|null $order_id
  * @property string $title
  * @property string|null $description
  * @property string|null $location
@@ -32,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
+ * @property-read Order|null $order
  * @property-read User|null $user
  *
  * @method static EventFactory factory($count = null, $state = [])
@@ -70,6 +73,7 @@ class Event extends Model
 
     protected $fillable = [
         'user_id',
+        'order_id',
         'title',
         'description',
         'location',
@@ -111,5 +115,13 @@ class Event extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Order, $this>
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

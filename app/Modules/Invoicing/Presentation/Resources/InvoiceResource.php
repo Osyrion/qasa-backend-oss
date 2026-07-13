@@ -14,7 +14,7 @@ use OpenApi\Attributes as OA;
     schema: 'Invoice',
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'invoice_number', type: 'string', example: 'FA-2026-001'),
+        new OA\Property(property: 'invoice_number', type: 'string', nullable: true, description: 'Null until the invoice is issued (drafts have no number yet)', example: 'FA-2026-001'),
         new OA\Property(property: 'type', type: 'string', enum: ['invoice', 'proforma', 'credit_note', 'storno']),
         new OA\Property(property: 'related_invoice_id', type: 'string', format: 'uuid', nullable: true),
         new OA\Property(property: 'settled_invoice_id', type: 'string', format: 'uuid', nullable: true, description: 'Set on a proforma once settled into an ordinary invoice'),

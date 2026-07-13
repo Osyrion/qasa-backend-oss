@@ -75,7 +75,7 @@ class InvoicePdfService
 
         return new InvoicePdfViewModel(
             invoice: $invoice,
-            documentTitle: $titleText.' '.$invoice->invoice_number,
+            documentTitle: $titleText.' '.($invoice->invoice_number ?? (string) __('invoices::pdf.draft_number_placeholder')),
             isTaxDocument: $type->isTaxDocument(),
             relatedInvoiceNumber: $invoice->relatedInvoice?->invoice_number,
             supplier: $supplier,
@@ -108,7 +108,7 @@ class InvoicePdfService
     {
         return sprintf(
             '%s_%s.pdf',
-            str_replace(['/', '\\', ' '], '-', $invoice->invoice_number),
+            str_replace(['/', '\\', ' '], '-', $invoice->invoice_number ?? 'draft'),
             $invoice->issued_at->format('Y-m-d'),
         );
     }

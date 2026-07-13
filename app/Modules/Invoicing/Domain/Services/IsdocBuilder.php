@@ -35,7 +35,9 @@ final class IsdocBuilder
         $root->setAttribute('version', self::VERSION);
 
         $root->appendChild($this->el($dom, 'DocumentType', $this->documentTypeCode($invoice->type)));
-        $root->appendChild($this->el($dom, 'ID', $invoice->invoice_number));
+        // Callers only build ISDOC for already-issued invoices (drafts are
+        // rejected before reaching here), so a number always exists.
+        $root->appendChild($this->el($dom, 'ID', (string) $invoice->invoice_number));
         $root->appendChild($this->el($dom, 'UUID', $invoice->id));
         $root->appendChild($this->el($dom, 'IssueDate', $invoice->issued_at->format('Y-m-d')));
 

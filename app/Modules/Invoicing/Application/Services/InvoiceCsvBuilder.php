@@ -50,7 +50,7 @@ final class InvoiceCsvBuilder
         $client = $invoice->client_snapshot ?? $this->clientFallback($invoice);
 
         return [
-            $invoice->invoice_number,
+            $invoice->invoice_number ?? '',
             $invoice->type->value,
             $invoice->status->value,
             $invoice->issued_at->format('Y-m-d'),

@@ -44,26 +44,20 @@ readonly class CreateInvoiceAction
                 $data->reverse_charge,
             );
 
-            $invoiceNumber = $this->repository->nextInvoiceNumber(
-                userId: $userId,
-                mask: $data->type->numberMask($user),
-                start: $owner->invoice_number_start ?? 1,
-            );
-
             $bankAccountId = $data->bank_account_id
                 ?? $this->bankAccounts->defaultForCurrency($userId, $data->currency)?->id;
 
             $invoice = $this->repository->create([
                 'user_id' => $userId,
                 'client_id' => $data->client_id,
-                'invoice_number' => $invoiceNumber,
+                'invoice_number' => null,
                 'type' => $data->type->value,
                 'status' => 'draft',
                 'issued_at' => $data->issued_at,
                 'taxable_supply_at' => $data->taxable_supply_at
                     ?? ($data->type->isTaxDocument() ? $data->issued_at : null),
                 'due_at' => $data->due_at,
-                'variable_symbol' => $data->variable_symbol ?? self::variableSymbolFromNumber($invoiceNumber),
+                'variable_symbol' => $data->variable_symbol,
                 'bank_account_id' => $bankAccountId,
                 'currency' => $data->currency->value,
                 'subtotal' => 0,

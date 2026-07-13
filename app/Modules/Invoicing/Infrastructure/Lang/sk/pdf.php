@@ -40,6 +40,7 @@ return [
     'generated' => 'Vygenerované',
     'title_tax_document' => 'Faktúra – daňový doklad',
     'title_invoice' => 'Faktúra',
+    'draft_number_placeholder' => 'KONCEPT',
     'not_vat_payer' => 'Dodávateľ nie je platiteľom DPH.',
     'total_excl_vat' => 'Celkom bez DPH',
     'reverse_charge_clause_domestic_sk' => 'Prenesenie daňovej povinnosti — dodanie podlieha preneseniu daňovej povinnosti podľa § 69 ods. 12 zákona č. 222/2004 Z. z.',

@@ -40,6 +40,7 @@ return [
     'generated' => 'Generated',
     'title_tax_document' => 'Invoice – Tax Document',
     'title_invoice' => 'Invoice',
+    'draft_number_placeholder' => 'DRAFT',
     'not_vat_payer' => 'Supplier is not a VAT payer.',
     'total_excl_vat' => 'Total excl. VAT',
     'reverse_charge_clause_domestic_sk' => 'Reverse charge — this supply is subject to reverse charge under §69(12) of Act No. 222/2004 Coll.',

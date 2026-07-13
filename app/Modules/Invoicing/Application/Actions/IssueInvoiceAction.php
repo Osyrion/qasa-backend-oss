@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Services\ViesPreconditionService;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -12,9 +13,11 @@ use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\TimeTracking\Application\Contracts\ExchangeRateServiceInterface;
 
 /**
- * The draft → sent moment: freezes supplier/client/bank snapshots so later
- * profile edits don't rewrite issued documents, snapshots the ČNB rate to CZK
- * for foreign-currency invoices, and fills VS/DUZP defaults.
+ * The draft → sent/issued moment: assigns the invoice_number (chronological,
+ * per-account sequence — never assigned earlier so a deleted draft never
+ * leaves a gap), freezes supplier/client/bank snapshots so later profile
+ * edits don't rewrite issued documents, snapshots the ČNB rate to CZK for
+ * foreign-currency invoices, and fills VS/DUZP defaults.
  *
  * Failures of the ČNB fetch must not block issuance — the rate snapshot
  * simply stays null and the PDF omits the CZK conversion table.
@@ -22,6 +25,7 @@ use App\Modules\TimeTracking\Application\Contracts\ExchangeRateServiceInterface;
 readonly class IssueInvoiceAction
 {
     public function __construct(
+        private InvoiceRepositoryInterface $repository,
         private ExchangeRateServiceInterface $exchangeRateService,
         private ViesPreconditionService $viesPrecondition,
     ) {}
@@ -55,6 +59,17 @@ readonly class IssueInvoiceAction
         $client = $invoice->client;
 
         assert($user !== null);
+
+        // Never reassign — grandfathered drafts that already carry a number
+        // (created before this action owned assignment, or issued once
+        // already) keep it. This is the single point where a number is born.
+        if ($invoice->invoice_number === null) {
+            $invoice->invoice_number = $this->repository->nextInvoiceNumber(
+                userId: $invoice->user_id,
+                mask: $invoice->type->numberMask($user),
+                start: $user->accountOwner()->invoice_number_start ?? 1,
+            );
+        }
 
         if ($invoice->reverse_charge_mode === ReverseChargeMode::Eu) {
             assert($client !== null);

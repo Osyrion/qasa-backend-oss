@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Application\Actions;
 
+use App\Modules\Calendar\Domain\Models\Event;
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Domain\Events\OrderDeleted;
 use App\Modules\Orders\Domain\Models\Order;
@@ -35,6 +36,15 @@ readonly class DeleteOrderAction
 
         DB::transaction(function () use ($order): void {
             event(new OrderDeleted($order));
+
+            // Order deletion is a soft delete (the row survives), so the
+            // events.order_id nullOnDelete FK never fires on its own —
+            // unlink explicitly so calendar events aren't left pointing at
+            // a now-invisible order.
+            Event::withoutGlobalScope('user')
+                ->where('order_id', $order->id)
+                ->update(['order_id' => null]);
+
             $this->repository->delete($order);
         });
     }

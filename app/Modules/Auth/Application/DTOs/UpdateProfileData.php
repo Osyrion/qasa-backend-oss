@@ -129,6 +129,9 @@ class UpdateProfileData extends Data
         #[Sometimes]
         public readonly ?int $auto_remind_interval_days = null,
 
+        #[Sometimes]
+        public readonly ?bool $overdue_digest_enabled = null,
+
         #[Sometimes, Max(100)]
         public readonly ?string $clockify_api_key = null,
 
@@ -171,6 +174,7 @@ class UpdateProfileData extends Data
             'auto_remind_enabled' => ['sometimes', 'boolean'],
             'auto_remind_max' => ['sometimes', 'integer', 'min:1', 'max:10'],
             'auto_remind_interval_days' => ['sometimes', 'integer', 'min:'.config('invoicing.reminder_cooldown_days', 3), 'max:90'],
+            'overdue_digest_enabled' => ['sometimes', 'boolean'],
             'clockify_api_key' => ['sometimes', 'nullable', 'string', 'max:100'],
             'clockify_workspace_id' => ['sometimes', 'nullable', 'string', 'max:50'],
         ];
@@ -214,6 +218,7 @@ class UpdateProfileData extends Data
             auto_remind_enabled: $request->filled('auto_remind_enabled') ? $request->boolean('auto_remind_enabled') : null,
             auto_remind_max: $request->filled('auto_remind_max') ? $request->integer('auto_remind_max') : null,
             auto_remind_interval_days: $request->filled('auto_remind_interval_days') ? $request->integer('auto_remind_interval_days') : null,
+            overdue_digest_enabled: $request->has('overdue_digest_enabled') ? $request->boolean('overdue_digest_enabled') : null,
             clockify_api_key: $request->filled('clockify_api_key') ? $request->string('clockify_api_key')->toString() : null,
             clockify_workspace_id: $request->filled('clockify_workspace_id') ? $request->string('clockify_workspace_id')->toString() : null,
         );
