@@ -1,60 +1,28 @@
-# Qasa — dokumentácia aplikácie
+# Qasa — technická špecifikácia API backendu
 
-> Tento dokument popisuje architektúru, moduly a funkčné toky backendu Qasa (Laravel 13, PHP 8.4).
-> Cieľom je poskytnúť ucelený obraz o tom, ako aplikácia funguje — od registrácie používateľa
-> až po vystavenie a zaplatenie faktúry.
+> Tento dokument popisuje architektúru, technologický stack a modulárnu štruktúru backendu aplikácie Qasa.
 
-## Obsah
+## 1. Technologický stack
 
-1. [Prehľad a technologický stack](#1-prehľad-a-technologický-stack)
-2. [Architektúra: modulárny monolit](#2-architektúra-modulárny-monolit)
-3. [Open-core: OSS vs. SaaS edícia](#3-open-core-oss-vs-saas-edícia)
-4. [Multi-tenancy: ako sú oddelené dáta jednotlivých účtov](#4-multi-tenancy-ako-sú-oddelené-dáta-jednotlivých-účtov)
-5. [Role a oprávnenia](#5-role-a-oprávnenia)
-6. [Modul Auth — registrácia, prihlásenie, profil](#6-modul-auth--registrácia-prihlásenie-profil)
-7. [SaaS nadstavba — Team, Admin, Subscriptions, Saas](#7-saas-nadstavba--team-admin-subscriptions-saas)
-8. [Modul Clients — klienti a kontaktné osoby](#8-modul-clients--klienti-a-kontaktné-osoby)
-9. [Modul Orders — zákazky](#9-modul-orders--zákazky)
-10. [Modul Pricing — sadzby a cenníky](#10-modul-pricing--sadzby-a-cenníky)
-11. [Modul TimeTracking — časové výkazy a výdavky](#11-modul-timetracking--časové-výkazy-a-výdavky)
-12. [Modul Calendar — udalosti, import/export, retencia](#12-modul-calendar--udalosti-importexport-retencia)
-13. [Modul Invoicing — fakturácia, DPH, prijaté faktúry](#13-modul-invoicing--fakturácia-dph-prijaté-faktúry)
-14. [Štatistiky](#14-štatistiky)
-15. [Kompletný flow: od zákazky po zaplatenú faktúru](#15-kompletný-flow-od-zákazky-po-zaplatenú-faktúru)
-16. [Bezpečnosť a spoločné konvencie](#16-bezpečnosť-a-spoločné-konvencie)
-17. [Známe medzery / rozpracované časti](#17-známe-medzery--rozpracované-časti)
-18. [Modul Integrations — token scopes a webhooky](#18-modul-integrations--token-scopes-a-webhooky)
-19. [2FA (TOTP) pre bežných používateľov](#19-2fa-totp-pre-bežných-používateľov)
+Aplikácia je vyvíjaná ako moderné API-first riešenie s dôrazom na typovú bezpečnosť a čistú architektúru.
 
----
+- **Jazyk / Framework:** PHP 8.4 (striktné typovanie), Laravel 13
+- **Databáza:** PostgreSQL + Eloquent ORM
+- **Autentifikácia:** Laravel Sanctum (Token-based) + Laravel Socialite (Google OAuth)
+- **Kvalita kódu & Testy:** Pest PHP 3.0, PHPStan (Larastan, Level 8), Laravel Pint
+- **Dokumentácia API:** OpenAPI (L5-Swagger)
+- **Kľúčové knižnice:** Spatie Laravel Data (DTOs), Spatie Laravel Query Builder, barryvdh/laravel-dompdf, chillerlan/php-qrcode
 
-## 1. Prehľad a technologický stack
+## 2. Architektúra: Modulárny monolit
 
-Qasa je API backend pre fakturačný/zákazkový systém (podobný napr. Fakturoid alebo Pohoda,
-ale s dôrazom na sledovanie zákaziek a času). Postavený je na:
+Kód je striktne rozdelený do izolovaných modulov v `app/Modules/*`. Každý modul rešpektuje vrstvenú architektúru:
 
-| Oblasť | Technológia |
-|---|---|
-| Jazyk / framework | PHP ^8.4, Laravel ^13.0 (`declare(strict_types=1)` povinné vo všetkých súboroch) |
-| Databáza | PostgreSQL cez Eloquent ORM |
-| Autentifikácia (API) | Laravel Sanctum (token-based, nie session cookies) |
-| Sociálne prihlásenie | Laravel Socialite (Google) |
-| Platby / predplatné | Laravel Cashier (Stripe) — **len SaaS repo** (`qasa_saas`), nie je v `composer.json` tohto repozitára |
-| Role a oprávnenia | Spatie Laravel Permission — **len SaaS repo**; OSS jadro schvaľuje všetko cez `Gate::before` (kapitola 3) |
-| DTO / validácia | Spatie Laravel Data |
-| Query building | Spatie Laravel Query Builder |
-| PDF | barryvdh/laravel-dompdf |
-| QR platby | chillerlan/php-qrcode |
-| CSV import | league/csv |
-| ICS (kalendár) | sabre/vobject |
-| Extrakcia textu z PDF (scan inbox) | smalot/pdfparser |
-| OCR obrázkov (scan inbox) | thiagoalessio/tesseract_ocr |
-| Testy | Pest PHP ^3.0 / PHPUnit ^11.3 |
-| Statická analýza | PHPStan ^2.1 cez Larastan ^3.9 (level 8), Laravel Pint ^1.27. **Psalm sa nepoužíva.** |
-| API dokumentácia | L5-Swagger (OpenAPI) |
-| MCP server | `laravel/mcp` (`Mcp::local('qasa', QasaServer::class)`) |
+- **Domain:** Entity (Eloquent modely), hodnotové objekty, enamy, biznis logika.
+- **Application:** DTOs, Actions, Services, Eventy a Listenery.
+- **Infrastructure:** Implementácie externých služieb, Service Providery.
+- **Presentation:** API Controllery, FormRequesty, API Resources a definície rout.
 
-Zoznam dependencies pravidelne kontroluj proti `composer.json` — je jediný zdroj pravdy.
+## 3. Prehľad modulov (Core)
 
 ---
 
