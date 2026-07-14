@@ -41,7 +41,8 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
         Route::get('tables', [StatisticsController::class, 'tables'])->name('tables');
     });
 
-    Route::apiResource('invoices', InvoiceController::class);
+    Route::apiResource('invoices', InvoiceController::class)
+        ->middlewareFor('store', 'idempotent');
 
     Route::apiResource('bank-accounts', BankAccountController::class)
         ->parameters(['bank-accounts' => 'bank_account']);
@@ -66,7 +67,8 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
 
     Route::apiResource('payment-orders', PaymentOrderController::class)
         ->parameters(['payment-orders' => 'payment_order'])
-        ->only(['index', 'store', 'show', 'destroy']);
+        ->only(['index', 'store', 'show', 'destroy'])
+        ->middlewareFor('store', 'idempotent');
 
     Route::get('payment-orders/{payment_order}/export/{format}', [PaymentOrderController::class, 'export'])
         ->whereIn('format', ['abo', 'sepa', 'csv', 'pdf'])
@@ -91,7 +93,7 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
     Route::prefix('invoices/{invoice}')->scopeBindings()->group(function (): void {
         Route::post('status', [InvoiceController::class, 'updateStatus'])->name('invoices.status');
         Route::post('email', [InvoiceController::class, 'email'])
-            ->middleware('throttle:invoice-email')
+            ->middleware(['throttle:invoice-email', 'idempotent'])
             ->name('invoices.email');
         Route::post('remind', [InvoiceController::class, 'remind'])
             ->middleware('throttle:invoice-email')
@@ -102,7 +104,9 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
         Route::delete('items/{item}', [InvoiceController::class, 'removeItem'])->name('invoices.items.destroy');
         Route::post('public-link', [InvoiceController::class, 'createPublicLink'])->name('invoices.public-link.store');
         Route::delete('public-link', [InvoiceController::class, 'revokePublicLink'])->name('invoices.public-link.destroy');
-        Route::post('payments', [InvoicePaymentController::class, 'store'])->name('invoices.payments.store');
+        Route::post('payments', [InvoicePaymentController::class, 'store'])
+            ->middleware('idempotent')
+            ->name('invoices.payments.store');
         Route::delete('payments/{payment}', [InvoicePaymentController::class, 'destroy'])->name('invoices.payments.destroy');
         Route::get('pdf/download', [InvoicePdfController::class, 'download'])->name('invoices.pdf.download');
         Route::get('pdf/preview', [InvoicePdfController::class, 'preview'])->name('invoices.pdf.preview');

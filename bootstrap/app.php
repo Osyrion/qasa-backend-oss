@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Presentation\Middleware\IdempotencyKey;
 use App\Modules\Shared\Presentation\Middleware\SetLocale;
 use App\Providers\AppServiceProvider;
 use App\Providers\TelescopeServiceProvider;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SetLocale::class);
+        $middleware->alias(['idempotent' => IdempotencyKey::class]);
 
         // Edition overlay (SaaS repo only) — spatie middleware aliases.
         if (file_exists(__DIR__.'/middleware.edition.php')) {

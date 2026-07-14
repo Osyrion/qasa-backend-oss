@@ -8,6 +8,7 @@ return [
     'cannot_email_cancelled_invoice' => 'Stornovanú faktúru nie je možné odoslať emailom.',
     'client_email_missing_for_send' => 'Klient nemá e-mailovú adresu. Doplňte ju alebo zadajte príjemcu.',
     'only_draft_editable' => 'Upravovať je možné len koncept faktúry.',
+    'stale_update' => 'Túto faktúru medzičasom zmenil niekto iný, odkedy ste si ju naposledy načítali.',
     'template_not_paused' => 'Šablónu je možné obnoviť len ak je pozastavená.',
     'template_not_active' => 'Šablónu je možné pozastaviť len ak je aktívna.',
     'template_missing_owner' => 'Opakovaná šablóna :id nemá vlastníka.',

@@ -32,6 +32,7 @@ use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -103,6 +104,17 @@ class InvoiceController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
+
+        $expectedUpdatedAt = $request->input('expected_updated_at');
+
+        if ($expectedUpdatedAt !== null
+            && $invoice->updated_at !== null
+            && ! $invoice->updated_at->equalTo(CarbonImmutable::parse($expectedUpdatedAt))) {
+            return response()->json([
+                'message' => __('invoicing.stale_update'),
+                'data' => InvoiceResource::make($invoice->load(['client', 'items'])),
+            ], 409);
+        }
 
         $data = InvoiceData::fromRequest($request);
         $updated = $this->updateAction->execute($invoice, $data);

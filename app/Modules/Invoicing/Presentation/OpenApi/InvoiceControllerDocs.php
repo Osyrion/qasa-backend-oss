@@ -185,6 +185,7 @@ final class InvoiceControllerDocs
                     new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
                     new OA\Property(property: 'note', type: 'string', nullable: true),
                     new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                    new OA\Property(property: 'expected_updated_at', type: 'string', format: 'date-time', nullable: true, description: 'Optimistic lock: the updated_at value last seen by the client. A mismatch returns 409.'),
                 ]
             )
         ),
@@ -206,6 +207,7 @@ final class InvoiceControllerDocs
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Invoice not found'),
+            new OA\Response(response: 409, description: 'expected_updated_at does not match the invoice\'s current updated_at'),
             new OA\Response(response: 422, description: 'Validation error or invoice not editable'),
         ]
     )]

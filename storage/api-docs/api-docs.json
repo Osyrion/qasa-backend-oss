@@ -7669,6 +7669,12 @@
                                     "note_above": {
                                         "type": "string",
                                         "nullable": true
+                                    },
+                                    "expected_updated_at": {
+                                        "description": "Optimistic lock: the updated_at value last seen by the client. A mismatch returns 409.",
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -7692,6 +7698,9 @@
                     },
                     "404": {
                         "description": "Invoice not found"
+                    },
+                    "409": {
+                        "description": "expected_updated_at does not match the invoice's current updated_at"
                     },
                     "422": {
                         "description": "Validation error or invoice not editable"

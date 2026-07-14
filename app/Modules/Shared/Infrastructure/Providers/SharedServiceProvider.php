@@ -13,6 +13,7 @@ use App\Modules\Shared\Application\Listeners\RecordActivity;
 use App\Modules\Shared\Domain\Models\ActivityLog;
 use App\Modules\Shared\Infrastructure\Repositories\EloquentActivityRecorder;
 use App\Modules\Shared\Presentation\Console\PurgeActivityLogCommand;
+use App\Modules\Shared\Presentation\Console\PurgeIdempotencyKeysCommand;
 use App\Modules\Shared\Presentation\Policies\ActivityLogPolicy;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Event;
@@ -48,7 +49,7 @@ class SharedServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
-            $this->commands([PurgeActivityLogCommand::class]);
+            $this->commands([PurgeActivityLogCommand::class, PurgeIdempotencyKeysCommand::class]);
         }
     }
 }

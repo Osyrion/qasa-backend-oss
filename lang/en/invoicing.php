@@ -8,6 +8,7 @@ return [
     'cannot_email_cancelled_invoice' => 'A cancelled invoice cannot be emailed.',
     'client_email_missing_for_send' => 'The client has no email address. Add one or specify a recipient.',
     'only_draft_editable' => 'Only a draft invoice can be edited.',
+    'stale_update' => 'This invoice was changed by someone else since you last loaded it.',
     'template_not_paused' => 'Only paused templates can be resumed.',
     'template_not_active' => 'Only active templates can be paused.',
     'template_missing_owner' => 'Recurring template :id has no owner.',
