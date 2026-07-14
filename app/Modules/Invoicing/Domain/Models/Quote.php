@@ -70,12 +70,45 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Quote query()
  * @method static Builder<static>|Quote withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|Quote withoutTrashed()
+ * @method static Builder<static>|Quote whereAcceptedAt($value)
+ * @method static Builder<static>|Quote whereClientId($value)
+ * @method static Builder<static>|Quote whereClientSnapshot($value)
+ * @method static Builder<static>|Quote whereConvertedInvoiceId($value)
+ * @method static Builder<static>|Quote whereConvertedOrderId($value)
+ * @method static Builder<static>|Quote whereCreatedAt($value)
+ * @method static Builder<static>|Quote whereCurrency($value)
+ * @method static Builder<static>|Quote whereDecisionIp($value)
+ * @method static Builder<static>|Quote whereDecisionNote($value)
+ * @method static Builder<static>|Quote whereDeletedAt($value)
+ * @method static Builder<static>|Quote whereDiscountAmount($value)
+ * @method static Builder<static>|Quote whereDiscountPercent($value)
+ * @method static Builder<static>|Quote whereEmailedAt($value)
+ * @method static Builder<static>|Quote whereEmailedTo($value)
+ * @method static Builder<static>|Quote whereId($value)
+ * @method static Builder<static>|Quote whereIssuedAt($value)
+ * @method static Builder<static>|Quote whereNote($value)
+ * @method static Builder<static>|Quote whereNoteAbove($value)
+ * @method static Builder<static>|Quote wherePublicFirstViewedAt($value)
+ * @method static Builder<static>|Quote wherePublicToken($value)
+ * @method static Builder<static>|Quote wherePublicViewCount($value)
+ * @method static Builder<static>|Quote whereQuoteNumber($value)
+ * @method static Builder<static>|Quote whereRejectedAt($value)
+ * @method static Builder<static>|Quote whereStatus($value)
+ * @method static Builder<static>|Quote whereSubtotal($value)
+ * @method static Builder<static>|Quote whereSupplierSnapshot($value)
+ * @method static Builder<static>|Quote whereTotal($value)
+ * @method static Builder<static>|Quote whereUpdatedAt($value)
+ * @method static Builder<static>|Quote whereUserId($value)
+ * @method static Builder<static>|Quote whereValidUntil($value)
+ * @method static Builder<static>|Quote whereVatAmount($value)
  *
  * @mixin Eloquent
  */
 class Quote extends Model
 {
+    /** @use HasFactory<QuoteFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -210,26 +243,41 @@ class Quote extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Client, $this>
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * @return HasMany<QuoteItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(QuoteItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return BelongsTo<Invoice, $this>
+     */
     public function convertedInvoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class, 'converted_invoice_id');
     }
 
+    /**
+     * @return BelongsTo<Order, $this>
+     */
     public function convertedOrder(): BelongsTo
     {
         return $this->belongsTo(Order::class, 'converted_order_id');

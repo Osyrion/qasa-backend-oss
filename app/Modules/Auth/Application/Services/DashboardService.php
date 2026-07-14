@@ -38,13 +38,15 @@ class DashboardService
      */
     private function clientStats(string $userId): array
     {
+        /** @var array<string, int> $counts */
         $counts = Client::withoutGlobalScope('user')
             ->where('user_id', $userId)
             ->selectRaw('count(*) as total')
-            ->first();
+            ->first()
+            ?->toArray() ?? [];
 
         return [
-            'total' => $counts ? (int) $counts->total : 0,
+            'total' => (int) ($counts['total'] ?? 0),
         ];
     }
 
@@ -97,9 +99,9 @@ class DashboardService
         return [
             'this_month_seconds' => (int) $thisMonth,
             'this_month_hours' => round((int) $thisMonth / 3600, 2),
-            'uninvoiced_count' => (int) ($uninvoiced?->count ?? 0),
-            'uninvoiced_seconds' => (int) ($uninvoiced?->total_seconds ?? 0),
-            'uninvoiced_hours' => round((int) ($uninvoiced?->total_seconds ?? 0) / 3600, 2),
+            'uninvoiced_count' => (int) ($uninvoiced->count ?? 0),
+            'uninvoiced_seconds' => (int) ($uninvoiced->total_seconds ?? 0),
+            'uninvoiced_hours' => round((int) ($uninvoiced->total_seconds ?? 0) / 3600, 2),
         ];
     }
 
@@ -124,12 +126,12 @@ class DashboardService
             ->first();
 
         return [
-            'total' => (int) ($stats?->total ?? 0),
-            'draft' => (int) ($stats?->draft ?? 0),
-            'sent' => (int) ($stats?->sent ?? 0),
-            'paid' => (int) ($stats?->paid ?? 0),
-            'revenue_paid' => (float) ($stats?->revenue_paid ?? 0),
-            'revenue_pending' => (float) ($stats?->revenue_pending ?? 0),
+            'total' => (int) ($stats->total ?? 0),
+            'draft' => (int) ($stats->draft ?? 0),
+            'sent' => (int) ($stats->sent ?? 0),
+            'paid' => (int) ($stats->paid ?? 0),
+            'revenue_paid' => (float) ($stats->revenue_paid ?? 0),
+            'revenue_pending' => (float) ($stats->revenue_pending ?? 0),
             'volume' => $this->invoicingVolume($userId),
             'overdue' => $this->overdueStats($userId),
             'overdue_reminders' => $this->overdueReminders($user),
@@ -312,7 +314,7 @@ class DashboardService
         return [
             'id' => $entry->id,
             'description' => $entry->description,
-            'started_at' => $entry->started_at?->toISOString(),
+            'started_at' => $entry->started_at->toISOString(),
             'duration_seconds' => $entry->effectiveDurationSeconds(),
             'order' => [
                 'id' => $entry->order?->id,

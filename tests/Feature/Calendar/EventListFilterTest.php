@@ -28,7 +28,9 @@ it('returns events overlapping the given range', function (): void {
         ->getJson('/api/v1/events?from=2026-08-01&to=2026-08-31')
         ->assertOk();
 
-    $ids = collect($response->json('data'))->pluck('id');
+    /** @var list<array<string, mixed>> $data */
+    $data = $response->json('data');
+    $ids = collect($data)->pluck('id');
 
     expect($ids)->toContain($overlapsStart->id)
         ->toContain($inRange->id)

@@ -25,6 +25,21 @@ use Illuminate\Support\Carbon;
  * @property-read WebhookEndpoint|null $endpoint
  *
  * @method static WebhookDeliveryFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereAttempt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereDeliveredAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereEvent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereFailedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery wherePayload($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereResponseExcerpt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereResponseStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookDelivery whereWebhookEndpointId($value)
+ *
+ * @mixin \Eloquent
  */
 class WebhookDelivery extends Model
 {

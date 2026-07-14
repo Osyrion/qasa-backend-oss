@@ -14,9 +14,9 @@ return new class extends Migration
             $table->foreignUuid('settled_invoice_id')
                 ->nullable()
                 ->after('related_invoice_id')
+                ->comment('Ordinary invoice created when this proforma was settled')
                 ->constrained('invoices')
-                ->nullOnDelete()
-                ->comment('Ordinary invoice created when this proforma was settled');
+                ->nullOnDelete();
         });
     }
 

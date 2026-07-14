@@ -28,6 +28,14 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|InvoicePayment newModelQuery()
  * @method static Builder<static>|InvoicePayment newQuery()
  * @method static Builder<static>|InvoicePayment query()
+ * @method static Builder<static>|InvoicePayment whereAmount($value)
+ * @method static Builder<static>|InvoicePayment whereCreatedAt($value)
+ * @method static Builder<static>|InvoicePayment whereId($value)
+ * @method static Builder<static>|InvoicePayment whereInvoiceId($value)
+ * @method static Builder<static>|InvoicePayment whereMethod($value)
+ * @method static Builder<static>|InvoicePayment whereNote($value)
+ * @method static Builder<static>|InvoicePayment wherePaidAt($value)
+ * @method static Builder<static>|InvoicePayment whereUpdatedAt($value)
  *
  * @mixin Eloquent
  */

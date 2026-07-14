@@ -73,7 +73,9 @@ use Illuminate\Support\Carbon;
  */
 class TimeEntry extends Model
 {
+    /** @use HasFactory<TimeEntryFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -109,17 +111,29 @@ class TimeEntry extends Model
 
     // ── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeRunning($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeRunning(Builder $query): Builder
     {
         return $query->whereNull('ended_at');
     }
 
-    public function scopeBillable($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeBillable(Builder $query): Builder
     {
         return $query->where('is_billable', true);
     }
 
-    public function scopeNotInvoiced($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeNotInvoiced(Builder $query): Builder
     {
         return $query->where('is_invoiced', false);
     }
@@ -189,16 +203,25 @@ class TimeEntry extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Order, $this>
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * @return BelongsTo<OrderItem, $this>
+     */
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class);

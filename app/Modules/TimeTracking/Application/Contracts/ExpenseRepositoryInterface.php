@@ -11,6 +11,7 @@ interface ExpenseRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Expense>
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 

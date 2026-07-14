@@ -152,15 +152,17 @@ final readonly class RevenueCostAggregator
 
         foreach ($rows as $row) {
             /** @var Currency $currency */
-            $currency = $row->currency;
-            $convertedCzk = (float) $row->converted_czk;
-            $unconverted = (float) $row->unconverted;
+            $currency = data_get($row, 'currency');
+            $convertedCzk = (float) data_get($row, 'converted_czk');
+            $unconverted = (float) data_get($row, 'unconverted');
 
             if ($unconverted !== 0.0) {
                 $convertedCzk += $unconverted * $this->currencyConverter->fallbackRateToCzk($currency, $userId);
             }
 
-            $czkByMonth[$row->month] = ($czkByMonth[$row->month] ?? 0.0) + $convertedCzk;
+            /** @var string $month */
+            $month = data_get($row, 'month');
+            $czkByMonth[$month] = ($czkByMonth[$month] ?? 0.0) + $convertedCzk;
         }
 
         $months = [];

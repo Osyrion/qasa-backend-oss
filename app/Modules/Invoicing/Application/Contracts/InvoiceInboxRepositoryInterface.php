@@ -11,6 +11,7 @@ interface InvoiceInboxRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, InvoiceInboxItem>
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 

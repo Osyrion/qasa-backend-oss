@@ -37,6 +37,9 @@ use OpenApi\Attributes as OA;
 )]
 class OrderResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -46,11 +49,11 @@ class OrderResource extends JsonResource
             'readme' => $this->resource->readme,
             'status' => $this->resource->status,
             'billing_type' => $this->resource->billing_type?->value,
-            'rate' => $this->resource->rate !== null ? (float) $this->rate : null,
+            'rate' => $this->resource->rate !== null ? (float) $this->resource->rate : null,
             'currency' => $this->resource->currency?->value,
             'effective_currency' => $this->resource->effectiveCurrency()->value,
-            'estimated_hours' => $this->resource->estimated_hours !== null ? (float) $this->estimated_hours : null,
-            'estimated_price' => $this->resource->estimated_price !== null ? (float) $this->estimated_price : null,
+            'estimated_hours' => $this->resource->estimated_hours !== null ? (float) $this->resource->estimated_hours : null,
+            'estimated_price' => $this->resource->estimated_price !== null ? (float) $this->resource->estimated_price : null,
             'deadline' => $this->resource->deadline?->toDateString(),
             'is_personal' => $this->resource->isPersonal(),
             'is_billable' => $this->resource->isBillable(),

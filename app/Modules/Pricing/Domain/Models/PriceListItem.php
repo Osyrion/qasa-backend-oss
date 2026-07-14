@@ -30,6 +30,24 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read ItemUnit|string $unit_enum
  * @property-read PriceList|null $priceList
+ *
+ * @method static \Database\Factories\Modules\Pricing\Domain\Models\PriceListItemFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem wherePriceListId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereSortOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereUnit($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereUnitPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceListItem whereVatRate($value)
+ *
+ * @mixin \Eloquent
  */
 class PriceListItem extends Model
 {

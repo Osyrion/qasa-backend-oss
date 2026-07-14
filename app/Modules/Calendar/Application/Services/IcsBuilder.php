@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Calendar\Application\Services;
 
 use App\Modules\Calendar\Domain\Models\Event;
+use Sabre\VObject\Component;
 use Sabre\VObject\Component\VCalendar;
 
 final class IcsBuilder
@@ -15,9 +16,10 @@ final class IcsBuilder
     public function build(iterable $events): string
     {
         $vcalendar = new VCalendar;
-        $vcalendar->PRODID = '-//QASA//Calendar//EN';
+        $vcalendar->add('PRODID', '-//QASA//Calendar//EN');
 
         foreach ($events as $event) {
+            /** @var Component $vevent */
             $vevent = $vcalendar->add('VEVENT', [
                 'UID' => $event->external_uid ?? $event->id.'@qasa',
                 'SUMMARY' => $event->title,

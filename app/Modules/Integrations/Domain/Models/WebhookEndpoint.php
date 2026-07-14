@@ -34,6 +34,31 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, WebhookDelivery> $deliveries
  *
  * @method static WebhookEndpointFactory factory($count = null, $state = [])
+ *
+ * @property-read int|null $deliveries_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint forUser(?string $userId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereConsecutiveFailures($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereDisabledAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereEvents($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereLastFailureAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereLastSuccessAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereSecret($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|WebhookEndpoint withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 class WebhookEndpoint extends Model
 {

@@ -73,12 +73,12 @@ class PublicInvoiceController extends Controller
 
         return response()->json([
             'invoice_number' => $invoice->invoice_number,
-            'type' => $invoice->type?->label(),
-            'issued_at' => $invoice->issued_at?->toDateString(),
+            'type' => $invoice->type->label(),
+            'issued_at' => $invoice->issued_at->toDateString(),
             'taxable_supply_at' => $invoice->taxable_supply_at?->toDateString(),
-            'due_at' => $invoice->due_at?->toDateString(),
+            'due_at' => $invoice->due_at->toDateString(),
             'variable_symbol' => $invoice->variable_symbol,
-            'currency' => $invoice->currency?->value,
+            'currency' => $invoice->currency->value,
             'supplier' => $invoice->supplier_snapshot,
             'client' => $invoice->client_snapshot,
             'items' => $invoice->items->map(static fn ($item): array => [

@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Infrastructure\Csv;
 
+use App\Modules\TimeTracking\Application\Contracts\TimeEntryCsvParserInterface;
 use Carbon\Carbon;
 
 /**
  * Parse CSV files exported from Clockify
  */
-class ClockifyCsvParser
+class ClockifyCsvParser implements TimeEntryCsvParserInterface
 {
-    /**
-     * Check if this parser can handle the CSV file
-     */
     public function canHandle(array $headers): bool
     {
         $expectedHeaders = ['Email', 'Project', 'Task', 'Description', 'Start Date', 'Start Time', 'End Date', 'End Time'];

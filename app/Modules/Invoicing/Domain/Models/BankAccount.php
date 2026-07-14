@@ -35,6 +35,17 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|BankAccount newModelQuery()
  * @method static Builder<static>|BankAccount newQuery()
  * @method static Builder<static>|BankAccount query()
+ * @method static Builder<static>|BankAccount whereAccountNumber($value)
+ * @method static Builder<static>|BankAccount whereBankName($value)
+ * @method static Builder<static>|BankAccount whereBic($value)
+ * @method static Builder<static>|BankAccount whereCreatedAt($value)
+ * @method static Builder<static>|BankAccount whereCurrency($value)
+ * @method static Builder<static>|BankAccount whereIban($value)
+ * @method static Builder<static>|BankAccount whereId($value)
+ * @method static Builder<static>|BankAccount whereIsDefault($value)
+ * @method static Builder<static>|BankAccount whereLabel($value)
+ * @method static Builder<static>|BankAccount whereUpdatedAt($value)
+ * @method static Builder<static>|BankAccount whereUserId($value)
  *
  * @mixin Eloquent
  */

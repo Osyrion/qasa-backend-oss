@@ -57,6 +57,8 @@ enum ItemUnit: string
 
     /**
      * All known unit values for validation.
+     *
+     * @return list<string>
      */
     public static function knownValues(): array
     {

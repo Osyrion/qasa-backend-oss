@@ -32,7 +32,7 @@ class AddInvoiceItemAction
         }
 
         return DB::transaction(function () use ($invoice, $data, $vatRate): InvoiceItem {
-            $unit = ItemUnit::tryFrom($data->unit)?->value ?? $data->unit;
+            $unit = ItemUnit::tryFrom($data->unit)->value ?? $data->unit;
 
             /** @var InvoiceItem $item */
             $item = $invoice->items()->make([

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Application\DTOs\ExchangeRateData;
 use App\Modules\TimeTracking\Domain\Models\ExchangeRate;
@@ -24,6 +25,8 @@ class ExchangeRateController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $data = ExchangeRateData::fromRequest($request);
 
         if ($data->base_currency === $data->target_currency) {
@@ -32,7 +35,7 @@ class ExchangeRateController extends Controller
 
         $rate = ExchangeRate::updateOrCreate(
             [
-                'user_id' => $request->user()->accountOwnerId(),
+                'user_id' => $user->accountOwnerId(),
                 'base_currency' => $data->base_currency->value,
                 'target_currency' => $data->target_currency->value,
                 'date' => $data->date,
@@ -45,10 +48,10 @@ class ExchangeRateController extends Controller
 
         return response()->json([
             'id' => $rate->id,
-            'base_currency' => $rate->base_currency?->value,
-            'target_currency' => $rate->target_currency?->value,
+            'base_currency' => $rate->base_currency->value,
+            'target_currency' => $rate->target_currency->value,
             'rate' => (float) $rate->rate,
-            'date' => $rate->date?->toDateString(),
+            'date' => $rate->date->toDateString(),
             'source' => $rate->source,
         ], 201);
     }

@@ -82,7 +82,7 @@ class UpdateProfileAction
 
             $user->update($updateData);
 
-            return $user->fresh();
+            return $user->refresh();
         });
     }
 

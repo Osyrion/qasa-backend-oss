@@ -57,11 +57,11 @@ class GenerateRecurringInvoicesCommand extends Command
                     $this->line("Template {$template->id} ({$template->name}): generated {$lastGenerated->invoice_number}.");
                 }
 
-                if (
-                    $iterations >= self::MAX_ITERATIONS_PER_TEMPLATE
-                    && $template->refresh()->isActive()
-                    && $template->next_run_date->lessThanOrEqualTo($today)
-                ) {
+                // If the loop above stopped specifically because it hit the
+                // iteration cap (rather than the template going inactive or
+                // catching up), isActive() and next_run_date<=today were both
+                // true on that final check already — no need to re-fetch.
+                if ($iterations >= self::MAX_ITERATIONS_PER_TEMPLATE) {
                     Log::warning('Recurring template hit the catch-up iteration cap', [
                         'template_id' => $template->id,
                         'next_run_date' => $template->next_run_date->toDateString(),

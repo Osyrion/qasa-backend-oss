@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Presentation\Controllers;
 
 use App\Modules\Auth\Application\Services\SetupStatusService;
+use App\Modules\Auth\Domain\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -55,7 +56,9 @@ class SetupStatusController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $status = $this->setupStatusService->getStatus($request->user());
+        /** @var User $user */
+        $user = $request->user();
+        $status = $this->setupStatusService->getStatus($user);
 
         return response()->json(['data' => $status]);
     }

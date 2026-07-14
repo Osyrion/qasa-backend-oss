@@ -58,7 +58,9 @@ use Illuminate\Support\Facades\Storage;
  */
 class OrderAttachment extends Model
 {
+    /** @use HasFactory<OrderAttachmentFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -92,8 +94,11 @@ class OrderAttachment extends Model
 
     public function getUrlAttribute(): ?string
     {
+        /** @var string $path */
+        $path = $this->path;
+
         return match ($this->disk) {
-            'local', 'r2' => Storage::disk($this->disk)->url($this->path),
+            'local', 'r2' => Storage::disk($this->disk)->url($path),
             'sharepoint', 'onedrive' => $this->external_url,
             default => null,
         };
@@ -127,11 +132,17 @@ class OrderAttachment extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<Order, $this>
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

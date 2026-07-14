@@ -19,6 +19,7 @@ use App\Modules\TimeTracking\Domain\Models\Expense;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
 use Database\Factories\Modules\Auth\Domain\Models\UserFactory;
 use Eloquent;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -144,10 +145,33 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @method static Builder<static>|User whereUpdatedAt($value)
  * @method static Builder<static>|User withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|User withoutTrashed()
+ * @method static Builder<static>|User whereAutoRemindEnabled($value)
+ * @method static Builder<static>|User whereAutoRemindIntervalDays($value)
+ * @method static Builder<static>|User whereAutoRemindMax($value)
+ * @method static Builder<static>|User whereClockifyApiKey($value)
+ * @method static Builder<static>|User whereClockifyWorkspaceId($value)
+ * @method static Builder<static>|User whereInvoiceFooterText($value)
+ * @method static Builder<static>|User whereInvoiceInboxEnabled($value)
+ * @method static Builder<static>|User whereInvoiceNumberMask($value)
+ * @method static Builder<static>|User whereInvoiceNumberStart($value)
+ * @method static Builder<static>|User whereLogoPath($value)
+ * @method static Builder<static>|User whereOverdueDigestEnabled($value)
+ * @method static Builder<static>|User whereOverdueReminderDays($value)
+ * @method static Builder<static>|User whereQuoteNumberMask($value)
+ * @method static Builder<static>|User whereQuoteNumberStart($value)
+ * @method static Builder<static>|User whereSupplierInvoiceNumberMask($value)
+ * @method static Builder<static>|User whereSupplierInvoiceNumberStart($value)
+ * @method static Builder<static>|User whereTwoFactorConfirmedAt($value)
+ * @method static Builder<static>|User whereTwoFactorRecoveryCodes($value)
+ * @method static Builder<static>|User whereTwoFactorSecret($value)
+ * @method static Builder<static>|User whereVatId($value)
+ * @method static Builder<static>|User whereVatStatus($value)
+ * @method static Builder<static>|User whereVatStatusConfirmedAt($value)
+ * @method static Builder<static>|User whereWebsite($value)
  *
  * @mixin Eloquent
  */
-class User extends Authenticatable implements ProvidesAccountMeta
+class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMeta
 {
     use HasApiTokens;
 
@@ -155,6 +179,7 @@ class User extends Authenticatable implements ProvidesAccountMeta
     use HasFactory;
 
     use HasUuids;
+    use \Illuminate\Auth\MustVerifyEmail;
     use Notifiable;
     use SoftDeletes;
 
@@ -256,6 +281,9 @@ class User extends Authenticatable implements ProvidesAccountMeta
         return $this->two_factor_confirmed_at !== null;
     }
 
+    /**
+     * @phpstan-assert-if-true !null $this->password
+     */
     public function hasPassword(): bool
     {
         return $this->password !== null;

@@ -235,8 +235,15 @@ final readonly class HealthStatisticsService
         foreach ($rows as $row) {
             /** @var Currency $currency */
             $currency = $row->currency;
-            $czk = (float) $row->converted_czk;
-            $unconverted = (float) $row->unconverted;
+
+            /** @var float|int|string|null $rawCzk */
+            $rawCzk = $row->getAttribute('converted_czk');
+
+            /** @var float|int|string|null $rawUnconverted */
+            $rawUnconverted = $row->getAttribute('unconverted');
+
+            $czk = (float) $rawCzk;
+            $unconverted = (float) $rawUnconverted;
 
             if ($unconverted !== 0.0) {
                 $czk += $unconverted * $this->currencyConverter->fallbackRateToCzk($currency, $userId);

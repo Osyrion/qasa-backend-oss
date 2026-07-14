@@ -103,11 +103,47 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Invoice withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|Invoice withoutTrashed()
  *
+ * @property-read BankAccount|null $bankAccount
+ * @property-read RecurringInvoiceTemplate|null $recurringTemplate
+ * @property-read Invoice|null $relatedInvoice
+ * @property-read Invoice|null $settledInvoice
+ * @property-read Collection<int, InvoiceWorkReportLine> $workReportLines
+ * @property-read int|null $work_report_lines_count
+ *
+ * @method static Builder<static>|Invoice whereBankAccountId($value)
+ * @method static Builder<static>|Invoice whereBankAccountSnapshot($value)
+ * @method static Builder<static>|Invoice whereClientSnapshot($value)
+ * @method static Builder<static>|Invoice whereDiscountAmount($value)
+ * @method static Builder<static>|Invoice whereDiscountPercent($value)
+ * @method static Builder<static>|Invoice whereEmailFailedAt($value)
+ * @method static Builder<static>|Invoice whereEmailedAt($value)
+ * @method static Builder<static>|Invoice whereEmailedCc($value)
+ * @method static Builder<static>|Invoice whereEmailedTo($value)
+ * @method static Builder<static>|Invoice whereLastRemindedAt($value)
+ * @method static Builder<static>|Invoice whereNoteAbove($value)
+ * @method static Builder<static>|Invoice whereOverdueNotifiedAt($value)
+ * @method static Builder<static>|Invoice wherePublicFirstViewedAt($value)
+ * @method static Builder<static>|Invoice wherePublicToken($value)
+ * @method static Builder<static>|Invoice wherePublicViewCount($value)
+ * @method static Builder<static>|Invoice whereRecurringTemplateId($value)
+ * @method static Builder<static>|Invoice whereRelatedInvoiceId($value)
+ * @method static Builder<static>|Invoice whereReminderCount($value)
+ * @method static Builder<static>|Invoice whereRemindersExhaustedNotifiedAt($value)
+ * @method static Builder<static>|Invoice whereReverseCharge($value)
+ * @method static Builder<static>|Invoice whereReverseChargeMode($value)
+ * @method static Builder<static>|Invoice whereSettledInvoiceId($value)
+ * @method static Builder<static>|Invoice whereSupplierSnapshot($value)
+ * @method static Builder<static>|Invoice whereTaxableSupplyAt($value)
+ * @method static Builder<static>|Invoice whereType($value)
+ * @method static Builder<static>|Invoice whereVariableSymbol($value)
+ *
  * @mixin Eloquent
  */
 class Invoice extends Model
 {
+    /** @use HasFactory<InvoiceFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -183,22 +219,38 @@ class Invoice extends Model
 
     // ── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeDraft($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', InvoiceStatus::Draft->value);
     }
 
-    public function scopeSent($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeSent(Builder $query): Builder
     {
         return $query->where('status', InvoiceStatus::Sent->value);
     }
 
-    public function scopePaid($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePaid(Builder $query): Builder
     {
         return $query->where('status', InvoiceStatus::Paid->value);
     }
 
-    public function scopeOverdue($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeOverdue(Builder $query): Builder
     {
         return $query->where('status', InvoiceStatus::Sent->value)
             ->where('due_at', '<', now()->toDateString());
@@ -327,21 +379,33 @@ class Invoice extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Client, $this>
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * @return HasMany<InvoiceItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<InvoicePayment, $this>
+     */
     /**
      * @return HasMany<InvoicePayment, $this>
      */
@@ -353,6 +417,9 @@ class Invoice extends Model
     /**
      * @return BelongsTo<BankAccount, $this>
      */
+    /**
+     * @return BelongsTo<BankAccount, $this>
+     */
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(BankAccount::class);
@@ -360,6 +427,9 @@ class Invoice extends Model
 
     /**
      * @return BelongsTo<Invoice, $this>
+     */
+    /**
+     * @return BelongsTo<self, $this>
      */
     public function relatedInvoice(): BelongsTo
     {
@@ -369,6 +439,9 @@ class Invoice extends Model
     /**
      * @return BelongsTo<Invoice, $this>
      */
+    /**
+     * @return BelongsTo<self, $this>
+     */
     public function settledInvoice(): BelongsTo
     {
         return $this->belongsTo(self::class, 'settled_invoice_id');
@@ -377,11 +450,17 @@ class Invoice extends Model
     /**
      * @return HasMany<InvoiceWorkReportLine, $this>
      */
+    /**
+     * @return HasMany<InvoiceWorkReportLine, $this>
+     */
     public function workReportLines(): HasMany
     {
         return $this->hasMany(InvoiceWorkReportLine::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return BelongsTo<RecurringInvoiceTemplate, $this>
+     */
     /**
      * @return BelongsTo<RecurringInvoiceTemplate, $this>
      */

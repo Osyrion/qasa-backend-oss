@@ -6,6 +6,7 @@ namespace App\Modules\Orders\Application\Actions;
 
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Application\DTOs\OrderData;
+use App\Modules\Orders\Domain\Enums\OrderStatus;
 use App\Modules\Orders\Domain\Events\OrderUpdated;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Pricing\Application\Contracts\RecordOrderRateChangeActionInterface;
@@ -26,9 +27,12 @@ readonly class UpdateOrderAction
      */
     public function execute(Order $order, OrderData $data): Order
     {
-        if (! $order->status_enum->isEditable()) {
+        /** @var OrderStatus $status */
+        $status = $order->status_enum;
+
+        if (! $status->isEditable()) {
             throw DomainException::because(
-                "Zákazku so statusom {$order->status_enum->label()} nie je možné upraviť."
+                "Zákazku so statusom {$status->label()} nie je možné upraviť."
             );
         }
 

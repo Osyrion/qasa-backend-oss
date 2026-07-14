@@ -48,7 +48,9 @@ use Illuminate\Support\Carbon;
  */
 class ExchangeRate extends Model
 {
+    /** @use HasFactory<ExchangeRateFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -73,12 +75,20 @@ class ExchangeRate extends Model
 
     // ── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeSystem($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeSystem(Builder $query): Builder
     {
         return $query->whereNull('user_id');
     }
 
-    public function scopeForPair($query, Currency $base, Currency $target)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeForPair(Builder $query, Currency $base, Currency $target): Builder
     {
         return $query
             ->where('base_currency', $base->value)
@@ -99,6 +109,9 @@ class ExchangeRate extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

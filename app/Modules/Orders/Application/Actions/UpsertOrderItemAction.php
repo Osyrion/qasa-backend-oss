@@ -13,7 +13,7 @@ class UpsertOrderItemAction
 {
     public function execute(Order $order, OrderItemData $data, ?OrderItem $existing = null): OrderItem
     {
-        $unit = ItemUnit::tryFrom($data->unit)?->value ?? $data->unit;
+        $unit = ItemUnit::tryFrom($data->unit)->value ?? $data->unit;
 
         $attributes = [
             'type' => $data->type->value,

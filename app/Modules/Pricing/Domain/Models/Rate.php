@@ -36,6 +36,25 @@ use Illuminate\Support\Carbon;
  * @property-read User|null $user
  * @property-read Client|null $client
  * @property-read Order|null $order
+ *
+ * @method static \Database\Factories\Modules\Pricing\Domain\Models\RateFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate forUser(?string $userId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereClientId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereCurrency($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereLevel($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereOrderId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereRate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Rate whereValidFrom($value)
+ *
+ * @mixin \Eloquent
  */
 class Rate extends Model
 {

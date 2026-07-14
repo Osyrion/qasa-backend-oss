@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Application\DTOs\OrderNoteData;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderNote;
@@ -84,9 +85,12 @@ class OrderNoteController extends Controller
 
         $data = OrderNoteData::fromRequest($request);
 
+        /** @var User $user */
+        $user = $request->user();
+
         /** @var OrderNote $note */
         $note = $order->notes()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'content' => $data->content,
         ]);
 
@@ -112,9 +116,12 @@ class OrderNoteController extends Controller
     {
         $this->authorize('update', $order);
 
+        /** @var User $user */
+        $user = request()->user();
+
         // Author may always delete their own note; orders.manage covers the rest.
-        if ((string) $note->user_id !== (string) request()->user()->id
-            && ! request()->user()->can('orders.manage')
+        if ((string) $note->user_id !== (string) $user->id
+            && ! $user->can('orders.manage')
         ) {
             return response()->json(['message' => __('orders.notes_delete_own_only')], 403);
         }

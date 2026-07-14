@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
@@ -18,7 +17,6 @@ use Throwable;
 readonly class GenerateInvoiceFromOrderAction
 {
     public function __construct(
-        private InvoiceRepositoryInterface $repository,
         private CreateInvoiceAction $createAction,
         private RateResolverInterface $rateResolver,
     ) {}
@@ -73,7 +71,7 @@ readonly class GenerateInvoiceFromOrderAction
                 $hours = round($entry->effectiveDurationHours(), 2);
                 $rate = $entry->rate_override !== null
                     ? (float) $entry->rate_override
-                    : ($rateSheet->rateOn($entry->started_at)?->rate ?? (float) ($order->rate ?? 0));
+                    : ($rateSheet->rateOn($entry->started_at)->rate ?? (float) ($order->rate ?? 0));
                 $vatRate = (float) $entry->vat_rate;
 
                 /** @var InvoiceItem $item */

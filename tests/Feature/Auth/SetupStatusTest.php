@@ -6,9 +6,16 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 
+/**
+ * @param  array<string, mixed>  $body
+ * @return array<string, mixed>
+ */
 function setupStatusItems(array $body): array
 {
-    return collect($body['data']['items'])->keyBy('key')->all();
+    /** @var list<array<string, mixed>> $items */
+    $items = $body['data']['items'];
+
+    return collect($items)->keyBy('key')->all();
 }
 
 it('reports a fresh account as incomplete on every required item', function (): void {

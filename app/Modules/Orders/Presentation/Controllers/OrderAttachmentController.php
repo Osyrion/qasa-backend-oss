@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderAttachment;
 use App\Modules\Orders\Presentation\Resources\OrderAttachmentResource;
@@ -127,9 +128,12 @@ class OrderAttachmentController extends Controller
 
         $nextSortOrder = $order->attachments()->max('sort_order') + 1;
 
+        /** @var User $requestUser */
+        $requestUser = $request->user();
+
         /** @var OrderAttachment $attachment */
         $attachment = $order->attachments()->create([
-            'user_id' => $request->user()->id,
+            'user_id' => $requestUser->id,
             'disk' => $disk,
             'path' => $path,
             'filename' => $file->getClientOriginalName(),

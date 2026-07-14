@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Presentation\Controllers;
 
 use App\Modules\Auth\Application\Services\DashboardService;
+use App\Modules\Auth\Domain\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -17,7 +18,9 @@ class DashboardController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $stats = $this->dashboardService->getStats($request->user());
+        /** @var User $user */
+        $user = $request->user();
+        $stats = $this->dashboardService->getStats($user);
 
         return response()->json(['data' => $stats]);
     }

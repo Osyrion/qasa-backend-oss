@@ -52,12 +52,33 @@ use Illuminate\Support\Facades\Storage;
  * @method static Builder<static>|InvoiceInboxItem query()
  * @method static Builder<static>|InvoiceInboxItem withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|InvoiceInboxItem withoutTrashed()
+ * @method static Builder<static>|InvoiceInboxItem whereCreatedAt($value)
+ * @method static Builder<static>|InvoiceInboxItem whereDeletedAt($value)
+ * @method static Builder<static>|InvoiceInboxItem whereDisk($value)
+ * @method static Builder<static>|InvoiceInboxItem whereError($value)
+ * @method static Builder<static>|InvoiceInboxItem whereFileHash($value)
+ * @method static Builder<static>|InvoiceInboxItem whereId($value)
+ * @method static Builder<static>|InvoiceInboxItem whereMatchedClientId($value)
+ * @method static Builder<static>|InvoiceInboxItem whereMimeType($value)
+ * @method static Builder<static>|InvoiceInboxItem whereOcrEngine($value)
+ * @method static Builder<static>|InvoiceInboxItem whereOcrText($value)
+ * @method static Builder<static>|InvoiceInboxItem whereOriginalFilename($value)
+ * @method static Builder<static>|InvoiceInboxItem wherePath($value)
+ * @method static Builder<static>|InvoiceInboxItem whereScannedAt($value)
+ * @method static Builder<static>|InvoiceInboxItem whereSizeBytes($value)
+ * @method static Builder<static>|InvoiceInboxItem whereStatus($value)
+ * @method static Builder<static>|InvoiceInboxItem whereSuggestions($value)
+ * @method static Builder<static>|InvoiceInboxItem whereSupplierInvoiceId($value)
+ * @method static Builder<static>|InvoiceInboxItem whereUpdatedAt($value)
+ * @method static Builder<static>|InvoiceInboxItem whereUserId($value)
  *
  * @mixin Eloquent
  */
 class InvoiceInboxItem extends Model
 {
+    /** @use HasFactory<InvoiceInboxItemFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -124,16 +145,25 @@ class InvoiceInboxItem extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<SupplierInvoice, $this>
+     */
     public function supplierInvoice(): BelongsTo
     {
         return $this->belongsTo(SupplierInvoice::class);
     }
 
+    /**
+     * @return BelongsTo<Client, $this>
+     */
     public function matchedClient(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'matched_client_id');

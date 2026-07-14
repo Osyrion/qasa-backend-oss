@@ -73,12 +73,38 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|SupplierInvoice unpaid()
  * @method static Builder<static>|SupplierInvoice withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|SupplierInvoice withoutTrashed()
+ * @method static Builder<static>|SupplierInvoice whereClientId($value)
+ * @method static Builder<static>|SupplierInvoice whereCreatedAt($value)
+ * @method static Builder<static>|SupplierInvoice whereCurrency($value)
+ * @method static Builder<static>|SupplierInvoice whereDeletedAt($value)
+ * @method static Builder<static>|SupplierInvoice whereDueAt($value)
+ * @method static Builder<static>|SupplierInvoice whereExchangeRate($value)
+ * @method static Builder<static>|SupplierInvoice whereId($value)
+ * @method static Builder<static>|SupplierInvoice whereInternalNumber($value)
+ * @method static Builder<static>|SupplierInvoice whereIssuedAt($value)
+ * @method static Builder<static>|SupplierInvoice whereNote($value)
+ * @method static Builder<static>|SupplierInvoice wherePaidAt($value)
+ * @method static Builder<static>|SupplierInvoice whereReceivedAt($value)
+ * @method static Builder<static>|SupplierInvoice whereSelfAssessedVatAmount($value)
+ * @method static Builder<static>|SupplierInvoice whereStatus($value)
+ * @method static Builder<static>|SupplierInvoice whereSubtotal($value)
+ * @method static Builder<static>|SupplierInvoice whereSupplierInvoiceNumber($value)
+ * @method static Builder<static>|SupplierInvoice whereTaxableSupplyAt($value)
+ * @method static Builder<static>|SupplierInvoice whereTotal($value)
+ * @method static Builder<static>|SupplierInvoice whereUpdatedAt($value)
+ * @method static Builder<static>|SupplierInvoice whereUserId($value)
+ * @method static Builder<static>|SupplierInvoice whereVariableSymbol($value)
+ * @method static Builder<static>|SupplierInvoice whereVatAmount($value)
+ * @method static Builder<static>|SupplierInvoice whereVatRegime($value)
+ * @method static Builder<static>|SupplierInvoice whereVendorSnapshot($value)
  *
  * @mixin Eloquent
  */
 class SupplierInvoice extends Model
 {
+    /** @use HasFactory<SupplierInvoiceFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -143,12 +169,20 @@ class SupplierInvoice extends Model
 
     // ── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeDraft($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeDraft(Builder $query): Builder
     {
         return $query->where('status', 'draft');
     }
 
-    public function scopeUnpaid($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeUnpaid(Builder $query): Builder
     {
         return $query->whereIn('status', ['received', 'booked']);
     }
@@ -231,11 +265,17 @@ class SupplierInvoice extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Client, $this>
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
@@ -244,11 +284,17 @@ class SupplierInvoice extends Model
     /**
      * @return HasMany<SupplierInvoiceVatLine, $this>
      */
+    /**
+     * @return HasMany<SupplierInvoiceVatLine, $this>
+     */
     public function vatLines(): HasMany
     {
         return $this->hasMany(SupplierInvoiceVatLine::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasOne<InvoiceInboxItem, $this>
+     */
     /**
      * @return HasOne<InvoiceInboxItem, $this>
      */

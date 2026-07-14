@@ -174,7 +174,9 @@ class ContactPersonController extends Controller
 
         DB::transaction(function () use ($contactPerson, $data): void {
             if ($data->is_primary) {
-                $contactPerson->client->contactPersons()
+                /** @var Client $client */
+                $client = $contactPerson->client;
+                $client->contactPersons()
                     ->where('id', '!=', $contactPerson->id)
                     ->update(['is_primary' => false]);
             }

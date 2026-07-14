@@ -8,7 +8,10 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 
-/** @return array{0: User, 1: Client} */
+/**
+ * @param  array<string, mixed>  $userAttributes
+ * @return array{0: User, 1: Client}
+ */
 function numberingScope(array $userAttributes = []): array
 {
     $user = createUser(['invoice_prefix' => 'FA', ...$userAttributes]);

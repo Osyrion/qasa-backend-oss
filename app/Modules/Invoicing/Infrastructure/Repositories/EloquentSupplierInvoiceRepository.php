@@ -24,6 +24,7 @@ class EloquentSupplierInvoiceRepository implements SupplierInvoiceRepositoryInte
 
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, SupplierInvoice>
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {

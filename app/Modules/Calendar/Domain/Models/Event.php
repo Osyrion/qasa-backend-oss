@@ -59,6 +59,7 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Event whereUserId($value)
  * @method static Builder<static>|Event withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|Event withoutTrashed()
+ * @method static Builder<static>|Event whereOrderId($value)
  *
  * @mixin Eloquent
  */

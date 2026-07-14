@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Actions\CreateClientAction;
 use App\Modules\Clients\Application\Actions\DeleteClientAction;
 use App\Modules\Clients\Application\Actions\UpdateClientAction;
@@ -195,8 +196,10 @@ class ClientController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $data = ClientData::validateAndCreate($request->all());
-        $client = $this->createAction->execute($data, $request->user()->accountOwnerId());
+        $client = $this->createAction->execute($data, $user->accountOwnerId());
 
         return response()->json(ClientResource::make($client), 201);
     }

@@ -45,6 +45,8 @@ enum Currency: string
 
     /**
      * All known currency values for validation.
+     *
+     * @return list<string>
      */
     public static function knownValues(): array
     {

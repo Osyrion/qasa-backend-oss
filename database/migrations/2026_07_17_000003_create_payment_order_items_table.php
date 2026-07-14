@@ -14,8 +14,8 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('payment_order_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('supplier_invoice_id')->nullable()
-                ->constrained()->nullOnDelete()
-                ->comment('Snapshot survives invoice deletion');
+                ->comment('Snapshot survives invoice deletion')
+                ->constrained()->nullOnDelete();
 
             $table->string('vendor_name');
             $table->string('supplier_invoice_number', 60);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Application\Actions;
 
+use App\Modules\TimeTracking\Application\Contracts\TimeEntryCsvParserInterface;
 use App\Modules\TimeTracking\Application\Contracts\WorkLogRepositoryInterface;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
 use League\Csv\Exception;
@@ -13,7 +14,7 @@ use SplFileObject;
 readonly class ImportCsvAction
 {
     /**
-     * @param  array<object>  $parsers
+     * @param  array<TimeEntryCsvParserInterface>  $parsers
      */
     public function __construct(
         private WorkLogRepositoryInterface $repository,
@@ -32,7 +33,7 @@ readonly class ImportCsvAction
         $csv = Reader::createFromFileObject($file);
         $csv->setHeaderOffset(0);
 
-        $headers = $csv->getHeader();
+        $headers = array_values($csv->getHeader());
         $parser = $this->findParser($headers);
 
         if (! $parser) {
@@ -77,9 +78,9 @@ readonly class ImportCsvAction
     /**
      * Find a suitable parser for the CSV headers
      *
-     * @param  array<string>  $headers
+     * @param  list<string>  $headers
      */
-    private function findParser(array $headers): ?object
+    private function findParser(array $headers): ?TimeEntryCsvParserInterface
     {
         return array_find($this->parsers, fn ($parser) => $parser->canHandle($headers));
     }

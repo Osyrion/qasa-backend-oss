@@ -38,12 +38,28 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|QuoteItem newModelQuery()
  * @method static Builder<static>|QuoteItem newQuery()
  * @method static Builder<static>|QuoteItem query()
+ * @method static Builder<static>|QuoteItem whereCreatedAt($value)
+ * @method static Builder<static>|QuoteItem whereDescription($value)
+ * @method static Builder<static>|QuoteItem whereId($value)
+ * @method static Builder<static>|QuoteItem wherePriceListItemId($value)
+ * @method static Builder<static>|QuoteItem whereQuantity($value)
+ * @method static Builder<static>|QuoteItem whereQuoteId($value)
+ * @method static Builder<static>|QuoteItem whereSortOrder($value)
+ * @method static Builder<static>|QuoteItem whereTotalExclVat($value)
+ * @method static Builder<static>|QuoteItem whereTotalInclVat($value)
+ * @method static Builder<static>|QuoteItem whereUnit($value)
+ * @method static Builder<static>|QuoteItem whereUnitPrice($value)
+ * @method static Builder<static>|QuoteItem whereUpdatedAt($value)
+ * @method static Builder<static>|QuoteItem whereVatAmount($value)
+ * @method static Builder<static>|QuoteItem whereVatRate($value)
  *
  * @mixin Eloquent
  */
 class QuoteItem extends Model
 {
+    /** @use HasFactory<QuoteItemFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -94,11 +110,17 @@ class QuoteItem extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<Quote, $this>
+     */
     public function quote(): BelongsTo
     {
         return $this->belongsTo(Quote::class);
     }
 
+    /**
+     * @return BelongsTo<PriceListItem, $this>
+     */
     public function priceListItem(): BelongsTo
     {
         return $this->belongsTo(PriceListItem::class);

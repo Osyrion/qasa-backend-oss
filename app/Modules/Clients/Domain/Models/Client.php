@@ -96,12 +96,17 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|Client whereUserId($value)
  * @method static Builder<static>|Client withTrashed(bool $withTrashed = true)
  * @method static Builder<static>|Client withoutTrashed()
+ * @method static Builder<static>|Client whereReverseChargeAllowed($value)
+ * @method static Builder<static>|Client whereVatId($value)
+ * @method static Builder<static>|Client whereVatVerifiedAt($value)
  *
  * @mixin Eloquent
  */
 class Client extends Model
 {
+    /** @use HasFactory<ClientFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -196,26 +201,41 @@ class Client extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return HasMany<ContactPerson, $this>
+     */
     public function contactPersons(): HasMany
     {
         return $this->hasMany(ContactPerson::class);
     }
 
+    /**
+     * @return HasMany<ContactPerson, $this>
+     */
     public function primaryContactPerson(): HasMany
     {
         return $this->hasMany(ContactPerson::class)->where('is_primary', true);
     }
 
+    /**
+     * @return HasMany<Order, $this>
+     */
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
     }
 
+    /**
+     * @return HasMany<Invoice, $this>
+     */
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

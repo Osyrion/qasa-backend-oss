@@ -33,6 +33,28 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $deleted_at
  * @property-read User|null $user
  * @property-read Collection<int, PriceListItem> $items
+ * @property-read int|null $items_count
+ *
+ * @method static \Database\Factories\Modules\Pricing\Domain\Models\PriceListFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList forUser(?string $userId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereCountry($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereCurrency($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereIsDefault($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PriceList withoutTrashed()
+ *
+ * @mixin \Eloquent
  */
 class PriceList extends Model
 {

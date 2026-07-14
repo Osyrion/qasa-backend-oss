@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Application\Actions\CreateOrderAction;
 use App\Modules\Orders\Application\Actions\DeleteOrderAction;
 use App\Modules\Orders\Application\Actions\UpdateOrderAction;
@@ -210,8 +211,10 @@ class OrderController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $data = OrderData::fromRequest($request);
-        $order = $this->createAction->execute($data, $request->user()->accountOwnerId());
+        $order = $this->createAction->execute($data, $user->accountOwnerId());
 
         return response()->json(OrderResource::make($order), 201);
     }

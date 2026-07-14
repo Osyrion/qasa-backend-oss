@@ -86,7 +86,9 @@ use Illuminate\Support\Carbon;
  */
 class Order extends Model
 {
+    /** @use HasFactory<OrderFactory> */
     use HasFactory;
+
     use HasUserScope;
     use HasUuids;
     use SoftDeletes;
@@ -120,17 +122,29 @@ class Order extends Model
 
     // ── Scopes ────────────────────────────────────────────────────────────────
 
-    public function scopeBillable($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeBillable(Builder $query): Builder
     {
         return $query->whereNotNull('client_id');
     }
 
-    public function scopePersonal($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopePersonal(Builder $query): Builder
     {
         return $query->whereNull('client_id');
     }
 
-    public function scopeActive($query)
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
     }
@@ -154,48 +168,72 @@ class Order extends Model
 
     public function hasDefaultRate(): bool
     {
-        return $this->billing_type?->hasDefaultRate() && $this->rate !== null;
+        return $this->billing_type->hasDefaultRate() && $this->rate !== null;
     }
 
     public function effectiveCurrency(): Currency
     {
+        /** @var User $user */
+        $user = $this->user;
+
         return $this->currency
-            ?? $this->client?->currency
-            ?? $this->user->default_currency;
+            ?? $this->client->currency
+            ?? $user->default_currency;
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsTo<Client, $this>
+     */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
+    /**
+     * @return HasMany<OrderNote, $this>
+     */
     public function notes(): HasMany
     {
         return $this->hasMany(OrderNote::class)->orderBy('created_at', 'desc');
     }
 
+    /**
+     * @return HasMany<OrderAttachment, $this>
+     */
     public function attachments(): HasMany
     {
         return $this->hasMany(OrderAttachment::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<OrderItem, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class)->orderBy('sort_order');
     }
 
+    /**
+     * @return HasMany<TimeEntry, $this>
+     */
     public function timeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class);
     }
 
+    /**
+     * @return HasMany<TimeEntry, $this>
+     */
     public function billableTimeEntries(): HasMany
     {
         return $this->hasMany(TimeEntry::class)

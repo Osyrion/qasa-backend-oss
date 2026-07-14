@@ -71,7 +71,9 @@ it('filters the event list by order_id', function (): void {
         ->getJson("/api/v1/events?order_id={$orderA->id}")
         ->assertOk();
 
-    $ids = collect($response->json('data'))->pluck('id');
+    /** @var list<array<string, mixed>> $data */
+    $data = $response->json('data');
+    $ids = collect($data)->pluck('id');
 
     expect($ids)->toHaveCount(1)->toContain($eventA->id);
 });
@@ -118,11 +120,17 @@ it('mixes in virtual order-deadline items within range, read-only and excluded f
         ->getJson('/api/v1/events?from=2026-08-01&to=2026-08-31&include=order_deadlines')
         ->assertOk();
 
-    $deadlineItems = collect($response->json('data'))->where('type', 'order_deadline');
+    /** @var list<array<string, mixed>> $data */
+    $data = $response->json('data');
+    $deadlineItems = collect($data)->where('type', 'order_deadline');
 
     expect($deadlineItems)->toHaveCount(1);
-    expect($deadlineItems->first()['order_id'])->toBe($inRange->id)
-        ->and($deadlineItems->first()['id'])->toBeNull();
+
+    /** @var array<string, mixed> $deadlineItem */
+    $deadlineItem = $deadlineItems->first();
+
+    expect($deadlineItem['order_id'])->toBe($inRange->id)
+        ->and($deadlineItem['id'])->toBeNull();
 });
 
 it('does not mix in order-deadline items without the include parameter', function (): void {

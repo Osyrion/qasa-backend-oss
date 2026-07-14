@@ -40,6 +40,17 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|VatRate newModelQuery()
  * @method static Builder<static>|VatRate newQuery()
  * @method static Builder<static>|VatRate query()
+ * @method static Builder<static>|VatRate whereCode($value)
+ * @method static Builder<static>|VatRate whereCountry($value)
+ * @method static Builder<static>|VatRate whereCreatedAt($value)
+ * @method static Builder<static>|VatRate whereId($value)
+ * @method static Builder<static>|VatRate whereIsDefault($value)
+ * @method static Builder<static>|VatRate whereLabel($value)
+ * @method static Builder<static>|VatRate whereRate($value)
+ * @method static Builder<static>|VatRate whereUpdatedAt($value)
+ * @method static Builder<static>|VatRate whereUserId($value)
+ * @method static Builder<static>|VatRate whereValidFrom($value)
+ * @method static Builder<static>|VatRate whereValidTo($value)
  *
  * @mixin Eloquent
  */

@@ -57,12 +57,15 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|InvoiceItem whereUpdatedAt($value)
  * @method static Builder<static>|InvoiceItem whereVatAmount($value)
  * @method static Builder<static>|InvoiceItem whereVatRate($value)
+ * @method static Builder<static>|InvoiceItem wherePriceListItemId($value)
  *
  * @mixin Eloquent
  */
 class InvoiceItem extends Model
 {
+    /** @use HasFactory<InvoiceItemFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -135,16 +138,25 @@ class InvoiceItem extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<Invoice, $this>
+     */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
+    /**
+     * @return BelongsTo<OrderItem, $this>
+     */
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class);
     }
 
+    /**
+     * @return BelongsTo<TimeEntry, $this>
+     */
     public function timeEntry(): BelongsTo
     {
         return $this->belongsTo(TimeEntry::class);

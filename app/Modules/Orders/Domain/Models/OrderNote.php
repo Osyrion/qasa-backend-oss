@@ -39,7 +39,9 @@ use Illuminate\Support\Carbon;
  */
 class OrderNote extends Model
 {
+    /** @use HasFactory<OrderNoteFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -50,11 +52,17 @@ class OrderNote extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<Order, $this>
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

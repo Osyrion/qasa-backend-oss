@@ -51,8 +51,8 @@ return new class extends Migration
 
             $table->string('description')->nullable();
 
-            $table->datetime('started_at');
-            $table->datetime('ended_at')->nullable()->comment('Null = timer running');
+            $table->dateTime('started_at');
+            $table->dateTime('ended_at')->nullable()->comment('Null = timer running');
             $table->unsignedInteger('duration_seconds')->nullable()->comment('Computed or manually set');
 
             // Rate — inherits from order, can be overridden per entry

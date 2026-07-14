@@ -110,7 +110,7 @@ readonly class ImportEventsCsvAction
     /**
      * @param  array<string>  $headers
      */
-    private function findParser(array $headers): ?object
+    private function findParser(array $headers): ?EventCsvParserInterface
     {
         return array_find($this->parsers, fn ($parser) => $parser->canHandle($headers));
     }

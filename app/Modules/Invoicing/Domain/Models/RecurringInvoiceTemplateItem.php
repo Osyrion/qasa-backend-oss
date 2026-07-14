@@ -30,6 +30,16 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|RecurringInvoiceTemplateItem newModelQuery()
  * @method static Builder<static>|RecurringInvoiceTemplateItem newQuery()
  * @method static Builder<static>|RecurringInvoiceTemplateItem query()
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereCreatedAt($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereDescription($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereId($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereQuantity($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereSortOrder($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereTemplateId($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereUnit($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereUnitPrice($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereUpdatedAt($value)
+ * @method static Builder<static>|RecurringInvoiceTemplateItem whereVatRate($value)
  *
  * @mixin Eloquent
  */

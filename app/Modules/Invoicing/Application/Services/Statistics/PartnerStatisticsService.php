@@ -81,7 +81,10 @@ final readonly class PartnerStatisticsService
             /** @var Currency $currency */
             $currency = $row->currency;
             $currencyValue = $currency->value;
-            $byCurrency[$currencyValue][$row->client_id] = ($byCurrency[$currencyValue][$row->client_id] ?? 0.0) + (float) $row->amount;
+
+            /** @var float|int|string|null $rawAmount */
+            $rawAmount = $row->getAttribute('amount');
+            $byCurrency[$currencyValue][$row->client_id] = ($byCurrency[$currencyValue][$row->client_id] ?? 0.0) + (float) $rawAmount;
         }
 
         $clients = Client::withoutGlobalScope('user')
@@ -206,8 +209,15 @@ final readonly class PartnerStatisticsService
         foreach ($rows as $row) {
             /** @var Currency $currency */
             $currency = $row->currency;
-            $czk = (float) $row->converted_czk;
-            $unconverted = (float) $row->unconverted;
+
+            /** @var float|int|string|null $rawCzk */
+            $rawCzk = $row->getAttribute('converted_czk');
+
+            /** @var float|int|string|null $rawUnconverted */
+            $rawUnconverted = $row->getAttribute('unconverted');
+
+            $czk = (float) $rawCzk;
+            $unconverted = (float) $rawUnconverted;
 
             if ($unconverted !== 0.0) {
                 $czk += $unconverted * $this->currencyConverter->fallbackRateToCzk($currency, $userId);

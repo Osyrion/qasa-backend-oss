@@ -25,7 +25,7 @@ class AddQuoteItemAction
         }
 
         return DB::transaction(function () use ($quote, $data): QuoteItem {
-            $unit = ItemUnit::tryFrom($data->unit)?->value ?? $data->unit;
+            $unit = ItemUnit::tryFrom($data->unit)->value ?? $data->unit;
 
             /** @var QuoteItem $item */
             $item = $quote->items()->make([

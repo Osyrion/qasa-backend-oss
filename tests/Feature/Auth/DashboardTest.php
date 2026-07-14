@@ -303,6 +303,7 @@ it('returns a continuous 12-month cash-in income trend', function (): void {
         ->getJson('/api/v1/dashboard')
         ->assertOk();
 
+    /** @var list<array<string, mixed>> $trend */
     $trend = $response->json('data.income_trend');
 
     expect($trend)->toHaveCount(12)

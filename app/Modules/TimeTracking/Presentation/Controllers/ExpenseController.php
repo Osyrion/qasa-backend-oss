@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\TimeTracking\Presentation\Controllers;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Support\Pagination;
 use App\Modules\TimeTracking\Application\Contracts\ExpenseRepositoryInterface;
 use App\Modules\TimeTracking\Application\DTOs\ExpenseData;
@@ -42,9 +43,11 @@ class ExpenseController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $data = ExpenseData::validateAndCreate($request->all());
         $expense = $this->repository->create([
-            'user_id' => $request->user()->accountOwnerId(),
+            'user_id' => $user->accountOwnerId(),
             'description' => $data->description,
             'category' => $data->category->value,
             'amount' => $data->amount,

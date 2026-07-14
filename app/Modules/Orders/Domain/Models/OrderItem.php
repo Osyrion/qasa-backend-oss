@@ -54,11 +54,17 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|OrderItem whereVatAmount($value)
  * @method static Builder<static>|OrderItem whereVatRate($value)
  *
+ * @property string|null $price_list_item_id
+ *
+ * @method static Builder<static>|OrderItem wherePriceListItemId($value)
+ *
  * @mixin Eloquent
  */
 class OrderItem extends Model
 {
+    /** @use HasFactory<OrderItemFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -134,11 +140,17 @@ class OrderItem extends Model
 
     // ── Relations ─────────────────────────────────────────────────────────────
 
+    /**
+     * @return BelongsTo<Order, $this>
+     */
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * @return HasOne<TimeEntry, $this>
+     */
     public function timeEntry(): HasOne
     {
         return $this->hasOne(TimeEntry::class);

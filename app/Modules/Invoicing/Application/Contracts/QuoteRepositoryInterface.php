@@ -12,6 +12,7 @@ interface QuoteRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, Quote>
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 

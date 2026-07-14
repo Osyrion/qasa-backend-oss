@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * One row of the "Výkaz víceprací" printed as the invoice's second page.
+ *
  * Prefilled from time entries, editable while the invoice is a draft.
  *
  * @property string $id
@@ -34,6 +35,15 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|InvoiceWorkReportLine newModelQuery()
  * @method static Builder<static>|InvoiceWorkReportLine newQuery()
  * @method static Builder<static>|InvoiceWorkReportLine query()
+ * @method static Builder<static>|InvoiceWorkReportLine whereCreatedAt($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereDescription($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereHours($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereId($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereInvoiceId($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereSortOrder($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereTimeEntryId($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereUpdatedAt($value)
+ * @method static Builder<static>|InvoiceWorkReportLine whereWorkDate($value)
  *
  * @mixin Eloquent
  */

@@ -85,6 +85,8 @@ class DomainException extends Exception
 
     /**
      * Get the exception as an array for API responses.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

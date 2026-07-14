@@ -11,6 +11,7 @@ interface ClientRepositoryInterface
 {
     /**
      * @param  array<string, mixed>  $filters  Supports 'role' => 'customer'|'vendor'|'all' (default 'customer').
+     * @return LengthAwarePaginator<int, Client>
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator;
 

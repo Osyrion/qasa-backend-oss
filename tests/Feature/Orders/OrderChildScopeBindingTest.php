@@ -47,7 +47,7 @@ it('does not let a user update an item belonging to another account order', func
         ])
         ->assertNotFound();
 
-    expect($victimItem->fresh()->description)->toBe('Original');
+    expect($victimItem->refresh()->description)->toBe('Original');
 });
 
 it('does not let a user delete an attachment belonging to another account order', function (): void {

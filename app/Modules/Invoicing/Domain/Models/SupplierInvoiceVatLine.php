@@ -28,12 +28,22 @@ use Illuminate\Support\Carbon;
  * @method static Builder<static>|SupplierInvoiceVatLine newModelQuery()
  * @method static Builder<static>|SupplierInvoiceVatLine newQuery()
  * @method static Builder<static>|SupplierInvoiceVatLine query()
+ * @method static Builder<static>|SupplierInvoiceVatLine whereBase($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereCreatedAt($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereId($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereSortOrder($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereSupplierInvoiceId($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereUpdatedAt($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereVatAmount($value)
+ * @method static Builder<static>|SupplierInvoiceVatLine whereVatRate($value)
  *
  * @mixin Eloquent
  */
 class SupplierInvoiceVatLine extends Model
 {
+    /** @use HasFactory<SupplierInvoiceVatLineFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = [
@@ -54,6 +64,9 @@ class SupplierInvoiceVatLine extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<SupplierInvoice, $this>
+     */
     public function supplierInvoice(): BelongsTo
     {
         return $this->belongsTo(SupplierInvoice::class);

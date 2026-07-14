@@ -1055,6 +1055,72 @@
                 ]
             }
         },
+        "/api/v1/profile/setup-status": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Onboarding checklist for the account",
+                "operationId": "c016480fe7332fc139ab8515b8d4b015",
+                "responses": {
+                    "200": {
+                        "description": "Setup checklist",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "key": {
+                                                                "type": "string",
+                                                                "enum": [
+                                                                    "billing_identity",
+                                                                    "vat_status",
+                                                                    "bank_account",
+                                                                    "invoice_numbering",
+                                                                    "logo",
+                                                                    "first_client",
+                                                                    "first_invoice"
+                                                                ]
+                                                            },
+                                                            "done": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "optional": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "completed": {
+                                                    "description": "True once every non-optional item is done",
+                                                    "type": "boolean"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/auth/2fa/enable": {
             "post": {
                 "tags": [
@@ -1363,6 +1429,28 @@
                             "type": "integer",
                             "default": 20
                         }
+                    },
+                    {
+                        "name": "order_id",
+                        "in": "query",
+                        "description": "Only events linked to this order",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "include",
+                        "in": "query",
+                        "description": "Set to order_deadlines to additionally mix in read-only virtual items for order deadlines within range",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "order_deadlines"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -1442,6 +1530,11 @@
                                         "type": "string",
                                         "example": "#3B82F6",
                                         "nullable": true
+                                    },
+                                    "order_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1462,6 +1555,9 @@
                     },
                     "401": {
                         "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "order_id belongs to another account"
                     },
                     "422": {
                         "description": "Validation error"
@@ -1572,6 +1668,11 @@
                                         "type": "string",
                                         "example": "#3B82F6",
                                         "nullable": true
+                                    },
+                                    "order_id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1594,7 +1695,7 @@
                         "description": "Unauthenticated"
                     },
                     "404": {
-                        "description": "Event not found"
+                        "description": "Event, or order_id belonging to another account, not found"
                     },
                     "422": {
                         "description": "Validation error"
@@ -4110,6 +4211,7 @@
                                     "status": {
                                         "type": "string",
                                         "enum": [
+                                            "issued",
                                             "sent",
                                             "paid",
                                             "cancelled"
@@ -4342,6 +4444,53 @@
                     },
                     "422": {
                         "description": "Invalid type or original status"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/invoices/{invoice}/settle": {
+            "post": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "Settle a fully paid proforma into an ordinary tax invoice",
+                "operationId": "461ed51f0e736f914bcc7b8c73fd9a4a",
+                "parameters": [
+                    {
+                        "name": "invoice",
+                        "in": "path",
+                        "description": "Proforma invoice ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Ordinary invoice created from the settled proforma, already paid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Invoice"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice not found"
+                    },
+                    "422": {
+                        "description": "Not a proforma, not fully paid yet, or already settled"
                     }
                 },
                 "security": [
@@ -4985,6 +5134,58 @@
                 ]
             }
         },
+        "/api/v1/invoice-inbox/upload": {
+            "post": {
+                "tags": [
+                    "InvoiceInbox"
+                ],
+                "summary": "Upload a document directly into the invoice inbox",
+                "operationId": "b6f1e70a741d2020943061d3aba085e4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "file"
+                                ],
+                                "properties": {
+                                    "file": {
+                                        "description": "PDF, JPEG, or PNG document",
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Invoice inbox item created from the uploaded file",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InvoiceInboxItem"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Invalid file type/size, or the file was already uploaded before"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/invoice-inbox/{inbox_item}/convert": {
             "post": {
                 "tags": [
@@ -5578,6 +5779,12 @@
                                                 "type": "object"
                                             }
                                         },
+                                        "sepa_eligible": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
                                         "other": {
                                             "type": "array",
                                             "items": {
@@ -5686,7 +5893,7 @@
                 "tags": [
                     "PaymentOrders"
                 ],
-                "summary": "Download the batch as ABO (KPC), CSV or PDF — always from the frozen snapshot",
+                "summary": "Download the batch as ABO (KPC), SEPA (pain.001) XML, CSV or PDF — always from the frozen snapshot",
                 "operationId": "96c3adc5eb93fe207e0c523c58aaeca3",
                 "parameters": [
                     {
@@ -5706,6 +5913,7 @@
                             "type": "string",
                             "enum": [
                                 "abo",
+                                "sepa",
                                 "csv",
                                 "pdf"
                             ]
@@ -5723,7 +5931,7 @@
                         "description": "Payment order not found"
                     },
                     "422": {
-                        "description": "ABO is not applicable to this batch"
+                        "description": "ABO/SEPA is not applicable to this batch"
                     }
                 },
                 "security": [
@@ -10944,6 +11152,11 @@
                         "type": "integer",
                         "example": 7
                     },
+                    "overdue_digest_enabled": {
+                        "description": "Whether the owner receives a daily digest e-mail of invoices newly past due",
+                        "type": "boolean",
+                        "example": true
+                    },
                     "has_clockify_api_key": {
                         "type": "boolean",
                         "example": false
@@ -11046,6 +11259,11 @@
                         "example": "#3B82F6",
                         "nullable": true
                     },
+                    "effective_color": {
+                        "description": "color, falling back to the linked order's color when the event has none",
+                        "type": "string",
+                        "nullable": true
+                    },
                     "is_all_day": {
                         "type": "boolean"
                     },
@@ -11065,6 +11283,32 @@
                             "csv_import",
                             "ics_import"
                         ]
+                    },
+                    "order_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "order": {
+                        "properties": {
+                            "id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "color": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "client_display_name": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -11600,8 +11844,10 @@
                         "format": "uuid"
                     },
                     "invoice_number": {
+                        "description": "Null until the invoice is issued (drafts have no number yet)",
                         "type": "string",
-                        "example": "FA-2026-001"
+                        "example": "FA-2026-001",
+                        "nullable": true
                     },
                     "type": {
                         "type": "string",
@@ -11617,13 +11863,22 @@
                         "format": "uuid",
                         "nullable": true
                     },
+                    "settled_invoice_id": {
+                        "description": "Set on a proforma once settled into an ordinary invoice",
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
                     "status": {
                         "type": "string",
                         "enum": [
                             "draft",
+                            "issued",
                             "sent",
+                            "reminded",
                             "paid",
-                            "cancelled"
+                            "cancelled",
+                            "credited"
                         ]
                     },
                     "issued_at": {
@@ -13128,6 +13383,10 @@
         {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "Profile",
+            "description": "Profile"
         }
     ],
     "security": [
