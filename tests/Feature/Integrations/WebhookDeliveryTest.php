@@ -31,6 +31,33 @@ it('dispatches a delivery job when a subscribed event fires', function (): void 
     );
 });
 
+it('carries the triggering request\'s X-Request-Id into the dispatched job', function (): void {
+    Queue::fake();
+
+    $user = createUser();
+    WebhookEndpoint::factory()->create([
+        'user_id' => $user->id,
+        'events' => ['invoice.created'],
+    ]);
+
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->withHeaders(['X-Request-Id' => 'trace-abc-123'])
+        ->postJson('/api/v1/invoices', [
+            'client_id' => $client->id,
+            'issued_at' => today()->toDateString(),
+            'due_at' => today()->addDays(14)->toDateString(),
+            'currency' => 'EUR',
+        ])
+        ->assertCreated();
+
+    Queue::assertPushed(
+        DeliverWebhookJob::class,
+        fn (DeliverWebhookJob $job): bool => $job->requestId === 'trace-abc-123',
+    );
+});
+
 it('does not dispatch to an endpoint that is not subscribed to the event', function (): void {
     Queue::fake();
 

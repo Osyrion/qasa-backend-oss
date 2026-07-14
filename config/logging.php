@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -71,6 +72,10 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            // JSON lines so request_id (set by RequestId middleware via
+            // Log::withContext) and structured context survive log
+            // aggregation intact instead of being flattened into text.
+            'formatter' => env('LOG_DAILY_JSON', true) ? JsonFormatter::class : null,
         ],
 
         'slack' => [

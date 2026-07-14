@@ -30,6 +30,7 @@ class SharedServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/activity.php');
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/health.php');
 
         // Non-enforcing: only aliases these 4 models for readable
         // subject_type values. enforceMorphMap() would require every

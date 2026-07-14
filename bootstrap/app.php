@@ -2,6 +2,7 @@
 
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Presentation\Middleware\IdempotencyKey;
+use App\Modules\Shared\Presentation\Middleware\RequestId;
 use App\Modules\Shared\Presentation\Middleware\SetLocale;
 use App\Providers\AppServiceProvider;
 use App\Providers\TelescopeServiceProvider;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(RequestId::class);
         $middleware->append(SetLocale::class);
         $middleware->alias(['idempotent' => IdempotencyKey::class]);
 

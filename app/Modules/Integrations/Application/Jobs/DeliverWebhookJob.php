@@ -13,6 +13,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -40,6 +41,7 @@ class DeliverWebhookJob implements ShouldQueue
         public readonly string $webhookEndpointId,
         public readonly string $event,
         public readonly array $payload,
+        public readonly ?string $requestId = null,
     ) {}
 
     /**
@@ -52,6 +54,12 @@ class DeliverWebhookJob implements ShouldQueue
 
     public function handle(): void
     {
+        // Carries the originating request's id into this job's log lines,
+        // so a delivery failure can be traced back to what triggered it.
+        if ($this->requestId !== null) {
+            Log::withContext(['request_id' => $this->requestId]);
+        }
+
         $endpoint = WebhookEndpoint::withoutGlobalScope('user')->find($this->webhookEndpointId);
 
         if ($endpoint === null || ! $endpoint->is_active) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use Illuminate\Support\Carbon;
 
 it('accepts an update whose expected_updated_at matches the current value', function (): void {
     $user = createUser();
@@ -26,7 +27,7 @@ it('rejects an update whose expected_updated_at is stale, with 409 and current s
     $client = Client::factory()->create(['user_id' => $user->id]);
     $invoice = Invoice::factory()->draft()->create(['user_id' => $user->id, 'client_id' => $client->id]);
 
-    /** @var \Illuminate\Support\Carbon $updatedAt */
+    /** @var Carbon $updatedAt */
     $updatedAt = $invoice->updated_at;
     $staleTimestamp = $updatedAt->subMinutes(5)->toISOString();
 

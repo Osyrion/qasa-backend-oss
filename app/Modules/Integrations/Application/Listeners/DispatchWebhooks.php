@@ -32,13 +32,16 @@ class DispatchWebhooks
 
         $payload = WebhookEventMap::payloadFor($event);
 
+        /** @var string|null $requestId */
+        $requestId = request()->attributes->get('request_id');
+
         WebhookEndpoint::withoutGlobalScope('user')
             ->where('user_id', $userId)
             ->where('is_active', true)
             ->get()
-            ->each(function (WebhookEndpoint $endpoint) use ($wireEvent, $payload): void {
+            ->each(function (WebhookEndpoint $endpoint) use ($wireEvent, $payload, $requestId): void {
                 if ($endpoint->subscribesTo($wireEvent)) {
-                    DeliverWebhookJob::dispatch($endpoint->id, $wireEvent, $payload);
+                    DeliverWebhookJob::dispatch($endpoint->id, $wireEvent, $payload, $requestId);
                 }
             });
     }
