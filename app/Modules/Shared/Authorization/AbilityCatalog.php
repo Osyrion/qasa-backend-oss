@@ -34,6 +34,7 @@ final class AbilityCatalog
             'calendar.view',
             'calendar.manage',
             'integrations.manage',
+            'activity.view',
         ];
     }
 

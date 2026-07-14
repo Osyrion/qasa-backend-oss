@@ -41,3 +41,9 @@ Schedule::command('qasa:integrations:purge-webhook-deliveries')
     ->timezone((string) config('qasa.schedule_timezone'))
     ->withoutOverlapping()
     ->onOneServer();
+
+Schedule::command('qasa:activity:purge')
+    ->dailyAt('04:15')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();

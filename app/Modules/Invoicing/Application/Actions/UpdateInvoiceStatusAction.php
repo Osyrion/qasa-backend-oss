@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Events\InvoiceSent;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -18,6 +19,7 @@ readonly class UpdateInvoiceStatusAction
     public function __construct(
         private InvoiceRepositoryInterface $repository,
         private IssueInvoiceAction $issueAction,
+        private ActivityRecorderInterface $activityRecorder,
     ) {}
 
     /**
@@ -55,6 +57,16 @@ readonly class UpdateInvoiceStatusAction
             $updated = $this->repository->update($invoice, [
                 'status' => $newStatus->value,
             ]);
+
+            $actorId = auth()->id();
+
+            $this->activityRecorder->record(
+                $updated->user_id,
+                is_string($actorId) ? $actorId : null,
+                $updated,
+                'invoice.status_changed',
+                ['from' => $currentStatus->value, 'to' => $newStatus->value],
+            );
 
             match ($newStatus) {
                 InvoiceStatus::Sent => event(new InvoiceSent($updated)),

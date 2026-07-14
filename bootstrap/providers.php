@@ -7,11 +7,13 @@ use App\Modules\Integrations\Infrastructure\Providers\IntegrationsServiceProvide
 use App\Modules\Invoicing\Infrastructure\Providers\InvoicingServiceProvider;
 use App\Modules\Orders\Infrastructure\Providers\OrdersServiceProvider;
 use App\Modules\Pricing\Infrastructure\Providers\PricingServiceProvider;
+use App\Modules\Shared\Infrastructure\Providers\SharedServiceProvider;
 use App\Modules\TimeTracking\Infrastructure\Providers\TimeTrackingServiceProvider;
 use App\Providers\AppServiceProvider;
 
 $providers = [
     AppServiceProvider::class,
+    SharedServiceProvider::class,
     AuthServiceProvider::class,
     ClientsServiceProvider::class,
     OrdersServiceProvider::class,
