@@ -1,0 +1,54 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 8
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+    excludePaths:
+        analyseAndScan:
+            - app/Console/Kernel.php (?)
+            - app/Exceptions/Handler.php (?)
+            - bootstrap/*
+            - storage/*
+            - vendor/*
+            - node_modules/*
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        -
+            # Sanctum's HasApiTokens::currentAccessToken() docblock claims a
+            # non-nullable TToken, but at runtime it's null whenever the user
+            # wasn't authenticated via an actual token (e.g. tests using
+            # actingAs()) — the null check here is real and load-bearing.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Auth/Infrastructure/Providers/AuthServiceProvider.php
+        -
+            # Pest's it()/test()/arch() closures execute with $this rebound at
+            # runtime to the class(es) declared via uses()->in(...) in
+            # tests/Pest.php (Tests\TestCase + RefreshDatabase here). Pest's own
+            # `@param-closure-this TestCase` hint on these functions hardcodes
+            # plain PHPUnit\Framework\TestCase and has no way to reflect a
+            # project's uses() binding, so PHPStan can't resolve calls to
+            # Laravel test helpers (actingAs(), postJson(), artisan(), ...) or
+            # Pest's own fluent expectation/arch methods inside test closures.
+            # This is an upstream Pest+PHPStan limitation, not a signal about
+            # real code — scoped to tests/ only, app/ typos are still caught.
+            identifier: method.notFound
+            path: tests/*
+        -
+            identifier: property.notFound
+            path: tests/*
+        -
+            # thiagoalessio/tesseract_ocr's fluent config API (lang(), psm(),
+            # oem(), ...) is entirely magic __call — there is no declared
+            # method or stub to type against.
+            message: '#Call to an undefined method thiagoalessio\\TesseractOCR\\TesseractOCR::#'
+            path: app/Modules/Invoicing/Infrastructure/Ocr/TesseractExtractor.php
+    bootstrapFiles:
+        - vendor/autoload.php
