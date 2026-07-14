@@ -11,6 +11,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Support\Decimal;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\InvoiceFactory;
 use Eloquent;
@@ -72,6 +73,7 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $items_count
  * @property-read Collection<int, InvoicePayment> $payments
  * @property-read int|null $payments_count
+ * @property-read float|int|numeric-string|null $payments_sum_amount Set only when the query used withSum('payments', 'amount')
  * @property-read User|null $user
  *
  * @method static Builder<static>|Invoice draft()
@@ -301,10 +303,15 @@ class Invoice extends Model
     /**
      * Outstanding amount in the invoice currency — total minus recorded
      * payments. Negative once overpaid.
+     *
+     * Prefers the preloaded payments_sum_amount (set by repositories via
+     * withSum('payments', 'amount')) to avoid a query per invoice in lists.
      */
     public function balance(): float
     {
-        return round((float) $this->total - (float) $this->payments()->sum('amount'), 2);
+        $paid = $this->payments_sum_amount ?? $this->payments()->sum('amount');
+
+        return (float) Decimal::sub((string) $this->total, (string) $paid);
     }
 
     public function isOverdue(): bool
@@ -372,7 +379,7 @@ class Invoice extends Model
         $this->subtotal = $subtotal;
         $this->discount_amount = $discount;
         $this->vat_amount = $vat;
-        $this->total = round($subtotal - $discount + $vat, 2);
+        $this->total = (float) Decimal::add(Decimal::sub((string) $subtotal, (string) $discount), (string) $vat);
 
         return $this;
     }

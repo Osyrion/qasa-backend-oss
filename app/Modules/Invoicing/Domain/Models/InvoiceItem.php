@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Domain\Models;
 
 use App\Modules\Orders\Domain\Models\OrderItem;
 use App\Modules\Shared\Enums\ItemUnit;
+use App\Modules\Shared\Support\Decimal;
 use App\Modules\TimeTracking\Domain\Models\TimeEntry;
 use Database\Factories\Modules\Invoicing\Domain\Models\InvoiceItemFactory;
 use Eloquent;
@@ -126,12 +127,12 @@ class InvoiceItem extends Model
 
     public function recalculate(): self
     {
-        $excl = round((float) $this->quantity * (float) $this->unit_price, 2);
-        $vat = round($excl * (float) $this->vat_rate / 100, 2);
+        $excl = Decimal::mul((string) $this->quantity, (string) $this->unit_price);
+        $vat = Decimal::mul($excl, Decimal::div((string) $this->vat_rate, '100', 10));
 
-        $this->total_excl_vat = $excl;
-        $this->vat_amount = $vat;
-        $this->total_incl_vat = $excl + $vat;
+        $this->total_excl_vat = (float) $excl;
+        $this->vat_amount = (float) $vat;
+        $this->total_incl_vat = (float) Decimal::add($excl, $vat);
 
         return $this;
     }

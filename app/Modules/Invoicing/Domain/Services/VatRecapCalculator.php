@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Models\InvoiceItem;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Models\QuoteItem;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Support\Decimal;
 
 /**
  * Single source of truth for VAT math shared by invoices and quotes:
@@ -41,14 +42,14 @@ final class VatRecapCalculator
             return null;
         }
 
-        $rate = (float) $invoice->exchange_rate_snapshot;
+        $rate = (string) $invoice->exchange_rate_snapshot;
 
         return array_map(
             static fn (VatRecapRow $row): VatRecapRow => new VatRecapRow(
                 $row->rate,
-                round($row->base * $rate, 2),
-                round($row->vat * $rate, 2),
-                round($row->total * $rate, 2),
+                (float) Decimal::mul((string) $row->base, $rate),
+                (float) Decimal::mul((string) $row->vat, $rate),
+                (float) Decimal::mul((string) $row->total, $rate),
             ),
             $this->recap($invoice),
         );
@@ -115,12 +116,12 @@ final class VatRecapCalculator
     {
         $factor = $this->discountFactor($discountPercent);
 
-        /** @var array<string, float> $buckets rate => base excl. VAT before discount */
+        /** @var array<string, numeric-string> $buckets rate => base excl. VAT before discount */
         $buckets = [];
 
         foreach ($items as $item) {
             $rate = number_format((float) $item->vat_rate, 2, '.', '');
-            $buckets[$rate] = ($buckets[$rate] ?? 0.0) + (float) $item->total_excl_vat;
+            $buckets[$rate] = Decimal::add($buckets[$rate] ?? '0', (string) $item->total_excl_vat, 10);
         }
 
         ksort($buckets, SORT_NUMERIC);
@@ -129,10 +130,10 @@ final class VatRecapCalculator
 
         foreach ($buckets as $rate => $rawBase) {
             $rateFloat = (float) $rate;
-            $base = round($rawBase * $factor, 2);
-            $vat = round($base * $rateFloat / 100, 2);
+            $base = Decimal::round(Decimal::mul($rawBase, $factor, 10));
+            $vat = Decimal::round(Decimal::mul($base, Decimal::div((string) $rateFloat, '100', 10), 10));
 
-            $rows[] = new VatRecapRow($rateFloat, $base, $vat, round($base + $vat, 2));
+            $rows[] = new VatRecapRow($rateFloat, (float) $base, (float) $vat, (float) Decimal::add($base, $vat));
         }
 
         return $rows;
@@ -143,13 +144,13 @@ final class VatRecapCalculator
      */
     public function subtotalFromItems(iterable $items): float
     {
-        $sum = 0.0;
+        $sum = '0';
 
         foreach ($items as $item) {
-            $sum += (float) $item->total_excl_vat;
+            $sum = Decimal::add($sum, (string) $item->total_excl_vat, 10);
         }
 
-        return round($sum, 2);
+        return (float) Decimal::round($sum);
     }
 
     /**
@@ -161,7 +162,9 @@ final class VatRecapCalculator
             return 0.0;
         }
 
-        return round($this->subtotalFromItems($items) * $discountPercent / 100, 2);
+        $subtotal = (string) $this->subtotalFromItems($items);
+
+        return (float) Decimal::round(Decimal::mul($subtotal, Decimal::div((string) $discountPercent, '100', 10), 10));
     }
 
     /**
@@ -169,16 +172,22 @@ final class VatRecapCalculator
      */
     public function vatAmountFromItems(iterable $items, ?float $discountPercent): float
     {
-        return round(array_sum(array_map(
-            static fn (VatRecapRow $row): float => $row->vat,
-            $this->recapFromItems($items, $discountPercent),
-        )), 2);
+        $sum = '0';
+
+        foreach ($this->recapFromItems($items, $discountPercent) as $row) {
+            $sum = Decimal::add($sum, (string) $row->vat);
+        }
+
+        return (float) $sum;
     }
 
-    private function discountFactor(?float $discountPercent): float
+    /**
+     * @return numeric-string
+     */
+    private function discountFactor(?float $discountPercent): string
     {
         return $discountPercent === null
-            ? 1.0
-            : 1.0 - $discountPercent / 100;
+            ? '1'
+            : Decimal::sub('1', Decimal::div((string) $discountPercent, '100', 10), 10);
     }
 }
