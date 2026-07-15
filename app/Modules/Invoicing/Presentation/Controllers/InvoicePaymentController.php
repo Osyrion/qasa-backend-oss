@@ -13,6 +13,7 @@ use App\Modules\Invoicing\Presentation\Resources\InvoicePaymentResource;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
 use OpenApi\Attributes as OA;
 use Throwable;
@@ -25,6 +26,40 @@ class InvoicePaymentController extends Controller
         private readonly RecordPaymentAction $recordAction,
         private readonly DeletePaymentAction $deleteAction,
     ) {}
+
+    #[OA\Get(
+        path: '/api/v1/invoices/{invoice}/payments',
+        summary: 'List payments recorded against an invoice',
+        security: [['sanctum' => []]],
+        tags: ['Invoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'invoice',
+                description: 'Invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Payments ordered by paid_at',
+                content: new OA\JsonContent(
+                    type: 'array',
+                    items: new OA\Items(ref: '#/components/schemas/InvoicePayment')
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Invoice not found'),
+        ]
+    )]
+    public function index(Invoice $invoice): AnonymousResourceCollection
+    {
+        $this->authorize('view', $invoice);
+
+        return InvoicePaymentResource::collection($invoice->payments);
+    }
 
     /**
      * @throws Throwable

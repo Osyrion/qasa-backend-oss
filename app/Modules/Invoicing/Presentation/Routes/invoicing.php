@@ -105,6 +105,7 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])
         Route::delete('items/{item}', [InvoiceController::class, 'removeItem'])->name('invoices.items.destroy');
         Route::post('public-link', [InvoiceController::class, 'createPublicLink'])->name('invoices.public-link.store');
         Route::delete('public-link', [InvoiceController::class, 'revokePublicLink'])->name('invoices.public-link.destroy');
+        Route::get('payments', [InvoicePaymentController::class, 'index'])->name('invoices.payments.index');
         Route::post('payments', [InvoicePaymentController::class, 'store'])
             ->middleware('idempotent')
             ->name('invoices.payments.store');

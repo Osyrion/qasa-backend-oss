@@ -22,7 +22,7 @@ it('creates, lists, updates and deletes bank accounts', function (): void {
 
     $this->actingAs($user)->getJson('/api/v1/bank-accounts')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1);
 
     $this->actingAs($user)->putJson("/api/v1/bank-accounts/{$id}", [
         'label' => 'Fio EUR renamed',
@@ -43,7 +43,7 @@ it('hides other users bank accounts', function (): void {
     $intruder = createUser();
 
     $this->actingAs($intruder)->getJson("/api/v1/bank-accounts/{$account->id}")->assertNotFound();
-    $this->actingAs($intruder)->getJson('/api/v1/bank-accounts')->assertOk()->assertJsonCount(0, 'data');
+    $this->actingAs($intruder)->getJson('/api/v1/bank-accounts')->assertOk()->assertJsonCount(0);
 });
 
 it('keeps a single default per currency', function (): void {

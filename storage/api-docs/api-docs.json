@@ -1538,6 +1538,16 @@
                                         "nullable": true,
                                         "maxLength": 100
                                     },
+                                    "name": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 150
+                                    },
+                                    "surname": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 150
+                                    },
                                     "ico": {
                                         "type": "string",
                                         "nullable": true,
@@ -3489,6 +3499,51 @@
             }
         },
         "/api/v1/invoices/{invoice}/payments": {
+            "get": {
+                "tags": [
+                    "Invoices"
+                ],
+                "summary": "List payments recorded against an invoice",
+                "operationId": "e243e1d921a13d189813744ff2713254",
+                "parameters": [
+                    {
+                        "name": "invoice",
+                        "in": "path",
+                        "description": "Invoice ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payments ordered by paid_at",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/InvoicePayment"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Invoice not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "Invoices"
@@ -3716,7 +3771,281 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Invoice payload"
+                        "description": "Invoice payload",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "invoice_number": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        },
+                                        "issued_at": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "taxable_supply_at": {
+                                            "type": "string",
+                                            "format": "date",
+                                            "nullable": true
+                                        },
+                                        "due_at": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "variable_symbol": {
+                                            "type": "string",
+                                            "nullable": true
+                                        },
+                                        "currency": {
+                                            "type": "string"
+                                        },
+                                        "supplier": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "ico": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "dic": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "vat_id": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "is_vat_payer": {
+                                                    "type": "boolean"
+                                                },
+                                                "vat_status": {
+                                                    "type": "string"
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "postal_code": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "country": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "website": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "logo_path": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "invoice_footer_text": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "client": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "ico": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "dic": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "vat_id": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "is_vat_payer": {
+                                                    "type": "boolean"
+                                                },
+                                                "address": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "city": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "postal_code": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "country": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "email": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "phone": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object",
+                                            "nullable": true
+                                        },
+                                        "items": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "description": {
+                                                        "type": "string"
+                                                    },
+                                                    "quantity": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "unit": {
+                                                        "type": "string"
+                                                    },
+                                                    "unit_price": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "vat_rate": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "vat_amount": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "total_excl_vat": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "total_incl_vat": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "vat_recap": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "rate": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "base": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "vat": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "total": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "discount_percent": {
+                                            "type": "number",
+                                            "format": "float",
+                                            "nullable": true
+                                        },
+                                        "discount_amount": {
+                                            "type": "number",
+                                            "format": "float"
+                                        },
+                                        "subtotal": {
+                                            "type": "number",
+                                            "format": "float"
+                                        },
+                                        "vat_amount": {
+                                            "type": "number",
+                                            "format": "float"
+                                        },
+                                        "total": {
+                                            "type": "number",
+                                            "format": "float"
+                                        },
+                                        "payment": {
+                                            "properties": {
+                                                "balance": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "is_paid": {
+                                                    "type": "boolean"
+                                                },
+                                                "iban": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "bic": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "account_number": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "variable_symbol": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "qr_svg": {
+                                                    "description": "SVG data URI",
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "public_status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "cancelled",
+                                                "credited",
+                                                "paid",
+                                                "partially_paid",
+                                                "unpaid"
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Unknown token"

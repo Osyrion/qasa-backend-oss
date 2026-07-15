@@ -58,7 +58,7 @@ it('lists work report lines', function (): void {
 
     $this->actingAs($user)->getJson("/api/v1/invoices/{$invoice->id}/work-report")
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1);
 });
 
 it('rejects editing the work report of a non-draft invoice', function (): void {

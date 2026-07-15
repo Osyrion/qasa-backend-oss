@@ -27,9 +27,9 @@ it('tracks a partial payment without flipping the invoice to paid', function ():
 
     $show = $this->actingAs($user)->getJson("/api/v1/invoices/{$invoice->id}");
     $show->assertOk()
-        ->assertJsonPath('data.status', 'sent')
-        ->assertJsonPath('data.payment_status', 'partial')
-        ->assertJsonPath('data.balance', 140);
+        ->assertJsonPath('status', 'sent')
+        ->assertJsonPath('payment_status', 'partial')
+        ->assertJsonPath('balance', 140);
 });
 
 it('flips the invoice to paid once payments fully cover the total', function (): void {
@@ -50,9 +50,9 @@ it('flips the invoice to paid once payments fully cover the total', function ():
 
     $show = $this->actingAs($user)->getJson("/api/v1/invoices/{$invoice->id}");
     $show->assertOk()
-        ->assertJsonPath('data.status', 'paid')
-        ->assertJsonPath('data.payment_status', 'paid')
-        ->assertJsonPath('data.balance', 0);
+        ->assertJsonPath('status', 'paid')
+        ->assertJsonPath('payment_status', 'paid')
+        ->assertJsonPath('balance', 0);
 });
 
 it('reports an overpayment without erroring', function (): void {
@@ -73,8 +73,8 @@ it('reports an overpayment without erroring', function (): void {
 
     $this->actingAs($user)->getJson("/api/v1/invoices/{$invoice->id}")
         ->assertOk()
-        ->assertJsonPath('data.status', 'paid')
-        ->assertJsonPath('data.payment_status', 'overpaid');
+        ->assertJsonPath('status', 'paid')
+        ->assertJsonPath('payment_status', 'overpaid');
 });
 
 it('refuses to record a payment on a draft', function (): void {

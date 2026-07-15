@@ -82,7 +82,7 @@ it('recalculates totals when items are added and removed', function (): void {
     ]);
     $item->assertCreated();
 
-    $afterAdd = $this->actingAs($user)->getJson("/api/v1/quotes/{$quote['id']}")->json('data');
+    $afterAdd = $this->actingAs($user)->getJson("/api/v1/quotes/{$quote['id']}")->json();
     expect((float) $afterAdd['subtotal'])->toBe(100.0)
         ->and((float) $afterAdd['vat_amount'])->toBe(23.0)
         ->and((float) $afterAdd['total'])->toBe(123.0);
@@ -91,7 +91,7 @@ it('recalculates totals when items are added and removed', function (): void {
         ->deleteJson("/api/v1/quotes/{$quote['id']}/items/{$item->json('id')}")
         ->assertNoContent();
 
-    $afterRemove = $this->actingAs($user)->getJson("/api/v1/quotes/{$quote['id']}")->json('data');
+    $afterRemove = $this->actingAs($user)->getJson("/api/v1/quotes/{$quote['id']}")->json();
     expect((float) $afterRemove['subtotal'])->toBe(0.0)
         ->and((float) $afterRemove['total'])->toBe(0.0);
 });

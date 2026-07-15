@@ -89,6 +89,6 @@ it('includes is_customer and is_vendor in the client resource', function (): voi
     $this->actingAs($user)
         ->getJson("/api/v1/clients/{$client->id}")
         ->assertOk()
-        ->assertJsonPath('data.is_customer', true)
-        ->assertJsonPath('data.is_vendor', true);
+        ->assertJsonPath('is_customer', true)
+        ->assertJsonPath('is_vendor', true);
 });

@@ -19,7 +19,7 @@ it('creates, lists, updates and deletes VAT rates', function (): void {
 
     $this->actingAs($user)->getJson('/api/v1/vat-rates')
         ->assertOk()
-        ->assertJsonCount(1, 'data');
+        ->assertJsonCount(1);
 
     $this->actingAs($user)->putJson("/api/v1/vat-rates/{$id}", [
         'code' => 'SK-23',
@@ -41,7 +41,7 @@ it('hides other users VAT rates', function (): void {
     $intruder = createUser();
 
     $this->actingAs($intruder)->getJson("/api/v1/vat-rates/{$rate->id}")->assertNotFound();
-    $this->actingAs($intruder)->getJson('/api/v1/vat-rates')->assertOk()->assertJsonCount(0, 'data');
+    $this->actingAs($intruder)->getJson('/api/v1/vat-rates')->assertOk()->assertJsonCount(0);
 });
 
 it('keeps a single default per user and country', function (): void {

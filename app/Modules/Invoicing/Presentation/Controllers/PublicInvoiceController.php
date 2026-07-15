@@ -46,7 +46,114 @@ class PublicInvoiceController extends Controller
             ),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Invoice payload'),
+            new OA\Response(
+                response: 200,
+                description: 'Invoice payload',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'invoice_number', type: 'string', nullable: true),
+                        new OA\Property(property: 'type', type: 'string'),
+                        new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                        new OA\Property(property: 'taxable_supply_at', type: 'string', format: 'date', nullable: true),
+                        new OA\Property(property: 'due_at', type: 'string', format: 'date'),
+                        new OA\Property(property: 'variable_symbol', type: 'string', nullable: true),
+                        new OA\Property(property: 'currency', type: 'string'),
+                        new OA\Property(
+                            property: 'supplier',
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'vat_status', type: 'string'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                                new OA\Property(property: 'website', type: 'string', nullable: true),
+                                new OA\Property(property: 'logo_path', type: 'string', nullable: true),
+                                new OA\Property(property: 'invoice_footer_text', type: 'string', nullable: true),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'client',
+                            nullable: true,
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'items',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'description', type: 'string'),
+                                    new OA\Property(property: 'quantity', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'unit', type: 'string'),
+                                    new OA\Property(property: 'unit_price', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_excl_vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_incl_vat', type: 'number', format: 'float'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                        new OA\Property(
+                            property: 'vat_recap',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'base', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total', type: 'number', format: 'float'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                        new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                        new OA\Property(property: 'discount_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'subtotal', type: 'number', format: 'float'),
+                        new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'total', type: 'number', format: 'float'),
+                        new OA\Property(
+                            property: 'payment',
+                            properties: [
+                                new OA\Property(property: 'balance', type: 'number', format: 'float'),
+                                new OA\Property(property: 'is_paid', type: 'boolean'),
+                                new OA\Property(property: 'iban', type: 'string', nullable: true),
+                                new OA\Property(property: 'bic', type: 'string', nullable: true),
+                                new OA\Property(property: 'account_number', type: 'string', nullable: true),
+                                new OA\Property(property: 'variable_symbol', type: 'string', nullable: true),
+                                new OA\Property(property: 'qr_svg', type: 'string', nullable: true, description: 'SVG data URI'),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'public_status',
+                            type: 'string',
+                            enum: ['cancelled', 'credited', 'paid', 'partially_paid', 'unpaid']
+                        ),
+                    ],
+                    type: 'object'
+                )
+            ),
             new OA\Response(response: 404, description: 'Unknown token'),
             new OA\Response(response: 429, description: 'Too many requests'),
         ]
