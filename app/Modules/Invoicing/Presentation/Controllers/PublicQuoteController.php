@@ -36,8 +36,99 @@ class PublicQuoteController extends Controller
         path: '/api/v1/public/quotes/{token}',
         summary: 'Public quote payload for the client-facing page (no auth)',
         tags: ['Public Quote'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote payload'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote payload',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'quote_number', type: 'string'),
+                        new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                        new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                        new OA\Property(property: 'currency', type: 'string'),
+                        new OA\Property(
+                            property: 'supplier',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'vat_status', type: 'string'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                                new OA\Property(property: 'website', type: 'string', nullable: true),
+                                new OA\Property(property: 'logo_path', type: 'string', nullable: true),
+                                new OA\Property(property: 'invoice_footer_text', type: 'string', nullable: true),
+                            ]
+                        ),
+                        new OA\Property(
+                            property: 'client',
+                            type: 'object',
+                            nullable: true,
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                            ]
+                        ),
+                        new OA\Property(
+                            property: 'items',
+                            type: 'array',
+                            items: new OA\Items(
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'description', type: 'string'),
+                                    new OA\Property(property: 'quantity', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'unit', type: 'string'),
+                                    new OA\Property(property: 'unit_price', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_excl_vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_incl_vat', type: 'number', format: 'float'),
+                                ]
+                            )
+                        ),
+                        new OA\Property(
+                            property: 'vat_recap',
+                            type: 'array',
+                            items: new OA\Items(
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'base', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total', type: 'number', format: 'float'),
+                                ]
+                            )
+                        ),
+                        new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                        new OA\Property(property: 'discount_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'subtotal', type: 'number', format: 'float'),
+                        new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'total', type: 'number', format: 'float'),
+                        new OA\Property(property: 'effective_status', type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired']),
+                        new OA\Property(property: 'can_decide', type: 'boolean'),
+                    ],
+                    type: 'object'
+                )
+            ),
             new OA\Response(response: 404, description: 'Unknown token'),
         ]
     )]
@@ -94,6 +185,9 @@ class PublicQuoteController extends Controller
         path: '/api/v1/public/quotes/{token}/pdf',
         summary: 'Public quote PDF download (no auth)',
         tags: ['Public Quote'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
             new OA\Response(response: 200, description: 'PDF file', content: new OA\MediaType(mediaType: 'application/pdf')),
             new OA\Response(response: 404, description: 'Unknown token'),
@@ -117,9 +211,30 @@ class PublicQuoteController extends Controller
     #[OA\Post(
         path: '/api/v1/public/quotes/{token}/accept',
         summary: 'Client accepts the quote (no auth, one-shot)',
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'decision_note', type: 'string', nullable: true, maxLength: 1000),
+                ]
+            )
+        ),
         tags: ['Public Quote'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote accepted'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote accepted',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired']),
+                        new OA\Property(property: 'accepted_at', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'rejected_at', type: 'string', format: 'date-time', nullable: true),
+                    ]
+                )
+            ),
             new OA\Response(response: 404, description: 'Unknown token'),
             new OA\Response(response: 422, description: 'Quote expired or already decided'),
         ]
@@ -132,9 +247,30 @@ class PublicQuoteController extends Controller
     #[OA\Post(
         path: '/api/v1/public/quotes/{token}/reject',
         summary: 'Client rejects the quote (no auth, one-shot)',
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'decision_note', type: 'string', nullable: true, maxLength: 1000),
+                ]
+            )
+        ),
         tags: ['Public Quote'],
+        parameters: [
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote rejected'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote rejected',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired']),
+                        new OA\Property(property: 'accepted_at', type: 'string', format: 'date-time', nullable: true),
+                        new OA\Property(property: 'rejected_at', type: 'string', format: 'date-time', nullable: true),
+                    ]
+                )
+            ),
             new OA\Response(response: 404, description: 'Unknown token'),
             new OA\Response(response: 422, description: 'Quote expired or already decided'),
         ]

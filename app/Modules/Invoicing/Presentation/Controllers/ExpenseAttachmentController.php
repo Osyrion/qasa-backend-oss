@@ -50,7 +50,11 @@ class ExpenseAttachmentController extends Controller
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Attachment saved'),
+            new OA\Response(
+                response: 200,
+                description: 'Attachment saved',
+                content: new OA\JsonContent(ref: '#/components/schemas/Expense')
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 403, description: 'Forbidden'),
             new OA\Response(response: 404, description: 'Not found'),
@@ -107,7 +111,11 @@ class ExpenseAttachmentController extends Controller
             new OA\Parameter(name: 'expense', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'File contents'),
+            new OA\Response(
+                response: 200,
+                description: 'File contents',
+                content: new OA\MediaType(mediaType: 'application/octet-stream')
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 403, description: 'Forbidden'),
             new OA\Response(response: 404, description: 'Not found, or expense has no attachment'),

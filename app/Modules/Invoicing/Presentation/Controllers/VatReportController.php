@@ -106,7 +106,29 @@ class VatReportController extends Controller
             new OA\Parameter(name: 'month', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 12)),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'VAT control statement sections'),
+            new OA\Response(
+                response: 200,
+                description: 'VAT control statement sections. `sections`/`summary_sections` are keyed by section code (e.g. A1, A2, B1, B2 for SK; A1, A4, B1, B2 for CZ) — see VatControlStatementService for the exact per-country classification.',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'country', type: 'string', enum: ['SK', 'CZ']),
+                        new OA\Property(property: 'year', type: 'integer'),
+                        new OA\Property(property: 'quarter', type: 'integer', nullable: true),
+                        new OA\Property(property: 'month', type: 'integer', nullable: true),
+                        new OA\Property(
+                            property: 'sections',
+                            type: 'object',
+                            example: ['A1' => [['document_number' => '2026-0001', 'date' => '2026-07-01', 'partner_name' => 'Acme s.r.o.', 'partner_tax_id' => 'SK1234567890', 'rate' => 20, 'base' => 100.0, 'vat' => 20.0, 'related_document_number' => null]]]
+                        ),
+                        new OA\Property(
+                            property: 'summary_sections',
+                            type: 'object',
+                            example: ['B3' => [['rate' => 20, 'base' => 100.0, 'vat' => 20.0]]]
+                        ),
+                        new OA\Property(property: 'assumptions', type: 'array', items: new OA\Items(type: 'string')),
+                    ]
+                )
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Validation error or the account is not a VAT payer'),
         ]

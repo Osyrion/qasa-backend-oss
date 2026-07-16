@@ -163,6 +163,8 @@ class ClientController extends Controller
                 properties: [
                     new OA\Property(property: 'client_type', type: 'string', enum: ['individual', 'self_employed', 'company']),
                     new OA\Property(property: 'title', type: 'string', nullable: true, maxLength: 100),
+                    new OA\Property(property: 'name', type: 'string', nullable: true, maxLength: 150),
+                    new OA\Property(property: 'surname', type: 'string', nullable: true, maxLength: 150),
                     new OA\Property(property: 'ico', type: 'string', nullable: true, maxLength: 20),
                     new OA\Property(property: 'dic', type: 'string', nullable: true, maxLength: 20),
                     new OA\Property(property: 'vat_id', type: 'string', nullable: true, maxLength: 20),

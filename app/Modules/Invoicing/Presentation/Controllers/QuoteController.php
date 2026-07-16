@@ -67,7 +67,70 @@ class QuoteController extends Controller
         summary: 'List quotes',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
-        responses: [new OA\Response(response: 200, description: 'List of quotes')]
+        parameters: [
+            new OA\Parameter(
+                name: 'per_page',
+                description: 'Items per page',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'integer', default: 20)
+            ),
+            new OA\Parameter(
+                name: 'status',
+                description: 'Filter by status',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'])
+            ),
+            new OA\Parameter(
+                name: 'client_id',
+                description: 'Filter by client',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+            new OA\Parameter(
+                name: 'date_from',
+                description: 'Filter from date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', format: 'date')
+            ),
+            new OA\Parameter(
+                name: 'date_to',
+                description: 'Filter to date',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', format: 'date')
+            ),
+            new OA\Parameter(
+                name: 'sort',
+                description: 'Sort field',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string')
+            ),
+            new OA\Parameter(
+                name: 'direction',
+                description: 'Sort direction',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of quotes',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Quote')),
+                        new OA\Property(property: 'meta', type: 'object'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -84,8 +147,16 @@ class QuoteController extends Controller
         summary: 'Get quote details',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote details'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote details',
+                content: new OA\JsonContent(ref: '#/components/schemas/Quote')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Quote not found'),
         ]
     )]
@@ -100,9 +171,29 @@ class QuoteController extends Controller
         path: '/api/v1/quotes',
         summary: 'Create quote',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
         tags: ['Quotes'],
         responses: [
-            new OA\Response(response: 201, description: 'Quote created'),
+            new OA\Response(
+                response: 201,
+                description: 'Quote created',
+                content: new OA\JsonContent(ref: '#/components/schemas/Quote')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
@@ -131,9 +222,33 @@ class QuoteController extends Controller
         path: '/api/v1/quotes/{id}',
         summary: 'Update draft quote header',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote updated'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote updated',
+                content: new OA\JsonContent(ref: '#/components/schemas/Quote')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Quote not found'),
             new OA\Response(response: 422, description: 'Validation error or quote not editable'),
         ]
     )]
@@ -163,8 +278,12 @@ class QuoteController extends Controller
         summary: 'Delete draft quote',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
             new OA\Response(response: 204, description: 'Quote deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 403, description: 'Only draft quotes can be deleted'),
         ]
     )]
@@ -179,9 +298,31 @@ class QuoteController extends Controller
         path: '/api/v1/quotes/{quote}/items',
         summary: 'Add item to quote',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['description', 'quantity', 'unit_price'],
+                properties: [
+                    new OA\Property(property: 'description', type: 'string', maxLength: 500),
+                    new OA\Property(property: 'quantity', type: 'number', format: 'float'),
+                    new OA\Property(property: 'unit', type: 'string', default: 'ks', maxLength: 20),
+                    new OA\Property(property: 'unit_price', type: 'number', format: 'float'),
+                    new OA\Property(property: 'vat_rate', type: 'number', format: 'float', default: 0),
+                    new OA\Property(property: 'sort_order', type: 'integer', nullable: true),
+                ]
+            )
+        ),
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 201, description: 'Item added'),
+            new OA\Response(
+                response: 201,
+                description: 'Item added',
+                content: new OA\JsonContent(ref: '#/components/schemas/QuoteItem')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Validation error or quote not editable'),
         ]
     )]
@@ -208,8 +349,13 @@ class QuoteController extends Controller
         summary: 'Remove item from quote',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'item', description: 'Quote item ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
             new OA\Response(response: 204, description: 'Item removed'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Quote not editable'),
         ]
     )]
@@ -226,9 +372,26 @@ class QuoteController extends Controller
         path: '/api/v1/quotes/{quote}/status',
         summary: 'Manually update quote status',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['status'],
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', enum: ['sent', 'accepted', 'rejected', 'expired']),
+                ]
+            )
+        ),
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote status updated'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote status updated',
+                content: new OA\JsonContent(ref: '#/components/schemas/Quote')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Invalid status transition'),
         ]
     )]
@@ -250,9 +413,27 @@ class QuoteController extends Controller
         path: '/api/v1/quotes/{quote}/email',
         summary: 'Email the quote PDF to the client (sends the quote first when still a draft)',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'to', type: 'string', format: 'email', nullable: true, description: 'Override recipient; defaults to the client email'),
+                    new OA\Property(property: 'cc', type: 'array', items: new OA\Items(type: 'string', format: 'email'), nullable: true, maxItems: 5),
+                    new OA\Property(property: 'message', type: 'string', nullable: true, maxLength: 2000, description: 'Custom message shown in the email body'),
+                ]
+            )
+        ),
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote queued for email delivery'),
+            new OA\Response(
+                response: 200,
+                description: 'Quote queued for email delivery',
+                content: new OA\JsonContent(ref: '#/components/schemas/Quote')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Validation error or client without email'),
             new OA\Response(response: 429, description: 'Too many email requests'),
         ]
@@ -274,7 +455,13 @@ class QuoteController extends Controller
         summary: 'Download quote PDF',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
-        responses: [new OA\Response(response: 200, description: 'PDF file download')]
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'PDF file download', content: new OA\MediaType(mediaType: 'application/pdf')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
     )]
     public function pdfDownload(Quote $quote): Response
     {
@@ -295,7 +482,13 @@ class QuoteController extends Controller
         summary: 'Preview quote PDF in browser',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
-        responses: [new OA\Response(response: 200, description: 'PDF preview')]
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'PDF preview', content: new OA\MediaType(mediaType: 'application/pdf')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
     )]
     public function pdfPreview(Quote $quote): Response
     {
@@ -314,9 +507,30 @@ class QuoteController extends Controller
         path: '/api/v1/quotes/{quote}/public-link',
         summary: 'Create (or return the existing) public link for the quote; pass regenerate=true for a fresh token',
         security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'regenerate', type: 'boolean', default: false),
+                ]
+            )
+        ),
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 200, description: 'Public link token and URL'),
+            new OA\Response(
+                response: 200,
+                description: 'Public link token and URL',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'token', type: 'string'),
+                        new OA\Property(property: 'url', type: 'string'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Quote is still a draft'),
         ]
     )]
@@ -341,7 +555,13 @@ class QuoteController extends Controller
         summary: 'Revoke the quote public link',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
-        responses: [new OA\Response(response: 204, description: 'Public link revoked')]
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Public link revoked'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
     )]
     public function revokePublicLink(Quote $quote): JsonResponse
     {
@@ -357,8 +577,16 @@ class QuoteController extends Controller
         summary: 'Convert an accepted (or sent) quote into a draft invoice',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 201, description: 'Invoice created'),
+            new OA\Response(
+                response: 201,
+                description: 'Invoice created',
+                content: new OA\JsonContent(ref: '#/components/schemas/Invoice')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Invalid status or already converted'),
         ]
     )]
@@ -379,8 +607,16 @@ class QuoteController extends Controller
         summary: 'Convert an accepted (or sent) quote into an order',
         security: [['sanctum' => []]],
         tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', description: 'Quote ID', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
         responses: [
-            new OA\Response(response: 201, description: 'Order created'),
+            new OA\Response(
+                response: 201,
+                description: 'Order created',
+                content: new OA\JsonContent(ref: '#/components/schemas/Order')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 422, description: 'Invalid status or already converted'),
         ]
     )]

@@ -187,6 +187,11 @@ class SupplierInvoiceController extends Controller
                     new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', nullable: true),
                     new OA\Property(property: 'variable_symbol', type: 'string', nullable: true, maxLength: 10),
                     new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'vat_regime', type: 'string', enum: ['domestic', 'eu_reverse_charge', 'import'], default: 'domestic'),
+                    new OA\Property(property: 'vendor_account_number', type: 'string', nullable: true, description: 'Domestic format [prefix-]number; requires vendor_bank_code'),
+                    new OA\Property(property: 'vendor_bank_code', type: 'string', nullable: true, description: '4 digits; requires vendor_account_number'),
+                    new OA\Property(property: 'vendor_iban', type: 'string', nullable: true, description: 'Requires vendor_bic'),
+                    new OA\Property(property: 'vendor_bic', type: 'string', nullable: true),
                     new OA\Property(
                         property: 'vat_lines',
                         type: 'array',
@@ -259,6 +264,11 @@ class SupplierInvoiceController extends Controller
                     new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', nullable: true),
                     new OA\Property(property: 'variable_symbol', type: 'string', nullable: true, maxLength: 10),
                     new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'vat_regime', type: 'string', enum: ['domestic', 'eu_reverse_charge', 'import'], default: 'domestic'),
+                    new OA\Property(property: 'vendor_account_number', type: 'string', nullable: true, description: 'Domestic format [prefix-]number; requires vendor_bank_code'),
+                    new OA\Property(property: 'vendor_bank_code', type: 'string', nullable: true, description: '4 digits; requires vendor_account_number'),
+                    new OA\Property(property: 'vendor_iban', type: 'string', nullable: true, description: 'Requires vendor_bic'),
+                    new OA\Property(property: 'vendor_bic', type: 'string', nullable: true),
                     new OA\Property(
                         property: 'vat_lines',
                         type: 'array',
@@ -422,7 +432,18 @@ class SupplierInvoiceController extends Controller
                     properties: [
                         new OA\Property(property: 'result', type: 'string', enum: ['published', 'unpublished', 'unreliable']),
                         new OA\Property(property: 'verified_at', type: 'string', format: 'date-time'),
-                        new OA\Property(property: 'published_accounts', type: 'array', items: new OA\Items(type: 'object')),
+                        new OA\Property(
+                            property: 'published_accounts',
+                            type: 'array',
+                            items: new OA\Items(
+                                type: 'object',
+                                properties: [
+                                    new OA\Property(property: 'account_number', type: 'string', nullable: true),
+                                    new OA\Property(property: 'bank_code', type: 'string', nullable: true),
+                                    new OA\Property(property: 'iban', type: 'string', nullable: true),
+                                ]
+                            )
+                        ),
                     ]
                 )
             ),

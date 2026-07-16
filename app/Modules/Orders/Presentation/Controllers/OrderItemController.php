@@ -68,7 +68,7 @@ class OrderItemController extends Controller
             content: new OA\JsonContent(
                 required: ['type', 'description', 'quantity', 'unit', 'unit_price', 'vat_rate'],
                 properties: [
-                    new OA\Property(property: 'type', type: 'string', enum: ['service', 'product']),
+                    new OA\Property(property: 'type', type: 'string', enum: ['service', 'product', 'time']),
                     new OA\Property(property: 'description', type: 'string', example: 'Consulting services', maxLength: 500),
                     new OA\Property(property: 'quantity', type: 'number', format: 'float', example: 8.5),
                     new OA\Property(property: 'unit', type: 'string', example: 'h', maxLength: 20),
@@ -113,7 +113,7 @@ class OrderItemController extends Controller
             content: new OA\JsonContent(
                 required: ['type', 'description', 'quantity', 'unit', 'unit_price', 'vat_rate'],
                 properties: [
-                    new OA\Property(property: 'type', type: 'string', enum: ['service', 'product']),
+                    new OA\Property(property: 'type', type: 'string', enum: ['service', 'product', 'time']),
                     new OA\Property(property: 'description', type: 'string', example: 'Consulting services', maxLength: 500),
                     new OA\Property(property: 'quantity', type: 'number', format: 'float', example: 8.5),
                     new OA\Property(property: 'unit', type: 'string', example: 'h', maxLength: 20),

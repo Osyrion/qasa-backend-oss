@@ -148,7 +148,11 @@ class InvoiceInboxController extends Controller
             ),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'The stored document'),
+            new OA\Response(
+                response: 200,
+                description: 'The stored document (PDF, JPEG, or PNG)',
+                content: new OA\MediaType(mediaType: 'application/octet-stream')
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Invoice inbox item not found'),
         ]
@@ -244,6 +248,11 @@ class InvoiceInboxController extends Controller
                     new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', nullable: true),
                     new OA\Property(property: 'variable_symbol', type: 'string', nullable: true, maxLength: 10),
                     new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'vat_regime', type: 'string', enum: ['domestic', 'eu_reverse_charge', 'import'], default: 'domestic'),
+                    new OA\Property(property: 'vendor_account_number', type: 'string', nullable: true, description: 'Domestic format [prefix-]number; requires vendor_bank_code'),
+                    new OA\Property(property: 'vendor_bank_code', type: 'string', nullable: true, description: '4 digits; requires vendor_account_number'),
+                    new OA\Property(property: 'vendor_iban', type: 'string', nullable: true, description: 'Requires vendor_bic'),
+                    new OA\Property(property: 'vendor_bic', type: 'string', nullable: true),
                     new OA\Property(
                         property: 'vat_lines',
                         type: 'array',

@@ -12,7 +12,7 @@ use OpenApi\Attributes as OA;
     schema: 'OrderItem',
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'type', type: 'string', enum: ['service', 'product']),
+        new OA\Property(property: 'type', type: 'string', enum: ['service', 'product', 'time']),
         new OA\Property(property: 'description', type: 'string'),
         new OA\Property(property: 'quantity', type: 'number', format: 'float'),
         new OA\Property(property: 'unit', type: 'string', example: 'ks'),

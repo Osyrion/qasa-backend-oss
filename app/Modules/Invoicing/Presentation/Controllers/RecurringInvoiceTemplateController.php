@@ -147,7 +147,9 @@ class RecurringInvoiceTemplateController extends Controller
                     new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
                     new OA\Property(property: 'due_days', type: 'integer', minimum: 0, maximum: 365),
                     new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'reverse_charge', type: 'boolean', default: false, description: 'Intent only — re-resolved from the current client at each generation'),
                     new OA\Property(property: 'tax_date_mode', type: 'string', enum: ['issue_date', 'previous_month_end'], default: 'issue_date'),
+                    new OA\Property(property: 'auto_send', type: 'boolean', default: false, description: 'Issue and email generated invoices automatically'),
                     new OA\Property(property: 'note_above', type: 'string', nullable: true, description: 'Supports {BOM}, {EOM}, {MONTH}, {YEAR} placeholders'),
                     new OA\Property(property: 'note_below', type: 'string', nullable: true, description: 'Supports {BOM}, {EOM}, {MONTH}, {YEAR} placeholders'),
                     new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/RecurringTemplateItem')),
@@ -191,7 +193,28 @@ class RecurringInvoiceTemplateController extends Controller
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(
             required: true,
-            content: new OA\JsonContent(ref: '#/components/schemas/RecurringInvoiceTemplate')
+            content: new OA\JsonContent(
+                required: ['name', 'client_id', 'period', 'first_issue_date', 'currency', 'due_days', 'items'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'period', type: 'string', enum: ['monthly', 'quarterly', 'semiannually', 'yearly']),
+                    new OA\Property(property: 'day_of_month', type: 'integer', minimum: 1, maximum: 28, description: 'Ignored when last_day_of_month is true'),
+                    new OA\Property(property: 'last_day_of_month', type: 'boolean', default: false),
+                    new OA\Property(property: 'first_issue_date', type: 'string', format: 'date'),
+                    new OA\Property(property: 'end_date', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'type', type: 'string', enum: ['invoice', 'proforma'], default: 'invoice'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'due_days', type: 'integer', minimum: 0, maximum: 365),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'reverse_charge', type: 'boolean', default: false, description: 'Intent only — re-resolved from the current client at each generation'),
+                    new OA\Property(property: 'tax_date_mode', type: 'string', enum: ['issue_date', 'previous_month_end'], default: 'issue_date'),
+                    new OA\Property(property: 'auto_send', type: 'boolean', default: false, description: 'Issue and email generated invoices automatically'),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true, description: 'Supports {BOM}, {EOM}, {MONTH}, {YEAR} placeholders'),
+                    new OA\Property(property: 'note_below', type: 'string', nullable: true, description: 'Supports {BOM}, {EOM}, {MONTH}, {YEAR} placeholders'),
+                    new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/RecurringTemplateItem')),
+                ]
+            )
         ),
         tags: ['Recurring Invoice Templates'],
         parameters: [
