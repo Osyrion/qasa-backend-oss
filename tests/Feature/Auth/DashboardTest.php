@@ -8,98 +8,12 @@ use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use Illuminate\Support\Carbon;
 
 beforeEach(function (): void {
-    // Freeze time mid-month, mid-Q3, so month/quarter/year boundaries are deterministic.
+    // Freeze time mid-month, mid-Q3, so due-date/threshold boundaries are deterministic.
     Carbon::setTestNow(Carbon::parse('2026-07-15 12:00:00'));
 });
 
 afterEach(function (): void {
     Carbon::setTestNow();
-});
-
-it('reports invoicing volume split by month, quarter and year', function (): void {
-    $user = createUser();
-
-    // Current month + quarter + year.
-    Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'sent',
-        'issued_at' => '2026-07-10',
-        'due_at' => '2026-07-24',
-        'total' => 1000,
-    ]);
-    // Q2 (April): only the year bucket.
-    Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'paid',
-        'issued_at' => '2026-04-10',
-        'due_at' => '2026-04-24',
-        'total' => 2000,
-    ]);
-    // Draft is not issued volume — excluded everywhere.
-    Invoice::factory()->draft()->create([
-        'user_id' => $user->id,
-        'issued_at' => '2026-07-05',
-        'due_at' => '2026-07-19',
-        'total' => 500,
-    ]);
-
-    $this->actingAs($user)
-        ->getJson('/api/v1/dashboard')
-        ->assertOk()
-        ->assertJsonPath('data.invoices.volume.month', 1000)
-        ->assertJsonPath('data.invoices.volume.quarter', 1000)
-        ->assertJsonPath('data.invoices.volume.year', 3000);
-});
-
-it('reports overdue count and outstanding balance, respecting partial payments', function (): void {
-    $user = createUser();
-
-    // Overdue, partially paid: outstanding = 1000 - 300 = 700.
-    $overdue = Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'reminded',
-        'issued_at' => '2026-06-01',
-        'due_at' => '2026-06-15',
-        'total' => 1000,
-    ]);
-    InvoicePayment::factory()->create([
-        'invoice_id' => $overdue->id,
-        'amount' => 300,
-        'paid_at' => '2026-06-20',
-    ]);
-
-    // Sent but not yet due — not overdue.
-    Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'sent',
-        'issued_at' => '2026-07-10',
-        'due_at' => '2026-07-24',
-        'total' => 5000,
-    ]);
-
-    $this->actingAs($user)
-        ->getJson('/api/v1/dashboard')
-        ->assertOk()
-        ->assertJsonPath('data.invoices.overdue.count', 1)
-        ->assertJsonPath('data.invoices.overdue.amount', 700);
-});
-
-it('counts reminded invoices past due as overdue (payment-ledger statuses)', function (): void {
-    $user = createUser();
-
-    Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'reminded',
-        'issued_at' => '2026-05-01',
-        'due_at' => '2026-05-15',
-        'total' => 800,
-    ]);
-
-    $this->actingAs($user)
-        ->getJson('/api/v1/dashboard')
-        ->assertOk()
-        ->assertJsonPath('data.invoices.overdue.count', 1)
-        ->assertJsonPath('data.invoices.overdue.amount', 800);
 });
 
 it('lists overdue invoices past the reminder threshold with a can_remind flag', function (): void {
@@ -137,13 +51,13 @@ it('lists overdue invoices past the reminder threshold with a can_remind flag', 
     $this->actingAs($user)
         ->getJson('/api/v1/dashboard')
         ->assertOk()
-        ->assertJsonPath('data.invoices.overdue_reminders.threshold_days', 14)
-        ->assertJsonCount(1, 'data.invoices.overdue_reminders.items')
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.id', $overdue->id)
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.days_overdue', 44)
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.balance', 1000)
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.can_remind', true)
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.can_remind_reason', null);
+        ->assertJsonPath('data.threshold_days', 14)
+        ->assertJsonCount(1, 'data.items')
+        ->assertJsonPath('data.items.0.id', $overdue->id)
+        ->assertJsonPath('data.items.0.days_overdue', 44)
+        ->assertJsonPath('data.items.0.balance', 1000)
+        ->assertJsonPath('data.items.0.can_remind', true)
+        ->assertJsonPath('data.items.0.can_remind_reason', null);
 });
 
 it('respects a custom per-tenant overdue reminder threshold', function (): void {
@@ -163,8 +77,8 @@ it('respects a custom per-tenant overdue reminder threshold', function (): void 
     $this->actingAs($user)
         ->getJson('/api/v1/dashboard')
         ->assertOk()
-        ->assertJsonPath('data.invoices.overdue_reminders.threshold_days', 60)
-        ->assertJsonCount(0, 'data.invoices.overdue_reminders.items');
+        ->assertJsonPath('data.threshold_days', 60)
+        ->assertJsonCount(0, 'data.items');
 });
 
 it('flags why an overdue invoice cannot be reminded', function (): void {
@@ -205,10 +119,10 @@ it('flags why an overdue invoice cannot be reminded', function (): void {
     $response = $this->actingAs($user)
         ->getJson('/api/v1/dashboard')
         ->assertOk()
-        ->assertJsonCount(3, 'data.invoices.overdue_reminders.items');
+        ->assertJsonCount(3, 'data.items');
 
     /** @var array<int, array<string, mixed>> $itemsJson */
-    $itemsJson = $response->json('data.invoices.overdue_reminders.items');
+    $itemsJson = $response->json('data.items');
     $items = collect($itemsJson);
 
     expect($items->pluck('can_remind')->all())->toBe([false, false, false])
@@ -245,7 +159,7 @@ it('excludes settled, draft, cancelled and foreign invoices from the reminder li
     $this->actingAs($user)
         ->getJson('/api/v1/dashboard')
         ->assertOk()
-        ->assertJsonCount(0, 'data.invoices.overdue_reminders.items');
+        ->assertJsonCount(0, 'data.items');
 });
 
 it('reports the outstanding balance per reminder item, respecting partial payments', function (): void {
@@ -269,50 +183,5 @@ it('reports the outstanding balance per reminder item, respecting partial paymen
     $this->actingAs($user)
         ->getJson('/api/v1/dashboard')
         ->assertOk()
-        ->assertJsonPath('data.invoices.overdue_reminders.items.0.balance', 700);
-});
-
-it('returns a continuous 12-month cash-in income trend', function (): void {
-    $user = createUser();
-
-    $invoice = Invoice::factory()->create([
-        'user_id' => $user->id,
-        'status' => 'paid',
-        'issued_at' => '2026-04-01',
-        'due_at' => '2026-04-15',
-        'total' => 3000,
-    ]);
-    InvoicePayment::factory()->create([
-        'invoice_id' => $invoice->id,
-        'amount' => 2000,
-        'paid_at' => '2026-04-05',
-    ]);
-    InvoicePayment::factory()->create([
-        'invoice_id' => $invoice->id,
-        'amount' => 500,
-        'paid_at' => '2026-06-20',
-    ]);
-    // Outside the 12-month window — must be excluded.
-    InvoicePayment::factory()->create([
-        'invoice_id' => $invoice->id,
-        'amount' => 999,
-        'paid_at' => '2025-01-10',
-    ]);
-
-    $response = $this->actingAs($user)
-        ->getJson('/api/v1/dashboard')
-        ->assertOk();
-
-    /** @var list<array<string, mixed>> $trend */
-    $trend = $response->json('data.income_trend');
-
-    expect($trend)->toHaveCount(12)
-        ->and($trend[0]['month'])->toBe('2025-08')
-        ->and($trend[11]['month'])->toBe('2026-07');
-
-    $byMonth = collect($trend)->pluck('amount', 'month');
-
-    expect($byMonth['2026-04'])->toEqual(2000)
-        ->and($byMonth['2026-06'])->toEqual(500)
-        ->and($byMonth['2026-07'])->toEqual(0);
+        ->assertJsonPath('data.items.0.balance', 700);
 });
