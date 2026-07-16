@@ -8,7 +8,9 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Console\CreateUserCommand;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -56,6 +58,19 @@ class AuthServiceProvider extends ServiceProvider
             return rtrim((string) config('app.frontend_url'), '/')
                 .'/reset-password?token='.$token
                 .'&email='.urlencode($user->email);
+        });
+
+        // Verification links land on the SPA too — it forwards the signed
+        // API URL so the click doesn't dump raw JSON in the user's face.
+        VerifyEmail::createUrlUsing(function (User $user): string {
+            $apiUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(60),
+                ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())],
+            );
+
+            return rtrim((string) config('app.frontend_url'), '/')
+                .'/verify-email?url='.urlencode($apiUrl);
         });
     }
 }
