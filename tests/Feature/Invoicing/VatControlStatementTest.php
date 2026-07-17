@@ -5,23 +5,9 @@ declare(strict_types=1);
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
-use App\Modules\Invoicing\Domain\Models\Invoice;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
-
-/**
- * @return array{0: User, 1: Client}
- */
-function vcsScope(string $country, string $vatStatus = 'payer'): array
-{
-    $user = createUser(['country' => $country, 'vat_status' => $vatStatus]);
-    app(VatRateSeederService::class)->seedFor($user);
-    $client = Client::factory()->create(['user_id' => $user->id, 'country' => $country]);
-
-    return [$user, $client];
-}
 
 /**
  * @param  array<string, mixed>  $query
@@ -30,27 +16,6 @@ function vcsScope(string $country, string $vatStatus = 'payer'): array
 function vcsRequest(object $test, User $user, array $query): TestResponse
 {
     return $test->actingAs($user)->getJson('/api/v1/reports/vat-control-statement?'.http_build_query($query));
-}
-
-function vcsIssueInvoice(object $test, User $user, Client $client, string $issuedAt, float $unitPrice, float $vatRate): Invoice
-{
-    $currency = $client->country === 'CZ' ? 'CZK' : 'EUR';
-
-    $created = $test->actingAs($user)->postJson('/api/v1/invoices', [
-        'client_id' => $client->id,
-        'issued_at' => $issuedAt,
-        'due_at' => Carbon::parse($issuedAt)->addDays(14)->toDateString(),
-        'currency' => $currency,
-    ])->assertCreated();
-
-    $test->actingAs($user)->postJson("/api/v1/invoices/{$created->json('id')}/items", [
-        'description' => 'Služby', 'quantity' => 1, 'unit' => 'ks', 'unit_price' => $unitPrice, 'vat_rate' => $vatRate,
-    ])->assertCreated();
-
-    $test->actingAs($user)->postJson("/api/v1/invoices/{$created->json('id')}/status", ['status' => 'sent'])
-        ->assertOk();
-
-    return Invoice::withoutGlobalScope('user')->whereKey($created->json('id'))->firstOrFail();
 }
 
 /**
@@ -69,23 +34,6 @@ function vcsRowsInSection(TestResponse $response, string $section): array
 function vcsSummaryRowsInSection(TestResponse $response, string $section): array
 {
     return (array) $response->json("summary_sections.{$section}") ?: [];
-}
-
-/**
- * @param  array<string, mixed>  $overrides
- * @return array<string, mixed>
- */
-function vcsSupplierInvoicePayload(string $clientId, array $overrides = []): array
-{
-    return array_merge([
-        'client_id' => $clientId,
-        'supplier_invoice_number' => 'INV-'.fake()->unique()->numberBetween(1, 99999),
-        'issued_at' => now()->toDateString(),
-        'currency' => 'EUR',
-        'vat_lines' => [
-            ['vat_rate' => 23, 'base' => 100, 'vat_amount' => 23],
-        ],
-    ], $overrides);
 }
 
 // ── SK: issued domestic invoices → A.1 ──────────────────────────────────────
@@ -188,7 +136,7 @@ it('classifies SK self-assessed received invoices into B.1', function (): void {
     app(VatRateSeederService::class)->seedFor($user);
     $vendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'DE']);
 
-    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($vendor->id, [
+    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id, [
         'issued_at' => '2026-07-05',
         'vat_regime' => 'eu_reverse_charge',
         'vat_lines' => [['vat_rate' => 23, 'base' => 1000, 'vat_amount' => 230]],
@@ -213,7 +161,7 @@ it('classifies SK domestic received invoices with deduction into B.2', function 
     app(VatRateSeederService::class)->seedFor($user);
     $vendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'SK']);
 
-    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($vendor->id, [
+    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id, [
         'issued_at' => '2026-08-05',
         'vat_lines' => [['vat_rate' => 23, 'base' => 500, 'vat_amount' => 115]],
     ]))->assertCreated();
@@ -270,13 +218,13 @@ it('splits CZ received invoices by the 10 000 Kč threshold into B.2 (per doklad
     app(VatRateSeederService::class)->seedFor($user);
     $vendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'CZ']);
 
-    $above = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($vendor->id, [
+    $above = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id, [
         'issued_at' => '2026-10-05', 'currency' => 'CZK',
         'vat_lines' => [['vat_rate' => 21, 'base' => 12000, 'vat_amount' => 2520]],
     ]))->assertCreated();
     $this->actingAs($user)->postJson("/api/v1/supplier-invoices/{$above->json('id')}/status", ['status' => 'received'])->assertOk();
 
-    $below = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($vendor->id, [
+    $below = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id, [
         'issued_at' => '2026-10-06', 'currency' => 'CZK',
         'vat_lines' => [['vat_rate' => 21, 'base' => 200, 'vat_amount' => 42]],
     ]))->assertCreated();
@@ -299,7 +247,7 @@ it('classifies CZ self-assessed received invoices into B.1 regardless of amount'
     app(VatRateSeederService::class)->seedFor($user);
     $vendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'DE']);
 
-    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($vendor->id, [
+    $created = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($vendor->id, [
         'issued_at' => '2026-11-05', 'currency' => 'CZK',
         'vat_regime' => 'eu_reverse_charge',
         'vat_lines' => [['vat_rate' => 21, 'base' => 20000, 'vat_amount' => 4200]],
