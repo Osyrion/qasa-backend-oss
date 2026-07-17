@@ -6,5 +6,5 @@ use App\Modules\Shared\Presentation\Controllers\DeepHealthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('up/deep', DeepHealthController::class)
-    ->middleware('auth:sanctum')
+    ->middleware(['auth:sanctum', 'throttle:api'])
     ->name('health.deep');

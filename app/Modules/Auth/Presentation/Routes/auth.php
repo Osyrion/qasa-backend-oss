@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use App\Modules\Auth\Presentation\Controllers\AuthController;
-use App\Modules\Auth\Presentation\Controllers\DashboardController;
 use App\Modules\Auth\Presentation\Controllers\EmailVerificationController;
 use App\Modules\Auth\Presentation\Controllers\GoogleAuthController;
 use App\Modules\Auth\Presentation\Controllers\PasswordResetController;
@@ -30,10 +29,9 @@ Route::prefix('api/v1')->group(function (): void {
         ->name('verification.verify');
 
     // Protected routes
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
-        Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::put('auth/profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
         Route::post('auth/profile/logo', [AuthController::class, 'uploadLogo'])->name('auth.profile.logo');
         Route::get('profile/export', [AuthController::class, 'exportData'])->name('auth.profile.export');

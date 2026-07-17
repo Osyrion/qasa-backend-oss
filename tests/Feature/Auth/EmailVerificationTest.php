@@ -30,7 +30,7 @@ it('points the verification e-mail at the frontend, which forwards the signed AP
             ->and($apiUrl)->toContain('signature=');
 
         $this->getJson($apiUrl)->assertOk();
-        expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+        expect($user->refresh()->hasVerifiedEmail())->toBeTrue();
 
         return true;
     });
