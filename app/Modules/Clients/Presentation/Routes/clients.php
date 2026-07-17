@@ -8,7 +8,7 @@ use App\Modules\Clients\Presentation\Controllers\ContactPersonController;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/v1')->middleware(['auth:sanctum', SubstituteBindings::class])->group(function (): void {
+Route::prefix('api/v1')->middleware(['auth:sanctum', 'throttle:api', SubstituteBindings::class])->group(function (): void {
     // Registered before the apiResource so they are not captured by clients/{client}.
     Route::get('clients/lookup', [CompanyLookupController::class, 'lookup'])->name('clients.lookup');
     Route::get('clients/verify-vat', [CompanyLookupController::class, 'verifyVat'])->name('clients.verify-vat');

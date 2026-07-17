@@ -29,7 +29,7 @@ Route::prefix('api/v1')->group(function (): void {
         ->name('verification.verify');
 
     // Protected routes
-    Route::middleware('auth:sanctum')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::put('auth/profile', [AuthController::class, 'updateProfile'])->name('auth.profile.update');
