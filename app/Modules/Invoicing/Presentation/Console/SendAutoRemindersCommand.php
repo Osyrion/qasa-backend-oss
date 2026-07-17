@@ -40,8 +40,7 @@ class SendAutoRemindersCommand extends Command
         // Console has no auth context, so the invoice HasUserScope global
         // scope is a no-op anyway; withoutGlobalScope is belt-and-braces.
         // The per-tenant overdue_reminder_days threshold means this can't
-        // be a single cross-tenant query, so we loop per user (same idiom
-        // as DashboardService::overdueReminders()).
+        // be a single cross-tenant query, so we loop per user.
         foreach (User::query()->cursor() as $user) {
             $cutoff = $today->subDays($user->overdue_reminder_days);
 
