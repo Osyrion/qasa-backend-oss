@@ -2,44 +2,9 @@
 
 declare(strict_types=1);
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use Illuminate\Support\Str;
-
-/**
- * @param  array<string, mixed>  $overrides
- * @return array<string, mixed>
- */
-function supplierInvoicePayload(string $clientId, array $overrides = []): array
-{
-    return array_merge([
-        'client_id' => $clientId,
-        'supplier_invoice_number' => 'INV-'.fake()->unique()->numberBetween(1, 99999),
-        'issued_at' => now()->toDateString(),
-        'currency' => 'EUR',
-        'vat_lines' => [
-            ['vat_rate' => 23, 'base' => 100, 'vat_amount' => 23],
-        ],
-    ], $overrides);
-}
-
-function vendorClientFor(User $user): Client
-{
-    return Client::factory()->vendor()->create(['user_id' => $user->id]);
-}
-
-/**
- * @param  array<string, mixed>  $attributes
- */
-function createSupplierInvoiceOwner(array $attributes = []): User
-{
-    $user = createUser(array_merge(['country' => 'SK'], $attributes));
-    app(VatRateSeederService::class)->seedFor($user);
-
-    return $user;
-}
 
 it('creates a supplier invoice with a generated internal number and totals from vat lines', function (): void {
     $user = createSupplierInvoiceOwner();

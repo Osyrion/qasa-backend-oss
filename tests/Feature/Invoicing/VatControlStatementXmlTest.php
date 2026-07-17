@@ -59,7 +59,7 @@ it('generates a schema-valid CZ DPHKH1 XML draft covering A.1/A.4/A.5/B.1/B.2/B.
 
     // B.1: self-assessed received.
     $euVendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'DE', 'dic' => '55667788']);
-    $b1 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($euVendor->id, [
+    $b1 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($euVendor->id, [
         'issued_at' => '2027-03-08', 'currency' => 'CZK', 'vat_regime' => 'eu_reverse_charge',
         'vat_lines' => [['vat_rate' => 21, 'base' => 20000, 'vat_amount' => 4200]],
     ]))->assertCreated();
@@ -67,13 +67,13 @@ it('generates a schema-valid CZ DPHKH1 XML draft covering A.1/A.4/A.5/B.1/B.2/B.
 
     // B.2/B.3: domestic received, above and below threshold.
     $domesticVendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'CZ', 'dic' => '99887766']);
-    $b2 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($domesticVendor->id, [
+    $b2 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($domesticVendor->id, [
         'issued_at' => '2027-03-09', 'currency' => 'CZK',
         'vat_lines' => [['vat_rate' => 21, 'base' => 12000, 'vat_amount' => 2520]],
     ]))->assertCreated();
     $this->actingAs($user)->postJson("/api/v1/supplier-invoices/{$b2->json('id')}/status", ['status' => 'received'])->assertOk();
 
-    $b3 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($domesticVendor->id, [
+    $b3 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($domesticVendor->id, [
         'issued_at' => '2027-03-10', 'currency' => 'CZK',
         'vat_lines' => [['vat_rate' => 21, 'base' => 200, 'vat_amount' => 42]],
     ]))->assertCreated();
@@ -129,7 +129,7 @@ it('generates a schema-valid SK KVDPH_2025 XML draft covering A.1 (incl. domesti
 
     // B.1: self-assessed received.
     $euVendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'DE', 'vat_id' => 'DE555666777', 'is_vat_payer' => true]);
-    $b1 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($euVendor->id, [
+    $b1 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($euVendor->id, [
         'issued_at' => '2027-03-07', 'vat_regime' => 'eu_reverse_charge',
         'vat_lines' => [['vat_rate' => 23, 'base' => 1000, 'vat_amount' => 230]],
     ]))->assertCreated();
@@ -137,7 +137,7 @@ it('generates a schema-valid SK KVDPH_2025 XML draft covering A.1 (incl. domesti
 
     // B.2: domestic received with deduction.
     $domesticVendor = Client::factory()->vendor()->create(['user_id' => $user->id, 'country' => 'SK', 'vat_id' => 'SK4040404040', 'is_vat_payer' => true]);
-    $b2 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', vcsSupplierInvoicePayload($domesticVendor->id, [
+    $b2 = $this->actingAs($user)->postJson('/api/v1/supplier-invoices', supplierInvoicePayload($domesticVendor->id, [
         'issued_at' => '2027-03-08',
         'vat_lines' => [['vat_rate' => 23, 'base' => 500, 'vat_amount' => 115]],
     ]))->assertCreated();
