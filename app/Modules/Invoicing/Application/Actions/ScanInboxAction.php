@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -68,10 +67,6 @@ readonly class ScanInboxAction
                 }
 
                 $scanned++;
-
-                if ($item->status === InvoiceInboxStatus::Failed->value) {
-                    $failed++;
-                }
 
                 Storage::disk($disk)->move($path, $processedDir.'/'.basename($path));
             } catch (Throwable $e) {

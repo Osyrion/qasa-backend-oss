@@ -18,40 +18,71 @@ class AresApiClient implements CompanyRegistryClientInterface
 {
     private const int CACHE_TTL = 86400;
 
+    /**
+     * Cache::remember() never writes null, so a registry outage would make
+     * every request pay the full timeout+retry again. This sentinel marks
+     * a failed lookup in the cache (short TTL) so it degrades to today's
+     * null (fallback to manual entry) without repeating the HTTP call.
+     */
+    private const string FAILURE_SENTINEL = '__failed';
+
     public function fetchByIco(string $ico): ?CompanyRegistryData
     {
         $ico = trim($ico);
+        $cacheKey = "registry:CZ:{$ico}";
 
-        return Cache::remember("registry:CZ:{$ico}", self::CACHE_TTL, function () use ($ico): ?CompanyRegistryData {
-            try {
-                $response = Http::baseUrl((string) config('services.ares.base_url'))
-                    ->timeout(10)
-                    ->retry(2, 200, throw: false)
-                    ->get("/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{$ico}");
-            } catch (Throwable) {
-                return null;
-            }
+        $cached = Cache::get($cacheKey);
 
-            if (! $response->successful() || $response->json('ico') === null) {
-                return null;
-            }
+        if ($cached === self::FAILURE_SENTINEL) {
+            return null;
+        }
 
-            /** @var array<string, mixed> $sidlo */
-            $sidlo = (array) $response->json('sidlo', []);
-            $dic = $response->json('dic');
+        if ($cached !== null) {
+            /** @var CompanyRegistryData $cached */
+            return $cached;
+        }
 
-            return new CompanyRegistryData(
-                company_name: $this->str($response->json('obchodniJmeno')),
-                ico: $this->str($response->json('ico')),
-                dic: $this->str($dic),
-                // In Czechia the DIČ is the VAT identification number.
-                vat_id: $this->str($dic),
-                address: $this->buildStreet($sidlo),
-                city: $this->str($sidlo['nazevObce'] ?? null),
-                postal_code: $this->postalCode($sidlo['psc'] ?? null),
-                country: $this->str($sidlo['kodStatu'] ?? null) ?? 'CZ',
-            );
-        });
+        $result = $this->fetch($ico);
+
+        Cache::put(
+            $cacheKey,
+            $result ?? self::FAILURE_SENTINEL,
+            $result !== null ? self::CACHE_TTL : (int) config('services.ares.failure_ttl', 300),
+        );
+
+        return $result;
+    }
+
+    private function fetch(string $ico): ?CompanyRegistryData
+    {
+        try {
+            $response = Http::baseUrl((string) config('services.ares.base_url'))
+                ->timeout(10)
+                ->retry(2, 200, throw: false)
+                ->get("/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{$ico}");
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $response->successful() || $response->json('ico') === null) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $sidlo */
+        $sidlo = (array) $response->json('sidlo', []);
+        $dic = $response->json('dic');
+
+        return new CompanyRegistryData(
+            company_name: $this->str($response->json('obchodniJmeno')),
+            ico: $this->str($response->json('ico')),
+            dic: $this->str($dic),
+            // In Czechia the DIČ is the VAT identification number.
+            vat_id: $this->str($dic),
+            address: $this->buildStreet($sidlo),
+            city: $this->str($sidlo['nazevObce'] ?? null),
+            postal_code: $this->postalCode($sidlo['psc'] ?? null),
+            country: $this->str($sidlo['kodStatu'] ?? null) ?? 'CZ',
+        );
     }
 
     /**

@@ -59,6 +59,11 @@ services:
     networks:
       - laravel
 
+  # Runs ProcessInboxItemJob (pdftoppm + tesseract). Production deployments
+  # should additionally sandbox this process — a dedicated non-root user
+  # and cgroup CPU/memory limits — since OCR input hardening in code
+  # (pixel-dimension cap, Process::timeout) reduces but doesn't eliminate
+  # the worst case for a hostile/corrupt upload.
   queue:
     build:
       context: .

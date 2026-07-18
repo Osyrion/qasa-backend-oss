@@ -7,6 +7,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 it('marks imported and ignored as terminal', function (): void {
     expect(InvoiceInboxStatus::Imported->isTerminal())->toBeTrue()
         ->and(InvoiceInboxStatus::Ignored->isTerminal())->toBeTrue()
+        ->and(InvoiceInboxStatus::Processing->isTerminal())->toBeFalse()
         ->and(InvoiceInboxStatus::Pending->isTerminal())->toBeFalse()
         ->and(InvoiceInboxStatus::Failed->isTerminal())->toBeFalse();
 });
@@ -14,6 +15,7 @@ it('marks imported and ignored as terminal', function (): void {
 it('allows converting only pending and failed items', function (): void {
     expect(InvoiceInboxStatus::Pending->canConvert())->toBeTrue()
         ->and(InvoiceInboxStatus::Failed->canConvert())->toBeTrue()
+        ->and(InvoiceInboxStatus::Processing->canConvert())->toBeFalse()
         ->and(InvoiceInboxStatus::Imported->canConvert())->toBeFalse()
         ->and(InvoiceInboxStatus::Ignored->canConvert())->toBeFalse();
 });

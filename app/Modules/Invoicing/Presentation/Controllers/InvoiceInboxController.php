@@ -61,7 +61,7 @@ class InvoiceInboxController extends Controller
                 description: 'Filter by status',
                 in: 'query',
                 required: false,
-                schema: new OA\Schema(type: 'string', enum: ['pending', 'imported', 'ignored', 'failed'])
+                schema: new OA\Schema(type: 'string', enum: ['processing', 'pending', 'imported', 'ignored', 'failed'])
             ),
             new OA\Parameter(
                 name: 'date_from',
@@ -183,8 +183,8 @@ class InvoiceInboxController extends Controller
         tags: ['InvoiceInbox'],
         responses: [
             new OA\Response(
-                response: 201,
-                description: 'Invoice inbox item created from the uploaded file',
+                response: 202,
+                description: 'Invoice inbox item accepted and queued for OCR processing (status: processing)',
                 content: new OA\JsonContent(ref: '#/components/schemas/InvoiceInboxItem')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
@@ -223,7 +223,7 @@ class InvoiceInboxController extends Controller
             return response()->json(['message' => __('invoicing.inbox.duplicate_file')], 422);
         }
 
-        return response()->json(InvoiceInboxItemResource::make($item->load('matchedClient')), 201);
+        return response()->json(InvoiceInboxItemResource::make($item->load('matchedClient')), 202);
     }
 
     /**

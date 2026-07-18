@@ -13,7 +13,7 @@ use OpenApi\Attributes as OA;
     schema: 'InvoiceInboxItem',
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'imported', 'ignored', 'failed']),
+        new OA\Property(property: 'status', type: 'string', enum: ['processing', 'pending', 'imported', 'ignored', 'failed']),
         new OA\Property(property: 'status_label', type: 'string'),
         new OA\Property(property: 'original_filename', type: 'string'),
         new OA\Property(property: 'mime_type', type: 'string'),

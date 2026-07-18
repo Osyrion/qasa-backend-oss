@@ -127,6 +127,26 @@ it('rejects converting an already processed inbox item', function (): void {
     $response->assertStatus(422);
 });
 
+it('rejects converting an item still being processed', function (): void {
+    $user = createUser();
+    $vendor = vendorClientFor($user);
+    $item = inboxItemFor($user, ['status' => 'processing']);
+
+    $response = $this->actingAs($user)->postJson(
+        "/api/v1/invoice-inbox/{$item->id}/convert",
+        supplierInvoicePayload($vendor->id),
+    );
+
+    $response->assertStatus(422);
+});
+
+it('rejects ignoring an item still being processed', function (): void {
+    $user = createUser();
+    $item = inboxItemFor($user, ['status' => 'processing']);
+
+    $this->actingAs($user)->postJson("/api/v1/invoice-inbox/{$item->id}/ignore")->assertStatus(422);
+});
+
 it('ignores a pending inbox item', function (): void {
     $user = createUser();
     $item = inboxItemFor($user);

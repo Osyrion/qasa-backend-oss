@@ -74,6 +74,13 @@ return [
         'pdftoppm_path' => env('INVOICING_INBOX_PDFTOPPM_PATH', 'pdftoppm'),
         'ocr_max_pages' => env('INVOICING_INBOX_OCR_MAX_PAGES', 5),
         'ocr_dpi' => env('INVOICING_INBOX_OCR_DPI', 200),
+        'tesseract_path' => env('INVOICING_INBOX_TESSERACT_PATH', 'tesseract'),
+        // Cheap decompression-bomb guard: an image whose width or height
+        // exceeds this is rejected before OCR runs at all, on both direct
+        // uploads and pages rasterized from a PDF.
+        'ocr_max_pixels_per_side' => env('INVOICING_INBOX_OCR_MAX_PIXELS_PER_SIDE', 10000),
+        // Tesseract itself has no built-in timeout; enforced via Process.
+        'ocr_timeout' => env('INVOICING_INBOX_OCR_TIMEOUT', 60),
     ],
 
 ];

@@ -34,6 +34,16 @@ class InvoiceInboxItemFactory extends Factory
         ];
     }
 
+    public function processing(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => InvoiceInboxStatus::Processing->value,
+            'ocr_text' => null,
+            'ocr_engine' => null,
+            'suggestions' => null,
+        ]);
+    }
+
     public function pending(): static
     {
         return $this->state(fn (array $attributes): array => [

@@ -72,9 +72,11 @@ return [
         'already_processed' => 'Táto položka bola už spracovaná.',
         'unsupported_file' => 'Nepodporovaný typ súboru.',
         'extraction_failed' => 'Nepodarilo sa extrahovať text z dokladu.',
+        'processing_failed' => 'Spracovanie dokladu neočakávane zlyhalo.',
         'duplicate_file' => 'Tento súbor už bol nahraný.',
         'upload_invalid_file' => 'Nahraný súbor musí byť PDF, JPEG alebo PNG v rámci povoleného limitu veľkosti.',
         'status' => [
+            'processing' => 'Spracováva sa',
             'pending' => 'Čaká',
             'imported' => 'Importovaná',
             'ignored' => 'Ignorovaná',
