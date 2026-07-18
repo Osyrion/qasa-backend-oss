@@ -29,7 +29,7 @@ it('uploads a scanned PDF and lands as pending via the pdftoppm+tesseract fallba
 
     $response = $this->actingAs($user)->postJson('/api/v1/invoice-inbox/upload', ['file' => $file]);
 
-    $response->assertCreated();
+    $response->assertStatus(202);
 
     $item = InvoiceInboxItem::withoutGlobalScope('user')->firstOrFail();
 

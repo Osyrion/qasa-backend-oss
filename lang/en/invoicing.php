@@ -72,9 +72,11 @@ return [
         'already_processed' => 'This item has already been processed.',
         'unsupported_file' => 'Unsupported file type.',
         'extraction_failed' => 'Could not extract text from the document.',
+        'processing_failed' => 'Processing this document failed unexpectedly.',
         'duplicate_file' => 'This file has already been uploaded.',
         'upload_invalid_file' => 'The uploaded file must be a PDF, JPEG, or PNG within the allowed size limit.',
         'status' => [
+            'processing' => 'Processing',
             'pending' => 'Pending',
             'imported' => 'Imported',
             'ignored' => 'Ignored',

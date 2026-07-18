@@ -41,6 +41,10 @@ return [
 
     'ares' => [
         'base_url' => env('ARES_API_URL', 'https://ares.gov.cz'),
+        // Short TTL for a failed lookup (timeout/5xx/malformed response) so
+        // a registry outage doesn't force every request through the full
+        // timeout+retry again — a successful lookup keeps the long TTL below.
+        'failure_ttl' => env('ARES_API_FAILURE_TTL', 300),
     ],
 
     'rpo' => [
@@ -49,6 +53,10 @@ return [
 
     'vies' => [
         'base_url' => env('VIES_API_URL', 'https://ec.europa.eu/taxation_customs/vies/rest-api'),
+        // Short TTL for a failed lookup (timeout/5xx/malformed response) so
+        // a registry outage doesn't force every request through the full
+        // timeout+retry again — a successful lookup keeps the long TTL below.
+        'failure_ttl' => env('VIES_API_FAILURE_TTL', 300),
     ],
 
     'crpdph' => [
