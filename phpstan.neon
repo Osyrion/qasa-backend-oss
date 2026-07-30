@@ -1,0 +1,62 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    parallel:
+        maximumNumberOfProcesses: 1
+    level: 8
+    paths:
+        - app
+        - config
+        - database
+        - routes
+        - tests
+    excludePaths:
+        analyseAndScan:
+            - app/Console/Kernel.php (?)
+            - app/Exceptions/Handler.php (?)
+            - bootstrap/*
+            # Core stand-ins loaded only when tests/Pest.edition.php is absent.
+            # Analysing both would make PHPStan resolve createSaasUser() to the
+            # wrong definition. scripts/build-oss.sh drops this line, so the
+            # generated core analyses the file it actually loads.
+            - storage/*
+            - vendor/*
+            - node_modules/*
+    checkFunctionNameCase: true
+    checkInternalClassCaseSensitivity: true
+    reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Call to an undefined method.*#'
+        - '#Access to an undefined property.*#'
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*#'
+        -
+            # Sanctum's HasApiTokens::currentAccessToken() docblock claims a
+            # non-nullable TToken, but at runtime it's null whenever the user
+            # wasn't authenticated via an actual token (e.g. tests using
+            # actingAs()) — the null check here is real and load-bearing.
+            message: '#will always evaluate to (true|false)#'
+            path: app/Modules/Auth/Infrastructure/Providers/AuthServiceProvider.php
+        -
+            # Same Sanctum currentAccessToken() nullability gap as above —
+            # currentToken can be null (session/first-party auth) or a
+            # TransientToken (full-access login token), not just
+            # PersonalAccessToken as the docblock claims.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Auth/Application/Actions/UpdateProfileAction.php
+        -
+            # Pest applies this trait at runtime through uses() in Pest.php,
+            # which PHPStan cannot see, so it reads as unused. The trait is
+            # what makes RefreshDatabase migrate as the schema owner while
+            # tests still query as the unprivileged application role.
+            message: '#Trait Tests\\RefreshDatabaseAsOwner is used zero times#'
+            path: tests/RefreshDatabaseAsOwner.php
+        -
+            # AiProvider has a single case (Anthropic) at v1 — PHPStan
+            # correctly notes the comparison is trivially true today, but
+            # this loop is what makes adding a second provider a no-op
+            # here. See docs/plans/BYOK_MULTI_PROVIDER_EXTRACTION_PLAN.md.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Invoicing/Application/Services/LlmProviderRegistry.php
+    bootstrapFiles:
+        - vendor/autoload.php

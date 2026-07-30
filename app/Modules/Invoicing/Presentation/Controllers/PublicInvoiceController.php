@@ -1,0 +1,296 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Invoicing\Presentation\Controllers;
+
+use App\Modules\Invoicing\Application\Services\InvoicePdfService;
+use App\Modules\Invoicing\Application\Services\PaymentQrService;
+use App\Modules\Invoicing\Domain\Contracts\OnlinePaymentAvailabilityInterface;
+use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
+use App\Modules\Invoicing\Domain\Events\InvoiceViewed;
+use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
+use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
+use OpenApi\Attributes as OA;
+
+/**
+ * No auth context here — lookup deliberately bypasses the HasUserScope
+ * global scope. An unknown token must 404 exactly like an unknown route,
+ * so no distinction is made between "wrong token" and "no such invoice".
+ */
+#[OA\Tag(
+    name: 'Public Invoice',
+    description: 'Unauthenticated client-facing invoice page endpoints'
+)]
+class PublicInvoiceController extends Controller
+{
+    public function __construct(
+        private readonly VatRecapCalculator $recapCalculator,
+        private readonly PaymentQrService $paymentQrService,
+        private readonly InvoicePdfService $pdfService,
+        private readonly OnlinePaymentAvailabilityInterface $onlinePaymentAvailability,
+    ) {}
+
+    #[OA\Get(
+        path: '/api/v1/public/invoices/{token}',
+        summary: 'Public invoice payload for the client-facing page (no auth)',
+        tags: ['Public Invoice'],
+        parameters: [
+            new OA\Parameter(
+                name: 'token',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Invoice payload',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'invoice_number', type: 'string', nullable: true),
+                        new OA\Property(property: 'type', type: 'string'),
+                        new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                        new OA\Property(property: 'taxable_supply_at', type: 'string', format: 'date', nullable: true),
+                        new OA\Property(property: 'due_at', type: 'string', format: 'date'),
+                        new OA\Property(property: 'variable_symbol', type: 'string', nullable: true),
+                        new OA\Property(property: 'currency', type: 'string'),
+                        new OA\Property(
+                            property: 'supplier',
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'vat_status', type: 'string'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                                new OA\Property(property: 'website', type: 'string', nullable: true),
+                                new OA\Property(property: 'logo_path', type: 'string', nullable: true),
+                                new OA\Property(property: 'invoice_footer_text', type: 'string', nullable: true),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'client',
+                            nullable: true,
+                            properties: [
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'ico', type: 'string', nullable: true),
+                                new OA\Property(property: 'dic', type: 'string', nullable: true),
+                                new OA\Property(property: 'vat_id', type: 'string', nullable: true),
+                                new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                                new OA\Property(property: 'address', type: 'string', nullable: true),
+                                new OA\Property(property: 'city', type: 'string', nullable: true),
+                                new OA\Property(property: 'postal_code', type: 'string', nullable: true),
+                                new OA\Property(property: 'country', type: 'string', nullable: true),
+                                new OA\Property(property: 'email', type: 'string', nullable: true),
+                                new OA\Property(property: 'phone', type: 'string', nullable: true),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'items',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'description', type: 'string'),
+                                    new OA\Property(property: 'quantity', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'unit', type: 'string'),
+                                    new OA\Property(property: 'unit_price', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_excl_vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total_incl_vat', type: 'number', format: 'float'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                        new OA\Property(
+                            property: 'vat_recap',
+                            type: 'array',
+                            items: new OA\Items(
+                                properties: [
+                                    new OA\Property(property: 'rate', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'base', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'vat', type: 'number', format: 'float'),
+                                    new OA\Property(property: 'total', type: 'number', format: 'float'),
+                                ],
+                                type: 'object'
+                            )
+                        ),
+                        new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                        new OA\Property(property: 'discount_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'subtotal', type: 'number', format: 'float'),
+                        new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                        new OA\Property(property: 'total', type: 'number', format: 'float'),
+                        new OA\Property(
+                            property: 'payment',
+                            properties: [
+                                new OA\Property(property: 'balance', type: 'number', format: 'float'),
+                                new OA\Property(property: 'is_paid', type: 'boolean'),
+                                new OA\Property(property: 'iban', type: 'string', nullable: true),
+                                new OA\Property(property: 'bic', type: 'string', nullable: true),
+                                new OA\Property(property: 'account_number', type: 'string', nullable: true),
+                                new OA\Property(property: 'variable_symbol', type: 'string', nullable: true),
+                                new OA\Property(property: 'qr_svg', type: 'string', nullable: true, description: 'SVG data URI'),
+                            ],
+                            type: 'object'
+                        ),
+                        new OA\Property(
+                            property: 'public_status',
+                            type: 'string',
+                            enum: ['cancelled', 'credited', 'paid', 'partially_paid', 'unpaid']
+                        ),
+                        new OA\Property(
+                            property: 'online_payment',
+                            properties: [
+                                new OA\Property(property: 'available', type: 'boolean', description: 'Whether "pay online" (Stripe) should be offered — false in the OSS core build'),
+                            ],
+                            type: 'object'
+                        ),
+                    ],
+                    type: 'object'
+                )
+            ),
+            new OA\Response(response: 404, description: 'Unknown token'),
+            new OA\Response(response: 429, description: 'Too many requests'),
+        ]
+    )]
+    public function show(string $token): JsonResponse
+    {
+        $invoice = Invoice::withoutGlobalScope('user')
+            ->where('public_token', $token)
+            ->firstOrFail();
+
+        $invoice->loadMissing(['items']);
+
+        if ($invoice->public_first_viewed_at === null) {
+            $invoice->forceFill(['public_first_viewed_at' => now()])->save();
+
+            event(new InvoiceViewed($invoice));
+        }
+
+        $invoice->increment('public_view_count');
+
+        $balance = $invoice->balance();
+        $qrDataUri = $balance > 0 ? $this->paymentQrService->dataUri($invoice, $balance) : null;
+        $bank = $invoice->bank_account_snapshot;
+
+        return response()->json([
+            'invoice_number' => $invoice->invoice_number,
+            'type' => $invoice->type->label(),
+            'issued_at' => $invoice->issued_at->toDateString(),
+            'taxable_supply_at' => $invoice->taxable_supply_at?->toDateString(),
+            'due_at' => $invoice->due_at->toDateString(),
+            'variable_symbol' => $invoice->variable_symbol,
+            'currency' => $invoice->currency->value,
+            'supplier' => $invoice->supplier_snapshot,
+            'client' => $invoice->client_snapshot,
+            'items' => $invoice->items->map(static fn ($item): array => [
+                'description' => $item->description,
+                'quantity' => (float) $item->quantity,
+                'unit' => $item->unit,
+                'unit_price' => (float) $item->unit_price,
+                'vat_rate' => (float) $item->vat_rate,
+                'vat_amount' => (float) $item->vat_amount,
+                'total_excl_vat' => (float) $item->total_excl_vat,
+                'total_incl_vat' => (float) $item->total_incl_vat,
+            ])->all(),
+            'vat_recap' => array_map(static fn (VatRecapRow $row): array => [
+                'rate' => $row->rate,
+                'base' => $row->base,
+                'vat' => $row->vat,
+                'total' => $row->total,
+            ], $this->recapCalculator->recap($invoice)),
+            'discount_percent' => $invoice->discount_percent !== null ? (float) $invoice->discount_percent : null,
+            'discount_amount' => (float) $invoice->discount_amount,
+            'subtotal' => (float) $invoice->subtotal,
+            'vat_amount' => (float) $invoice->vat_amount,
+            'total' => (float) $invoice->total,
+            'payment' => [
+                'balance' => $balance,
+                'is_paid' => $balance <= 0,
+                'iban' => $bank['iban'] ?? null,
+                'bic' => $bank['bic'] ?? null,
+                'account_number' => $bank['account_number'] ?? null,
+                'variable_symbol' => $invoice->variable_symbol,
+                'qr_svg' => $qrDataUri,
+            ],
+            'public_status' => $this->publicStatus($invoice),
+            'online_payment' => [
+                'available' => $this->onlinePaymentAvailability->isAvailableFor($invoice),
+            ],
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/public/invoices/{token}/pdf',
+        summary: 'Public invoice PDF download (no auth)',
+        tags: ['Public Invoice'],
+        parameters: [
+            new OA\Parameter(
+                name: 'token',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'PDF file',
+                content: new OA\MediaType(mediaType: 'application/pdf')
+            ),
+            new OA\Response(response: 404, description: 'Unknown token'),
+            new OA\Response(response: 429, description: 'Too many requests'),
+        ]
+    )]
+    public function pdf(string $token): Response
+    {
+        $invoice = Invoice::withoutGlobalScope('user')
+            ->where('public_token', $token)
+            ->firstOrFail();
+
+        $pdf = $this->pdfService->generate($invoice);
+        $filename = $this->pdfService->filename($invoice);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Simplified status the public page renders — drafts never reach here
+     * (no draft ever carries a public_token).
+     */
+    private function publicStatus(Invoice $invoice): string
+    {
+        if ($invoice->isCancelled()) {
+            return 'cancelled';
+        }
+
+        if ($invoice->statusEnum() === InvoiceStatus::Credited) {
+            return 'credited';
+        }
+
+        $balance = $invoice->balance();
+
+        return match (true) {
+            $balance <= 0 => 'paid',
+            $balance < (float) $invoice->total => 'partially_paid',
+            default => 'unpaid',
+        };
+    }
+}

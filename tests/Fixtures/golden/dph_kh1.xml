@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Pisemnost nazevSW="Laravel">
+  <DPHKH1>
+    <VetaD dokument="KH1" k_uladis="DPH" mesic="3" rok="2026" khdph_forma="B"/>
+    <VetaP c_ufo="000" dic="12345678" typ_ds="F" jmeno="Petr" prijmeni="Svoboda" ulice="Hlavní 1" naz_obce="Praha" psc="11000" email="petr.svoboda@example.cz"/>
+    <VetaA1 dic_odb="11223344" c_evid_dd="FA-2026-10" duzp="07.03.2026" zakl_dane1="800.00" kod_pred_pl="1"/>
+    <VetaA4 dic_odb="87654321" c_evid_dd="FA-2026-11" dppd="05.03.2026" zakl_dane1="15000.00" dan1="3150.00" kod_rezim_pl="0" zdph_44="N"/>
+    <VetaA5 zakl_dane2="100.00" dan2="12.00"/>
+    <VetaB1 dic_dod="55667788" c_evid_dd="FD-2026-10" duzp="08.03.2026" zakl_dane1="1000.00" dan1="210.00" kod_pred_pl="1"/>
+    <VetaB2 dic_dod="99887766" c_evid_dd="FD-2026-11" dppd="09.03.2026" zakl_dane1="12000.00" dan1="2520.00" pomer="N" zdph_44="N"/>
+    <VetaB3 zakl_dane1="200.00" dan1="42.00"/>
+  </DPHKH1>
+</Pisemnost>

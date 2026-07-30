@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dat:dataPack xmlns:dat="http://www.stormware.cz/schema/version_2/data.xsd" xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" id="QasaExport" application="Qasa Core" version="2.0" note="Vydané faktúry" ico="12345678">
+  <dat:dataPackItem id="1" version="2.0">
+    <inv:invoice xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" version="2.0">
+      <inv:invoiceHeader xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceType>issuedInvoice</inv:invoiceType>
+        <inv:number xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:numberRequested xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">FA-2026-301</typ:numberRequested>
+        </inv:number>
+        <inv:symVar>2026301</inv:symVar>
+        <inv:date>2026-05-10</inv:date>
+        <inv:dateTax>2026-05-10</inv:dateTax>
+        <inv:dateDue>2026-05-24</inv:dateDue>
+        <inv:partnerIdentity xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:address xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:company>Klient Alfa s.r.o.</typ:company>
+            <typ:city>Bratislava</typ:city>
+            <typ:street>Prvá 1</typ:street>
+            <typ:zip>81101</typ:zip>
+            <typ:ico>11111111</typ:ico>
+            <typ:dic>SK2020202020</typ:dic>
+          </typ:address>
+        </inv:partnerIdentity>
+        <inv:paymentType xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:ids xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">draft</typ:ids>
+        </inv:paymentType>
+      </inv:invoiceHeader>
+      <inv:invoiceDetail xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceItem xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <inv:text>Konzultácia</inv:text>
+          <inv:quantity>10.000</inv:quantity>
+          <inv:unit>hod</inv:unit>
+          <inv:rateVAT>high</inv:rateVAT>
+          <inv:percentVAT>23.00</inv:percentVAT>
+          <inv:homeCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:unitPrice xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">50.00</typ:unitPrice>
+          </inv:homeCurrency>
+        </inv:invoiceItem>
+      </inv:invoiceDetail>
+      <inv:invoiceSummary xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:homeCurrency>
+          <inv:priceNone>0.00</inv:priceNone>
+          <inv:priceHigh>12500.00</inv:priceHigh>
+          <inv:priceHighVAT>2875.00</inv:priceHighVAT>
+          <inv:priceHighSum>15375.00</inv:priceHighSum>
+        </inv:homeCurrency>
+        <inv:foreignCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:currency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:ids>EUR</typ:ids>
+          </typ:currency>
+          <inv:rate>25.000000</inv:rate>
+          <inv:priceNone>0.00</inv:priceNone>
+          <inv:priceHigh>500.00</inv:priceHigh>
+          <inv:priceHighVAT>115.00</inv:priceHighVAT>
+          <inv:priceHighSum>615.00</inv:priceHighSum>
+        </inv:foreignCurrency>
+      </inv:invoiceSummary>
+    </inv:invoice>
+  </dat:dataPackItem>
+  <dat:dataPackItem id="2" version="2.0">
+    <inv:invoice xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" version="2.0">
+      <inv:invoiceHeader xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceType>issuedInvoice</inv:invoiceType>
+        <inv:number xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:numberRequested xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">FA-2026-302</typ:numberRequested>
+        </inv:number>
+        <inv:symVar>2026302</inv:symVar>
+        <inv:date>2026-05-11</inv:date>
+        <inv:dateTax>2026-05-11</inv:dateTax>
+        <inv:dateDue>2026-05-25</inv:dateDue>
+        <inv:partnerIdentity xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:address xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:company>RC Klient s.r.o.</typ:company>
+            <typ:city>Košice</typ:city>
+            <typ:street>Druhá 2</typ:street>
+            <typ:zip>04001</typ:zip>
+            <typ:ico>22222222</typ:ico>
+            <typ:dic>3030303030</typ:dic>
+          </typ:address>
+        </inv:partnerIdentity>
+        <inv:paymentType xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:ids xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">draft</typ:ids>
+        </inv:paymentType>
+      </inv:invoiceHeader>
+      <inv:invoiceDetail xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceItem xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <inv:text>Stavebné práce</inv:text>
+          <inv:quantity>1.000</inv:quantity>
+          <inv:unit>ks</inv:unit>
+          <inv:rateVAT>none</inv:rateVAT>
+          <inv:percentVAT>0.00</inv:percentVAT>
+          <inv:homeCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:unitPrice xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">800.00</typ:unitPrice>
+          </inv:homeCurrency>
+        </inv:invoiceItem>
+      </inv:invoiceDetail>
+      <inv:invoiceSummary xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:homeCurrency>
+          <inv:priceNone>800.00</inv:priceNone>
+        </inv:homeCurrency>
+        <inv:foreignCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:currency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:ids>EUR</typ:ids>
+          </typ:currency>
+          <inv:rate>1.000000</inv:rate>
+          <inv:priceNone>800.00</inv:priceNone>
+        </inv:foreignCurrency>
+      </inv:invoiceSummary>
+    </inv:invoice>
+  </dat:dataPackItem>
+  <dat:dataPackItem id="3" version="2.0">
+    <inv:invoice xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" version="2.0">
+      <inv:invoiceHeader xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceType>issuedCreditNote</inv:invoiceType>
+        <inv:number xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:numberRequested xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">DO-2026-1</typ:numberRequested>
+        </inv:number>
+        <inv:symVar>2026303</inv:symVar>
+        <inv:date>2026-05-12</inv:date>
+        <inv:dateTax>2026-05-12</inv:dateTax>
+        <inv:dateDue>2026-05-26</inv:dateDue>
+        <inv:partnerIdentity xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:address xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:company>Klient Alfa s.r.o.</typ:company>
+            <typ:city>Bratislava</typ:city>
+            <typ:street>Prvá 1</typ:street>
+            <typ:zip>81101</typ:zip>
+            <typ:ico>11111111</typ:ico>
+            <typ:dic>SK2020202020</typ:dic>
+          </typ:address>
+        </inv:partnerIdentity>
+        <inv:paymentType xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:ids xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">draft</typ:ids>
+        </inv:paymentType>
+      </inv:invoiceHeader>
+      <inv:invoiceDetail xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:invoiceItem xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <inv:text>Konzultácia</inv:text>
+          <inv:quantity>-10.000</inv:quantity>
+          <inv:unit>hod</inv:unit>
+          <inv:rateVAT>high</inv:rateVAT>
+          <inv:percentVAT>23.00</inv:percentVAT>
+          <inv:homeCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:unitPrice xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">50.00</typ:unitPrice>
+          </inv:homeCurrency>
+        </inv:invoiceItem>
+      </inv:invoiceDetail>
+      <inv:invoiceSummary xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+        <inv:homeCurrency>
+          <inv:priceNone>0.00</inv:priceNone>
+          <inv:priceHigh>-12500.00</inv:priceHigh>
+          <inv:priceHighVAT>-2875.00</inv:priceHighVAT>
+          <inv:priceHighSum>-15375.00</inv:priceHighSum>
+        </inv:homeCurrency>
+        <inv:foreignCurrency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+          <typ:currency xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">
+            <typ:ids>EUR</typ:ids>
+          </typ:currency>
+          <inv:rate>25.000000</inv:rate>
+          <inv:priceNone>0.00</inv:priceNone>
+          <inv:priceHigh>-500.00</inv:priceHigh>
+          <inv:priceHighVAT>-115.00</inv:priceHighVAT>
+          <inv:priceHighSum>-615.00</inv:priceHighSum>
+        </inv:foreignCurrency>
+      </inv:invoiceSummary>
+    </inv:invoice>
+  </dat:dataPackItem>
+</dat:dataPack>

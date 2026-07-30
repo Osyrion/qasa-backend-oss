@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'subject' => 'Faktúra :number',
+    'greeting' => 'Dobrý deň,',
+    'reminders_exhausted_subject' => 'Faktúra :number je stále neuhradená po :count upomienkach',
+    'reminders_exhausted_intro' => 'Faktúra č. :number je stále neuhradená aj po :count automatických upomienkach (limit :max). Ďalšie automatické upomienky sa už nebudú odosielať — odporúčame kontaktovať klienta manuálne.',
+    'intro' => 'v prílohe vám zasielame faktúru č. :number.',
+    'total_due' => 'Suma na úhradu',
+    'due_date' => 'Splatnosť',
+    'variable_symbol' => 'Variabilný symbol',
+    'attachment_note' => 'Faktúra je priložená vo formáte PDF.',
+    'regards' => 'S pozdravom',
+    'reminder_subject' => 'Upomienka — faktúra :number po splatnosti',
+    'reminder_intro' => 'radi by sme Vám pripomenuli, že faktúra č. :number je po splatnosti.',
+
+    'quote_subject' => 'Cenová ponuka :number',
+    'quote_intro' => 'v prílohe vám zasielame cenovú ponuku č. :number.',
+    'quote_total' => 'Celková suma',
+    'quote_valid_until' => 'Platnosť do',
+    'quote_attachment_note' => 'Cenová ponuka je priložená vo formáte PDF.',
+    'view_online' => 'Zobraziť faktúru online',
+    'quote_view_online' => 'Zobraziť ponuku online',
+    'quote_accepted_subject' => 'Cenová ponuka :number bola prijatá',
+    'quote_rejected_subject' => 'Cenová ponuka :number bola odmietnutá',
+    'quote_accepted_body' => 'Vašu cenovú ponuku č. :number klient prijal.',
+    'quote_rejected_body' => 'Vašu cenovú ponuku č. :number klient odmietol.',
+    'payment_details' => 'Platobné údaje',
+    'iban' => 'IBAN',
+    'bic' => 'SWIFT/BIC',
+    'qr_hint' => 'Zaplatiť môžete naskenovaním QR kódu nižšie.',
+    'qr_alt' => 'Platobný QR kód',
+    'overdue_digest_subject' => ':count faktúr(y) novo po splatnosti',
+    'overdue_digest_intro' => 'Od poslednej kontroly sa dostalo po splatnosti :count faktúr(y):',
+    'overdue_digest_column_number' => 'Faktúra',
+    'overdue_digest_column_client' => 'Klient',
+    'overdue_digest_column_amount' => 'Suma',
+    'overdue_digest_column_days_overdue' => 'Dní po splatnosti',
+];

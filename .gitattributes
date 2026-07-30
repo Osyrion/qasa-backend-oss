@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore
+*.kpc -text
+
+# KROS Omega imports are a CRLF/CP1250 Windows format; the golden fixtures are
+# compared byte-for-byte, so keep git's eol=lf normalization from stripping CR.
+tests/Fixtures/golden/omega_*.txt -text

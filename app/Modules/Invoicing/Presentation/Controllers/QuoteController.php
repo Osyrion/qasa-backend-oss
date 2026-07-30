@@ -1,0 +1,630 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\Invoicing\Presentation\Controllers;
+
+use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Actions\AddQuoteItemAction;
+use App\Modules\Invoicing\Application\Actions\ConvertQuoteToInvoiceAction;
+use App\Modules\Invoicing\Application\Actions\ConvertQuoteToOrderAction;
+use App\Modules\Invoicing\Application\Actions\CreateQuoteAction;
+use App\Modules\Invoicing\Application\Actions\CreateQuotePublicLinkAction;
+use App\Modules\Invoicing\Application\Actions\RemoveQuoteItemAction;
+use App\Modules\Invoicing\Application\Actions\RevokeQuotePublicLinkAction;
+use App\Modules\Invoicing\Application\Actions\SendQuoteEmailAction;
+use App\Modules\Invoicing\Application\Actions\UpdateQuoteAction;
+use App\Modules\Invoicing\Application\Actions\UpdateQuoteStatusAction;
+use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
+use App\Modules\Invoicing\Application\DTOs\QuoteData;
+use App\Modules\Invoicing\Application\DTOs\QuoteItemData;
+use App\Modules\Invoicing\Application\DTOs\SendInvoiceEmailData;
+use App\Modules\Invoicing\Application\Services\QuotePdfService;
+use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
+use App\Modules\Invoicing\Domain\Models\Quote;
+use App\Modules\Invoicing\Domain\Models\QuoteItem;
+use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
+use App\Modules\Invoicing\Presentation\Resources\QuoteItemResource;
+use App\Modules\Invoicing\Presentation\Resources\QuoteResource;
+use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Presentation\Resources\OrderResource;
+use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\Pagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
+use OpenApi\Attributes as OA;
+use Throwable;
+
+#[OA\Tag(
+    name: 'Quotes',
+    description: 'Quote management endpoints'
+)]
+class QuoteController extends Controller
+{
+    use AuthorizesRequests;
+
+    public function __construct(
+        private readonly QuoteRepositoryInterface $repository,
+        private readonly CreateQuoteAction $createAction,
+        private readonly UpdateQuoteAction $updateAction,
+        private readonly AddQuoteItemAction $addItemAction,
+        private readonly RemoveQuoteItemAction $removeItemAction,
+        private readonly SendQuoteEmailAction $sendEmailAction,
+        private readonly UpdateQuoteStatusAction $updateStatusAction,
+        private readonly CreateQuotePublicLinkAction $createPublicLinkAction,
+        private readonly RevokeQuotePublicLinkAction $revokePublicLinkAction,
+        private readonly ConvertQuoteToInvoiceAction $convertToInvoiceAction,
+        private readonly ConvertQuoteToOrderAction $convertToOrderAction,
+        private readonly QuotePdfService $pdfService,
+    ) {
+        $this->authorizeResource(Quote::class, 'quote');
+    }
+
+    #[OA\Get(
+        path: '/api/v1/quotes',
+        summary: 'List quotes',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 20)),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['draft', 'sent', 'accepted', 'rejected', 'expired'])),
+            new OA\Parameter(name: 'client_id', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'date_from', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'date_to', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'sort', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'direction', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['asc', 'desc'])),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of quotes',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Quote')),
+                    new OA\Property(property: 'meta', type: 'object'),
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function index(Request $request): AnonymousResourceCollection
+    {
+        $quotes = $this->repository->paginate(
+            perPage: Pagination::perPage($request),
+            filters: $request->only(['status', 'client_id', 'date_from', 'date_to', 'sort', 'direction']),
+        );
+
+        return QuoteResource::collection($quotes);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/quotes/{id}',
+        summary: 'Get quote details',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Quote details', content: new OA\JsonContent(ref: '#/components/schemas/Quote')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Quote not found'),
+        ]
+    )]
+    public function show(Quote $quote): JsonResponse
+    {
+        $quote->load(['client', 'items']);
+
+        return QuoteResource::make($quote)->response();
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes',
+        summary: 'Create quote',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        responses: [
+            new OA\Response(response: 201, description: 'Quote created', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function store(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $request->validate([
+            ...QuoteData::rules(),
+            'client_id' => [
+                'required', 'uuid',
+                Rule::exists('clients', 'id')
+                    ->where('user_id', $user->accountOwnerId())
+                    ->whereNull('deleted_at'),
+            ],
+        ]);
+
+        try {
+            $data = QuoteData::fromRequest($request);
+            $quote = $this->createAction->execute($data, $user);
+
+            return QuoteResource::make($quote)->response()->setStatusCode(201);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Put(
+        path: '/api/v1/quotes/{id}',
+        summary: 'Update draft quote header',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Quote updated', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Quote not found'),
+            new OA\Response(response: 422, description: 'Validation error or quote not editable'),
+        ]
+    )]
+    public function update(Request $request, Quote $quote): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $request->validate([
+            ...QuoteData::rules(),
+            'client_id' => [
+                'required', 'uuid',
+                Rule::exists('clients', 'id')
+                    ->where('user_id', $user->accountOwnerId())
+                    ->whereNull('deleted_at'),
+            ],
+        ]);
+
+        try {
+            $data = QuoteData::fromRequest($request);
+            $updated = $this->updateAction->execute($quote, $data);
+
+            return QuoteResource::make($updated->load(['client', 'items']))->response();
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Delete(
+        path: '/api/v1/quotes/{id}',
+        summary: 'Delete draft quote',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Quote deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Only draft quotes can be deleted'),
+        ]
+    )]
+    public function destroy(Quote $quote): JsonResponse
+    {
+        $this->repository->delete($quote);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/items',
+        summary: 'Add item to quote',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['description', 'quantity', 'unit_price'],
+                properties: [
+                    new OA\Property(property: 'description', type: 'string', maxLength: 500),
+                    new OA\Property(property: 'quantity', type: 'number', format: 'float'),
+                    new OA\Property(property: 'unit', type: 'string', default: 'ks', maxLength: 20),
+                    new OA\Property(property: 'unit_price', type: 'number', format: 'float'),
+                    new OA\Property(property: 'vat_rate', type: 'number', format: 'float', default: 0),
+                    new OA\Property(property: 'sort_order', type: 'integer', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Item added', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/QuoteItem')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error or quote not editable'),
+        ]
+    )]
+    public function addItem(Request $request, Quote $quote): JsonResponse
+    {
+        $this->authorize('update', $quote);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $request->validate(
+            QuoteItemData::rules($user->accountOwnerId(), $user->accountOwner()->country, $quote->issued_at->toDateString()),
+        );
+
+        try {
+            $data = QuoteItemData::fromRequest($request);
+            $item = $this->addItemAction->execute($quote, $data);
+
+            return QuoteItemResource::make($item)->response()->setStatusCode(201);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Delete(
+        path: '/api/v1/quotes/{quote}/items/{item}',
+        summary: 'Remove item from quote',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'item', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Item removed'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Quote not editable'),
+        ]
+    )]
+    public function removeItem(Quote $quote, QuoteItem $item): JsonResponse
+    {
+        $this->authorize('update', $quote);
+
+        try {
+            $this->removeItemAction->execute($quote, $item);
+
+            return response()->json(null, 204);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/status',
+        summary: 'Manually update quote status',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['status'],
+                properties: [
+                    new OA\Property(property: 'status', type: 'string', enum: ['sent', 'accepted', 'rejected', 'expired']),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Quote status updated', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Invalid status transition'),
+        ]
+    )]
+    public function updateStatus(Request $request, Quote $quote): JsonResponse
+    {
+        $this->authorize('updateStatus', $quote);
+
+        $request->validate([
+            'status' => ['required', 'in:sent,accepted,rejected,expired'],
+        ]);
+
+        try {
+            $newStatus = QuoteStatus::from($request->input('status'));
+            $updated = $this->updateStatusAction->execute($quote, $newStatus);
+
+            return QuoteResource::make($updated)->response();
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/email',
+        summary: 'Email the quote PDF to the client (sends the quote first when still a draft)',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'to', type: 'string', format: 'email', nullable: true, description: 'Override recipient; defaults to the client email'),
+                    new OA\Property(property: 'cc', type: 'array', items: new OA\Items(type: 'string', format: 'email'), nullable: true, maxItems: 5),
+                    new OA\Property(property: 'message', type: 'string', nullable: true, maxLength: 2000, description: 'Custom message shown in the email body'),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Quote queued for email delivery', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error or client without email'),
+            new OA\Response(response: 429, description: 'Too many email requests'),
+        ]
+    )]
+    public function email(Request $request, Quote $quote): JsonResponse
+    {
+        $this->authorize('email', $quote);
+
+        $request->validate(SendInvoiceEmailData::rules());
+
+        try {
+            $data = SendInvoiceEmailData::fromRequest($request);
+            $updated = $this->sendEmailAction->execute($quote, $data);
+
+            return QuoteResource::make($updated->load(['client', 'items']))->response();
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Get(
+        path: '/api/v1/quotes/{quote}/pdf/download',
+        summary: 'Download quote PDF',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'PDF file download', content: new OA\MediaType(mediaType: 'application/pdf')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function pdfDownload(Quote $quote): Response
+    {
+        $this->authorize('view', $quote);
+
+        $pdf = $this->pdfService->generate($quote);
+        $filename = $this->pdfService->filename($quote);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Content-Length' => strlen($pdf),
+        ]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/quotes/{quote}/pdf/preview',
+        summary: 'Preview quote PDF in browser',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'PDF preview', content: new OA\MediaType(mediaType: 'application/pdf')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function pdfPreview(Quote $quote): Response
+    {
+        $this->authorize('view', $quote);
+
+        $pdf = $this->pdfService->generate($quote);
+        $filename = $this->pdfService->filename($quote);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+        ]);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/public-link',
+        summary: 'Create (or return the existing) public link for the quote; pass regenerate=true for a fresh token',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'regenerate', type: 'boolean', default: false),
+            ])
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Public link token and URL', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'token', type: 'string'),
+                new OA\Property(property: 'url', type: 'string'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Quote is still a draft'),
+        ]
+    )]
+    public function createPublicLink(Request $request, Quote $quote): JsonResponse
+    {
+        $this->authorize('publicLink', $quote);
+
+        $request->validate([
+            'regenerate' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $updated = $this->createPublicLinkAction->execute($quote, $request->boolean('regenerate'));
+
+            return response()->json([
+                'token' => $updated->public_token,
+                'url' => $updated->publicUrl(),
+            ]);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    #[OA\Delete(
+        path: '/api/v1/quotes/{quote}/public-link',
+        summary: 'Revoke the quote public link',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Public link revoked'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function revokePublicLink(Quote $quote): JsonResponse
+    {
+        $this->authorize('publicLink', $quote);
+
+        $this->revokePublicLinkAction->execute($quote);
+
+        return response()->json(null, 204);
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/convert-to-invoice',
+        summary: 'Convert an accepted (or sent) quote into a draft invoice',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Invoice created', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Invoice')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Invalid status or already converted'),
+        ]
+    )]
+    public function convertToInvoice(Quote $quote): JsonResponse
+    {
+        $this->authorize('convert', $quote);
+
+        try {
+            $invoice = $this->convertToInvoiceAction->execute($quote);
+
+            return InvoiceResource::make($invoice->load(['client', 'items']))->response()->setStatusCode(201);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/quotes/{quote}/convert-to-order',
+        summary: 'Convert an accepted (or sent) quote into an order',
+        security: [['sanctum' => []]],
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'quote', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Order created', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Order')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Invalid status or already converted'),
+        ]
+    )]
+    public function convertToOrder(Quote $quote): JsonResponse
+    {
+        $this->authorize('convert', $quote);
+        // Converting produces an Order, so it also needs the orders.manage gate
+        // — 'convert' alone only asserts invoices.manage.
+        $this->authorize('create', Order::class);
+
+        try {
+            $order = $this->convertToOrderAction->execute($quote);
+
+            return OrderResource::make($order->load('items'))->response()->setStatusCode(201);
+        } catch (DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+}

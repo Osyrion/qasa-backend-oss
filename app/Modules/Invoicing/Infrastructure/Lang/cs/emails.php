@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'subject' => 'Faktura :number',
+    'greeting' => 'Dobrý den,',
+    'reminders_exhausted_subject' => 'Faktura :number je stále neuhrazena po :count upomínkách',
+    'reminders_exhausted_intro' => 'Faktura č. :number je stále neuhrazena i po :count automatických upomínkách (limit :max). Další automatické upomínky se již nebudou odesílat — doporučujeme kontaktovat klienta manuálně.',
+    'intro' => 'v příloze vám zasíláme fakturu č. :number.',
+    'total_due' => 'Částka k úhradě',
+    'due_date' => 'Splatnost',
+    'variable_symbol' => 'Variabilní symbol',
+    'attachment_note' => 'Faktura je přiložena ve formátu PDF.',
+    'regards' => 'S pozdravem',
+    'reminder_subject' => 'Upomínka — faktura :number po splatnosti',
+    'reminder_intro' => 'rádi bychom Vám připomněli, že faktura č. :number je po splatnosti.',
+
+    'quote_subject' => 'Cenová nabídka :number',
+    'quote_intro' => 'v příloze vám zasíláme cenovou nabídku č. :number.',
+    'quote_total' => 'Celková částka',
+    'quote_valid_until' => 'Platnost do',
+    'quote_attachment_note' => 'Cenová nabídka je přiložena ve formátu PDF.',
+    'view_online' => 'Zobrazit fakturu online',
+    'quote_view_online' => 'Zobrazit nabídku online',
+    'quote_accepted_subject' => 'Cenová nabídka :number byla přijata',
+    'quote_rejected_subject' => 'Cenová nabídka :number byla odmítnuta',
+    'quote_accepted_body' => 'Vaši cenovou nabídku č. :number klient přijal.',
+    'quote_rejected_body' => 'Vaši cenovou nabídku č. :number klient odmítl.',
+    'payment_details' => 'Platební údaje',
+    'iban' => 'IBAN',
+    'bic' => 'SWIFT/BIC',
+    'qr_hint' => 'Zaplatit můžete naskenováním QR kódu níže.',
+    'qr_alt' => 'Platební QR kód',
+    'overdue_digest_subject' => ':count faktur(y) nově po splatnosti',
+    'overdue_digest_intro' => 'Od poslední kontroly se dostalo po splatnosti :count faktur(y):',
+    'overdue_digest_column_number' => 'Faktura',
+    'overdue_digest_column_client' => 'Klient',
+    'overdue_digest_column_amount' => 'Částka',
+    'overdue_digest_column_days_overdue' => 'Dní po splatnosti',
+];

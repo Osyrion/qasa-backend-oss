@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<KVDPH_2025 xmlns="https://ekr.financnasprava.sk/Formulare/XSD/kv_dph_2025.xsd">
+  <Identifikacia>
+    <IcDphPlatitela>SK1234567890</IcDphPlatitela>
+    <Druh>R</Druh>
+    <Obdobie>
+      <Rok>2026</Rok>
+      <Mesiac>3</Mesiac>
+    </Obdobie>
+    <Nazov>Ján Novák</Nazov>
+    <Stat>SK</Stat>
+    <Obec>Bratislava</Obec>
+    <PSC>81101</PSC>
+    <Ulica>Hlavná 1</Ulica>
+    <Tel>+421900123456</Tel>
+    <Email>jan.novak@example.sk</Email>
+  </Identifikacia>
+  <Transakcie>
+    <A1 Odb="SK2020202020" F="FA-2026-1" Den="2026-03-05" Z="1000.00" D="230.00" S="23"/>
+    <A1 Odb="SK3030303030" F="FA-2026-2" Den="2026-03-06" Z="800.00" D="0.00" S="23"/>
+    <B1 Dod="DE555666777" F="FD-2026-1" Den="2026-03-07" Z="1000.00" D="230.00" S="23" O="230.00"/>
+    <B2 Dod="SK4040404040" F="FD-2026-2" Den="2026-03-08" Z="500.00" D="115.00" S="23" O="115.00"/>
+    <C1 Odb="SK2020202020" FO="DO-2026-1" FP="FA-2026-1" ZR="-100.00" DR="-23.00" S="23"/>
+  </Transakcie>
+</KVDPH_2025>
