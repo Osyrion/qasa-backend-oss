@@ -9,10 +9,19 @@ use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Application\Services\DashboardService;
 use App\Modules\Auth\Application\Services\SetupStatusService;
 use App\Modules\Auth\Application\Services\TwoFactorService;
+use App\Modules\Auth\Domain\Events\LoginFailed;
+use App\Modules\Auth\Domain\Events\LoginSucceeded;
+use App\Modules\Auth\Domain\Events\RecoveryCodesRegenerated;
+use App\Modules\Auth\Domain\Events\TwoFactorConfirmed;
+use App\Modules\Auth\Domain\Events\TwoFactorDisabled;
+use App\Modules\Auth\Domain\Events\TwoFactorEnabled;
+use App\Modules\Auth\Domain\Events\UserLoggedOut;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Infrastructure\Sanctum\TenantAwarePersonalAccessToken;
 use App\Modules\Auth\Presentation\Console\CreateUserCommand;
+use App\Modules\Shared\Application\Services\ActivityEventRegistry;
 use App\Modules\Shared\Authorization\AbilityCatalog;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -128,6 +137,49 @@ class AuthServiceProvider extends ServiceProvider
             return rtrim((string) config('app.frontend_url'), '/')
                 .'/reset-password?token='.$token
                 .'&email='.urlencode($user->email);
+        });
+
+        $this->registerActivityEvents();
+    }
+
+    /**
+     * Activity-log events owned by Auth. Registered here rather than in
+     * SharedServiceProvider because Auth (unlike Invoicing/Clients/Orders)
+     * has its own provider that already boots after Shared's — see
+     * ActivityEventRegistry.
+     */
+    private function registerActivityEvents(): void
+    {
+        $registry = $this->app->make(ActivityEventRegistry::class);
+
+        $registry->register(LoginSucceeded::class, 'auth.login_succeeded', fn (LoginSucceeded $e): User => $e->user);
+        $registry->register(
+            LoginFailed::class,
+            'auth.login_failed',
+            fn (LoginFailed $e): User => $e->user,
+            fn (LoginFailed $e): array => ['reason' => $e->reason],
+        );
+        $registry->register(UserLoggedOut::class, 'auth.logout', fn (UserLoggedOut $e): User => $e->user);
+
+        $registry->register(TwoFactorEnabled::class, 'auth.two_factor_enabled', fn (TwoFactorEnabled $e): User => $e->user);
+        $registry->register(TwoFactorConfirmed::class, 'auth.two_factor_confirmed', fn (TwoFactorConfirmed $e): User => $e->user);
+        $registry->register(TwoFactorDisabled::class, 'auth.two_factor_disabled', fn (TwoFactorDisabled $e): User => $e->user);
+        $registry->register(
+            RecoveryCodesRegenerated::class,
+            'auth.recovery_codes_regenerated',
+            fn (RecoveryCodesRegenerated $e): User => $e->user,
+        );
+
+        // Laravel's own built-in event — already dispatched in
+        // PasswordResetController::reset(), nothing new to fire. $e->user is
+        // declared Authenticatable (Laravel's own event, not ours) but is
+        // always our User model in practice — the assert() narrows it back
+        // for PHPStan rather than widening the registry's Closure(): Model
+        // signature.
+        $registry->register(PasswordReset::class, 'auth.password_reset', function (PasswordReset $e): User {
+            assert($e->user instanceof User);
+
+            return $e->user;
         });
     }
 }

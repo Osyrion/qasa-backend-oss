@@ -110,7 +110,9 @@ class LoginWithGoogleAction
         $deviceName = $deviceName ?? 'google-oauth';
         $user->tokens()->where('name', $deviceName)->delete();
 
-        return LoginResult::success($user->createToken($deviceName)->plainTextToken, $user);
+        $token = $user->createSessionToken($deviceName, $request?->ip(), $request?->userAgent());
+
+        return LoginResult::success($token->plainTextToken, $user);
     }
 
     /**

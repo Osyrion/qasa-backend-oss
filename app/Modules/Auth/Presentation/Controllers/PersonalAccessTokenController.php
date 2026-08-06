@@ -39,7 +39,7 @@ class PersonalAccessTokenController extends Controller
         $user = $request->user();
 
         return PersonalAccessTokenResource::collection(
-            $user->tokens()->orderByDesc('created_at')->get()
+            $user->tokens()->where('type', 'api')->orderByDesc('created_at')->get()
         );
     }
 
@@ -81,6 +81,7 @@ class PersonalAccessTokenController extends Controller
         $user = $request->user();
 
         $token = $user->createToken($data->name, $data->abilities);
+        $token->accessToken->forceFill(['type' => 'api'])->save();
 
         return response()->json([
             'token' => $token->plainTextToken,
@@ -107,7 +108,7 @@ class PersonalAccessTokenController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $deleted = $user->tokens()->where('id', $id)->delete();
+        $deleted = $user->tokens()->where('id', $id)->where('type', 'api')->delete();
 
         abort_if($deleted === 0, 404);
 

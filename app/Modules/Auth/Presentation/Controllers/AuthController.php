@@ -13,6 +13,7 @@ use App\Modules\Auth\Application\DTOs\LoginData;
 use App\Modules\Auth\Application\DTOs\RegisterUserData;
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Application\Services\AccountExportService;
+use App\Modules\Auth\Domain\Events\UserLoggedOut;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Resources\UserResource;
 use App\Modules\Shared\Exceptions\DomainException;
@@ -20,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
@@ -87,8 +89,10 @@ class AuthController extends Controller
         $data = RegisterUserData::fromRequest($request);
         $user = $this->registerAction->execute($data);
 
-        $token = $user->createToken(
-            $request->input('device_name', 'api-token')
+        $token = $user->createSessionToken(
+            $request->input('device_name', 'api-token'),
+            $request->ip(),
+            $request->userAgent(),
         )->plainTextToken;
 
         return response()->json([
@@ -178,7 +182,16 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        $user->currentAccessToken()->delete();
+        $token = $user->currentAccessToken();
+
+        // A session-authenticated (stateful SPA) request has no real token
+        // to revoke — currentAccessToken() is a TransientToken there, which
+        // has no delete() method at all.
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
+        event(new UserLoggedOut($user));
 
         return response()->json(['message' => __('auth.logout_success')]);
     }

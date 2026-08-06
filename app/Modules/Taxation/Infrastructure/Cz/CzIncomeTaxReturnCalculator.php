@@ -11,6 +11,7 @@ use App\Modules\Taxation\Domain\ValueObjects\TaxReturnResult;
 use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRates2025;
 use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRates2026;
 use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRateTable;
+use App\Modules\Taxation\Infrastructure\Cz\Rates\DbBackedCzRateTable;
 
 /**
  * §7 (samostatná činnost) worksheet — real vs. flat-rate expenses (whichever
@@ -34,13 +35,12 @@ final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
 
     public function supportsYear(int $year): bool
     {
-        return isset($this->rateTables[$year]);
+        return isset($this->rateTables[$year]) || DbBackedCzRateTable::hasYear($year);
     }
 
     public function calculate(TaxReturnInput $input): TaxReturnResult
     {
-        $rates = $this->rateTables[$input->year]
-            ?? throw DomainException::because(__('taxation.unsupported_tax_year', ['year' => $input->year]));
+        $rates = $this->ratesFor($input->year);
 
         $businessIncome = $input->systemIncome->businessIncome;
         $expensesUsed = $this->expensesUsed($input, $rates, $businessIncome);
@@ -88,6 +88,17 @@ final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
             contributions: $contributions,
             notes: $notes,
         );
+    }
+
+    /**
+     * An admin-edited row is a full replacement for the year, checked
+     * before the hardcoded class — never merged with it.
+     */
+    private function ratesFor(int $year): CzRateTable
+    {
+        return DbBackedCzRateTable::forYear($year)
+            ?? $this->rateTables[$year]
+            ?? throw DomainException::because(__('taxation.unsupported_tax_year', ['year' => $year]));
     }
 
     private function expensesUsed(TaxReturnInput $input, CzRateTable $rates, float $businessIncome): float

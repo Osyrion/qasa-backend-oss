@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\DeleteAccountData;
+use App\Modules\Auth\Domain\Events\AccountDeleted;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +24,12 @@ class DeleteAccountAction
         } elseif ($data->confirmation !== 'DELETE') {
             throw DomainException::because(__('auth.invalid_delete_confirmation'));
         }
+
+        // Fired before the (soft) delete so the subject is still fully
+        // hydrated. activity_log.user_id cascades on a hard delete, not a
+        // soft one, so this row is safe today — but a future hard-delete/
+        // purge job would take it down with the account it documents.
+        event(new AccountDeleted($user));
 
         $user->tokens()->delete();
         $user->delete();

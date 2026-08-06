@@ -78,6 +78,19 @@ return [
             'formatter' => env('LOG_DAILY_JSON', true) ? JsonFormatter::class : null,
         ],
 
+        // Pre-tenant security events that have no activity_log subject to
+        // attach to (e.g. a login attempt against an unknown email) — kept
+        // separate from 'daily' so they can be watched/alerted on without
+        // wading through routine application noise.
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'warning',
+            'days' => env('LOG_SECURITY_DAYS', 90),
+            'replace_placeholders' => true,
+            'formatter' => JsonFormatter::class,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

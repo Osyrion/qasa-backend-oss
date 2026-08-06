@@ -8,6 +8,7 @@ use App\Modules\Auth\Presentation\Controllers\EmailVerificationController;
 use App\Modules\Auth\Presentation\Controllers\GoogleAuthController;
 use App\Modules\Auth\Presentation\Controllers\PasswordResetController;
 use App\Modules\Auth\Presentation\Controllers\PersonalAccessTokenController;
+use App\Modules\Auth\Presentation\Controllers\SessionController;
 use App\Modules\Auth\Presentation\Controllers\SetupStatusController;
 use App\Modules\Auth\Presentation\Controllers\TwoFactorController;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +56,12 @@ Route::prefix('api/v1')->group(function (): void {
             ->middleware('feature:api_access')
             ->name('auth.tokens.store');
         Route::delete('auth/tokens/{id}', [PersonalAccessTokenController::class, 'destroy'])->name('auth.tokens.destroy');
+
+        // "My devices" — login sessions, kept separate from the integration
+        // tokens above (see SessionController's own docblock for why).
+        Route::get('auth/sessions', [SessionController::class, 'index'])->name('auth.sessions.index');
+        Route::delete('auth/sessions', [SessionController::class, 'destroyOthers'])->name('auth.sessions.destroy-others');
+        Route::delete('auth/sessions/{id}', [SessionController::class, 'destroy'])->name('auth.sessions.destroy');
 
         // Two-factor authentication management
         Route::post('auth/2fa/enable', [TwoFactorController::class, 'enable'])->name('auth.2fa.enable');

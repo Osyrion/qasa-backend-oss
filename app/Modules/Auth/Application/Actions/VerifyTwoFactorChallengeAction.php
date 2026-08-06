@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\VerifyTwoFactorChallengeData;
 use App\Modules\Auth\Application\Services\TwoFactorChallengeStore;
+use App\Modules\Auth\Domain\Events\LoginSucceeded;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -38,8 +39,12 @@ readonly class VerifyTwoFactorChallengeAction
         // Same device-name dedup as LoginAction/LoginWithGoogleAction.
         $user->tokens()->where('name', $deviceName)->delete();
 
+        $token = $user->createSessionToken($deviceName, request()->ip(), request()->userAgent());
+
+        event(new LoginSucceeded($user));
+
         return [
-            'token' => $user->createToken($deviceName)->plainTextToken,
+            'token' => $token->plainTextToken,
             'user' => $user,
         ];
     }

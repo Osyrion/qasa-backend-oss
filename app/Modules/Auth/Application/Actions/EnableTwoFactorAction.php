@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\Services\TwoFactorService;
+use App\Modules\Auth\Domain\Events\TwoFactorEnabled;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -37,6 +38,8 @@ readonly class EnableTwoFactorAction
             email: $user->email,
             secret: $secret,
         );
+
+        event(new TwoFactorEnabled($user));
 
         return [
             'secret' => $secret,

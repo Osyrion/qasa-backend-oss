@@ -45,6 +45,23 @@ parameters:
             message: '#will always evaluate to true#'
             path: app/Modules/Auth/Application/Actions/UpdateProfileAction.php
         -
+            # Same Sanctum currentAccessToken() gap as above — logout() has to
+            # tolerate a TransientToken (session/first-party auth has no real
+            # token to revoke), which has no delete() method at all.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Auth/Presentation/Controllers/AuthController.php
+        -
+            # Same Sanctum currentAccessToken() gap, admin guard.
+            message: '#will always evaluate to true#'
+            path: app/Modules/Admin/Presentation/Controllers/AdminAuthController.php
+        -
+            # Auth::guard('admin')->user() is declared non-nullable by
+            # Laravel's own facade stub but is genuinely null whenever no
+            # admin is authenticated yet (e.g. logging a failed login
+            # attempt) — the nullsafe here is real, not redundant.
+            message: '#nullsafe property access .* is unnecessary#'
+            path: app/Modules/Admin/Domain/Models/ActivityLog.php
+        -
             # Pest applies this trait at runtime through uses() in Pest.php,
             # which PHPStan cannot see, so it reads as unused. The trait is
             # what makes RefreshDatabase migrate as the schema owner while

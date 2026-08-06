@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Notifications;
 
+use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\DTOs\NotificationPayload;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -31,10 +32,19 @@ abstract class InAppNotification extends Notification implements ShouldQueue
     abstract public function payload(object $notifiable): NotificationPayload;
 
     /**
+     * Skipped entirely — not queued, not written — when the recipient has
+     * turned off in-app notifications for this category. Mail (added by a
+     * subclass's own via()) and the automation trigger that decided to
+     * notify are untouched; this only controls the notification centre row.
+     *
      * @return list<string>
      */
     public function via(object $notifiable): array
     {
+        if ($notifiable instanceof User && ! $notifiable->wantsNotificationCategory($this->payload($notifiable)->category)) {
+            return [];
+        }
+
         return ['database'];
     }
 

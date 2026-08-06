@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'invalid_credentials' => 'Incorrect email or password.',
     'google_account' => 'This account signs in with Google.',
+    'cannot_revoke_current_session' => 'You cannot revoke the session you are currently using — log in elsewhere and revoke it from there.',
     'invalid_verification_link' => 'Invalid verification link.',
     'email_verified' => 'Email verified successfully.',
     'email_already_verified' => 'Email is already verified.',

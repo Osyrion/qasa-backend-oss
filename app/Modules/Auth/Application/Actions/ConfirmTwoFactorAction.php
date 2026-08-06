@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\TwoFactorCodeData;
 use App\Modules\Auth\Application\Services\TwoFactorService;
+use App\Modules\Auth\Domain\Events\TwoFactorConfirmed;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -40,6 +41,8 @@ readonly class ConfirmTwoFactorAction
             'two_factor_confirmed_at' => now(),
             'two_factor_recovery_codes' => $recoveryCodes['hashed'],
         ]);
+
+        event(new TwoFactorConfirmed($user));
 
         return $recoveryCodes['plain'];
     }

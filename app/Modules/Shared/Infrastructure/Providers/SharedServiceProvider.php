@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Infrastructure\Providers;
 
+use App\Modules\Auth\Domain\Events\AccountDeleted;
 use App\Modules\Auth\Domain\Events\UserIcoChanged;
 use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Auth\Domain\Models\User;
@@ -11,14 +12,17 @@ use App\Modules\Clients\Domain\Events\ClientCreated;
 use App\Modules\Clients\Domain\Events\ClientDeleted;
 use App\Modules\Clients\Domain\Events\ClientUpdated;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Domain\Events\CashDocumentReversed;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
 use App\Modules\Invoicing\Domain\Events\InvoiceIssued;
 use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Events\InvoiceReminded;
 use App\Modules\Invoicing\Domain\Events\InvoiceSent;
+use App\Modules\Invoicing\Domain\Events\PaymentDeleted;
 use App\Modules\Invoicing\Domain\Events\PaymentRecorded;
 use App\Modules\Invoicing\Domain\Events\QuoteAccepted;
 use App\Modules\Invoicing\Domain\Events\QuoteRejected;
+use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Orders\Domain\Events\OrderCreated;
@@ -141,10 +145,39 @@ class SharedServiceProvider extends ServiceProvider
             ],
         );
 
+        // Same non-user_id shape as PaymentRecorded above — the payment is
+        // gone by the time anything downstream would look at it, so the
+        // invoice is both the natural subject and the only one that still
+        // exists to carry a user_id.
+        $registry->register(
+            PaymentDeleted::class,
+            'payment.deleted',
+            fn (PaymentDeleted $e): Invoice => $e->invoice,
+            fn (PaymentDeleted $e): array => [
+                'payment_id' => $e->payment->id,
+                'amount' => (string) $e->payment->amount,
+            ],
+        );
+
+        // Subject is the original, not the reversal — "this document was
+        // reversed" reads more naturally against the one someone is looking
+        // at than against its mirror image.
+        $registry->register(
+            CashDocumentReversed::class,
+            'cash_document.reversed',
+            fn (CashDocumentReversed $e): CashDocument => $e->original,
+            fn (CashDocumentReversed $e): array => [
+                'amount' => (string) $e->original->amount,
+                'currency' => $e->original->currency->value,
+                'reversal_number' => $e->reversal->number,
+            ],
+        );
+
         $registry->register(QuoteAccepted::class, 'quote.accepted', fn (QuoteAccepted $e): Quote => $e->quote);
         $registry->register(QuoteRejected::class, 'quote.rejected', fn (QuoteRejected $e): Quote => $e->quote);
 
         $registry->register(UserRegistered::class, 'user.registered', fn (UserRegistered $e): User => $e->user);
+        $registry->register(AccountDeleted::class, 'account.deleted', fn (AccountDeleted $e): User => $e->user);
         $registry->register(
             UserIcoChanged::class,
             'user.ico_changed',

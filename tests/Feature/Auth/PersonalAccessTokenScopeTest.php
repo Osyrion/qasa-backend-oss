@@ -47,7 +47,12 @@ it('revokes its own token but not another account token', function (): void {
     // createSaasUser() left the connection bound to $stranger (whoever was
     // created last) — personal_access_tokens is tenant-scoped too (phase
     // 7), so minting $owner's token needs to run bound to $owner instead.
-    $tokenId = asAccount($owner, fn () => $owner->createToken('to-revoke', ['invoices.view']))->accessToken->id;
+    $tokenId = asAccount($owner, function () use ($owner) {
+        $token = $owner->createToken('to-revoke', ['invoices.view']);
+        $token->accessToken->forceFill(['type' => 'api'])->save();
+
+        return $token;
+    })->accessToken->id;
 
     $this->actingAs($stranger)
         ->deleteJson("/api/v1/auth/tokens/{$tokenId}")

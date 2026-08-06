@@ -15,6 +15,7 @@ use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use App\Modules\Shared\Domain\Models\AccountNotification;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Enums\NotificationCategory;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Domain\Enums\VatFilingFrequency;
@@ -33,6 +34,7 @@ use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\NewAccessToken;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
@@ -86,6 +88,12 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property string|null $clockify_api_key
  * @property string|null $clockify_workspace_id
  * @property bool $ai_extraction_enabled Account-wide switch for AI invoice extraction (BYOK or platform) — the account may still fall back to regex per FieldExtractorFactory's decision tree
+ * @property bool $notify_invoice_enabled Gates the in-app (database channel) copy only — never mail or the automation trigger itself
+ * @property bool $notify_quote_enabled Gates the in-app (database channel) copy only
+ * @property bool $notify_tax_enabled Gates the in-app (database channel) copy only
+ * @property bool $notify_billing_enabled Gates the in-app (database channel) copy only
+ * @property bool $notify_banking_enabled Gates the in-app (database channel) copy only
+ * @property bool $notify_system_enabled Gates the in-app (database channel) copy only
  * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -171,6 +179,8 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         'country', 'company_name', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'clockify_api_key', 'clockify_workspace_id', 'ai_extraction_enabled',
+        'notify_invoice_enabled', 'notify_quote_enabled', 'notify_tax_enabled',
+        'notify_billing_enabled', 'notify_banking_enabled', 'notify_system_enabled',
     ];
 
     protected $hidden = [
@@ -184,6 +194,12 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         'vat_status' => 'non_payer',
         'overdue_digest_enabled' => true,
         'ai_extraction_enabled' => false,
+        'notify_invoice_enabled' => true,
+        'notify_quote_enabled' => true,
+        'notify_tax_enabled' => true,
+        'notify_billing_enabled' => true,
+        'notify_banking_enabled' => true,
+        'notify_system_enabled' => true,
     ];
 
     /**
@@ -228,6 +244,12 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
             'ai_extraction_enabled' => 'boolean',
+            'notify_invoice_enabled' => 'boolean',
+            'notify_quote_enabled' => 'boolean',
+            'notify_tax_enabled' => 'boolean',
+            'notify_billing_enabled' => 'boolean',
+            'notify_banking_enabled' => 'boolean',
+            'notify_system_enabled' => 'boolean',
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
@@ -274,9 +296,47 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         return $this->google_id !== null;
     }
 
+    /**
+     * Whether this recipient wants an in-app (database channel) copy of a
+     * notification in the given category — checked by InAppNotification::
+     * via(), never by mail or by the automation trigger that decided to
+     * send in the first place.
+     */
+    public function wantsNotificationCategory(NotificationCategory $category): bool
+    {
+        return match ($category) {
+            NotificationCategory::Invoice => $this->notify_invoice_enabled,
+            NotificationCategory::Quote => $this->notify_quote_enabled,
+            NotificationCategory::Tax => $this->notify_tax_enabled,
+            NotificationCategory::Billing => $this->notify_billing_enabled,
+            NotificationCategory::Banking => $this->notify_banking_enabled,
+            NotificationCategory::System => $this->notify_system_enabled,
+        };
+    }
+
     public function hasPassword(): bool
     {
         return $this->password !== null;
+    }
+
+    /**
+     * Every path that signs a user in (password login, Google OAuth, 2FA
+     * challenge, invitation accept) goes through this rather than
+     * createToken() directly, so `type` is never missing on a login token —
+     * SessionController relies on it to tell a login token apart from an
+     * integration one created via PersonalAccessTokenController.
+     */
+    public function createSessionToken(string $name, ?string $ipAddress = null, ?string $userAgent = null): NewAccessToken
+    {
+        $token = $this->createToken($name);
+
+        $token->accessToken->forceFill([
+            'type' => 'session',
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+        ])->save();
+
+        return $token;
     }
 
     /**

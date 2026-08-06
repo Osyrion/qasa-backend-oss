@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\TwoFactorCodeData;
 use App\Modules\Auth\Application\Services\TwoFactorService;
+use App\Modules\Auth\Domain\Events\RecoveryCodesRegenerated;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -34,6 +35,8 @@ readonly class RegenerateRecoveryCodesAction
         $recoveryCodes = $this->service->generateRecoveryCodes();
 
         $user->update(['two_factor_recovery_codes' => $recoveryCodes['hashed']]);
+
+        event(new RecoveryCodesRegenerated($user));
 
         return $recoveryCodes['plain'];
     }

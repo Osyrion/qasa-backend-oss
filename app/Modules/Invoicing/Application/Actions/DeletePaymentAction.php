@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
+use App\Modules\Invoicing\Domain\Events\PaymentDeleted;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,8 @@ readonly class DeletePaymentAction
             $locked = Invoice::query()->lockForUpdate()->whereKey($invoice->getKey())->firstOrFail();
 
             $payment->delete();
+
+            event(new PaymentDeleted($locked, $payment));
 
             $locked->unsetRelation('payments')->forgetPaymentsAggregate();
 

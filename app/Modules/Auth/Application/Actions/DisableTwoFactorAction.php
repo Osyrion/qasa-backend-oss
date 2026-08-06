@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\DisableTwoFactorData;
+use App\Modules\Auth\Domain\Events\TwoFactorDisabled;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\Hash;
@@ -46,5 +47,7 @@ readonly class DisableTwoFactorAction
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ]);
+
+        event(new TwoFactorDisabled($user));
     }
 }

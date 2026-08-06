@@ -1218,6 +1218,100 @@
                 ]
             }
         },
+        "/api/v1/auth/sessions": {
+            "get": {
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "List the caller's active login sessions",
+                "operationId": "1df83de6fc17793872e2608c2cefd820",
+                "responses": {
+                    "200": {
+                        "description": "Sessions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Session"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Log out every other session",
+                "description": "Revokes every login session except the one the request is authenticated with.",
+                "operationId": "8e4b4960f89184a2236dc4ae9c0e7596",
+                "responses": {
+                    "200": {
+                        "description": "How many were revoked"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/sessions/{id}": {
+            "delete": {
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Revoke one login session",
+                "description": "Refuses to revoke the session the request is authenticated with — log in elsewhere and revoke it from there, or use \"log out everywhere else\".",
+                "operationId": "77427d1c1af8dea813a98de5538767d0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Revoked"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "422": {
+                        "description": "Attempted to revoke the current session"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/profile/setup-status": {
             "get": {
                 "tags": [
@@ -11882,6 +11976,108 @@
                 ]
             }
         },
+        "/api/v1/notifications/preferences": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Show the caller's in-app notification category preferences",
+                "operationId": "9a3d0edd48a2530416d89f0491376129",
+                "responses": {
+                    "200": {
+                        "description": "Current preferences",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "notify_invoice_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "notify_quote_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "notify_tax_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "notify_billing_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "notify_banking_enabled": {
+                                            "type": "boolean"
+                                        },
+                                        "notify_system_enabled": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Update the caller's in-app notification category preferences",
+                "description": "Partial update — omitted fields are left unchanged. Only gates the in-app (database) channel, never e-mail or the automation trigger that decided to notify.",
+                "operationId": "e40e9b75a68432169632264c0c583da1",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "notify_invoice_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "notify_quote_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "notify_tax_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "notify_billing_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "notify_banking_enabled": {
+                                        "type": "boolean"
+                                    },
+                                    "notify_system_enabled": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/contributions": {
             "get": {
                 "tags": [
@@ -13391,6 +13587,40 @@
                             "type": "string",
                             "example": "invoices.view"
                         }
+                    },
+                    "last_used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Session": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "api-token"
+                    },
+                    "ip_address": {
+                        "type": "string",
+                        "example": "203.0.113.7",
+                        "nullable": true
+                    },
+                    "user_agent": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_current": {
+                        "type": "boolean"
                     },
                     "last_used_at": {
                         "type": "string",
@@ -15802,6 +16032,10 @@
         {
             "name": "Tokens",
             "description": "Scoped personal access tokens for third-party integrations"
+        },
+        {
+            "name": "Sessions",
+            "description": "Login tokens (\"my devices\") — separate from API integration tokens"
         },
         {
             "name": "TwoFactor",

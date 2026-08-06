@@ -144,6 +144,16 @@ function ownAccountRouteAllowlist(): array
         'auth.tokens.index' => 'own user record',
         'auth.tokens.store' => 'creates a token owned by the caller',
         'auth.tokens.destroy' => "scoped via \$user->tokens()->where('id', ...) in the controller",
+        // Same reasoning as auth.tokens.* above — SessionController scopes
+        // via $user->tokens()->where('type', 'session') in the controller.
+        'auth.sessions.index' => 'own user record',
+        'auth.sessions.destroy-others' => 'scoped via $user->tokens() in the controller',
+        'auth.sessions.destroy' => "scoped via \$user->tokens()->where('id', ...) in the controller",
+
+        // Personal preference, not an account setting — each caller reads/
+        // writes only their own row (see NotificationPreferencesController).
+        'notifications.preferences.show' => 'own user record',
+        'notifications.preferences.update' => 'own user record',
 
         // Own tax residency — one row per account, no foreign id. The
         // tax-return endpoints used to live here on the same reasoning and

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Invoicing\Application\Services\CashDocumentNumberGenerator;
+use App\Modules\Invoicing\Domain\Events\CashDocumentReversed;
 use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -36,7 +37,7 @@ readonly class ReverseCashDocumentAction
 
         $type = $document->type->opposite();
 
-        return $this->numbers->withNumber(
+        $reversal = $this->numbers->withNumber(
             $document->user_id,
             $type,
             (int) $document->issued_at->year,
@@ -57,5 +58,9 @@ readonly class ReverseCashDocumentAction
                 'reverses_cash_document_id' => $document->id,
             ]),
         );
+
+        event(new CashDocumentReversed($document, $reversal));
+
+        return $reversal;
     }
 }

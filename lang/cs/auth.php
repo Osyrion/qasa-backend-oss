@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'invalid_credentials' => 'Nesprávný e-mail nebo heslo.',
     'google_account' => 'Tento účet se přihlašuje přes Google.',
+    'cannot_revoke_current_session' => 'Nemůžeš odhlásit zařízení, ze kterého právě pracuješ — přihlas se jinde a odhlas ho odtamtud.',
     'invalid_verification_link' => 'Neplatný ověřovací odkaz.',
     'invalid_oauth_state' => 'Neplatný nebo prošlý požadavek na přihlášení. Zkuste to prosím znovu.',
     'email_verified' => 'E-mail byl úspěšně ověřen.',
