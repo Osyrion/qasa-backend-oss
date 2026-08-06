@@ -22,17 +22,32 @@ readonly class DeletePaymentAction
     public function execute(Invoice $invoice, InvoicePayment $payment): void
     {
         DB::transaction(function () use ($invoice, $payment): void {
+            // Re-read under a row lock, for the same reason and in the same
+            // shape as RecordPaymentAction. $invoice is whatever the caller
+            // bound at the top of the request, and the status this decision
+            // turns on can have moved since — the bank sync auto-applies
+            // matched payments (Provenance::AutoMatched) while a person is
+            // deleting a mis-recorded one. Reading isPaid() off the stale
+            // instance left an invoice marked paid with a balance still
+            // outstanding; see DeletePaymentStalenessTest.
+            $locked = Invoice::query()->lockForUpdate()->whereKey($invoice->getKey())->firstOrFail();
+
             $payment->delete();
 
-            $invoice->unsetRelation('payments');
+            $locked->unsetRelation('payments')->forgetPaymentsAggregate();
 
-            if ($invoice->isPaid() && $invoice->balance() > 0) {
-                $invoice->update([
-                    'status' => $invoice->reminder_count > 0
+            if ($locked->isPaid() && $locked->balance() > 0) {
+                $locked->update([
+                    'status' => $locked->reminder_count > 0
                         ? InvoiceStatus::Reminded->value
                         : InvoiceStatus::Sent->value,
                 ]);
             }
+
+            // Hand the caller the state the transaction settled on rather
+            // than the one it read before — it goes on to serialise it.
+            $invoice->setRawAttributes($locked->getAttributes(), true);
+            $invoice->unsetRelation('payments')->forgetPaymentsAggregate();
         });
     }
 }

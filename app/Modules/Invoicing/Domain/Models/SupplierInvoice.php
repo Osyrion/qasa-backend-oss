@@ -9,6 +9,7 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\SupplierInvoiceFactory;
 use Eloquent;
@@ -31,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property string $supplier_invoice_number Original document number as issued by the vendor
  * @property string|null $variable_symbol
  * @property string $status
+ * @property Provenance $provenance How this document came to exist — manual|email_in|api|import|auto_matched|ai_suggested
  * @property SupplierVatRegime $vat_regime
  * @property Carbon $issued_at
  * @property Carbon|null $taxable_supply_at DUZP
@@ -121,6 +123,7 @@ class SupplierInvoice extends Model
         'supplier_invoice_number',
         'variable_symbol',
         'status',
+        'provenance',
         'vat_regime',
         'issued_at',
         'taxable_supply_at',
@@ -149,6 +152,7 @@ class SupplierInvoice extends Model
     {
         return [
             'currency' => Currency::class,
+            'provenance' => Provenance::class,
             'vat_regime' => SupplierVatRegime::class,
             'issued_at' => 'date',
             'taxable_supply_at' => 'date',

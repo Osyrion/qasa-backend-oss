@@ -16,6 +16,20 @@ return [
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
+
+        // N1 (e-mail-in) — inbound webhook. Postmark has no HMAC signature
+        // option for inbound; Basic Auth embedded in the webhook URL
+        // registered with Postmark (https://user:pass@host/...) is its own
+        // recommended protection, enforced by RequireBasicAuthWebhook.
+        'inbound_username' => env('POSTMARK_INBOUND_USERNAME'),
+        'inbound_password' => env('POSTMARK_INBOUND_PASSWORD'),
+        'inbound_domain' => env('POSTMARK_INBOUND_DOMAIN'),
+
+        // Outbound (delivery) webhook — Delivery/Bounce/Open/SpamComplaint.
+        // A separate pair from the inbound one above so either can be
+        // rotated without taking the other down.
+        'outbound_username' => env('POSTMARK_OUTBOUND_USERNAME'),
+        'outbound_password' => env('POSTMARK_OUTBOUND_PASSWORD'),
     ],
 
     'resend' => [
@@ -65,6 +79,20 @@ return [
 
     'crpdph' => [
         'base_url' => env('CRPDPH_API_URL', 'https://adisrws.mfcr.cz'),
+    ],
+
+    'fio' => [
+        'base_url' => env('FIO_API_URL', 'https://fioapi.fio.cz'),
+    ],
+
+    // UNVERIFIED against a live sandbox account — see "Otvorené otázky" in
+    // docs/plans/COMPETITOR_MIGRATION_IMPORTS_PLAN.md. SuperfakturaApiClient
+    // implements the publicly documented REST shape (SFAPI auth header,
+    // /clients/index.json, /invoices/index.json) but must be confirmed
+    // against a real account — in particular whether invoice payments are
+    // included in the export — before this driver is enabled in production.
+    'superfaktura' => [
+        'base_url' => env('SUPERFAKTURA_API_URL', 'https://moja.superfaktura.sk'),
     ],
 
     'anthropic' => [

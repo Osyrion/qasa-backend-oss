@@ -39,6 +39,9 @@ function paidProforma(User $user, Client $client, array $overrides = []): Invoic
         'amount' => 1200,
         'paid_at' => today()->subDays(2),
         'method' => 'bank_transfer',
+        // Not 'manual': lets the settle test prove the payment's provenance
+        // is carried over to the settled invoice, not reset to the default.
+        'provenance' => 'auto_matched',
     ]);
 
     $proforma->update(['status' => 'paid']);
@@ -66,6 +69,9 @@ it('settles a fully paid proforma into an ordinary paid invoice', function (): v
 
     expect($proforma->refresh()->settled_invoice_id)->toBe($response->json('data.id'))
         ->and($proforma->type->value)->toBe('proforma');
+
+    $settled = Invoice::query()->with('payments')->findOrFail($response->json('data.id'));
+    expect($settled->payments->first()?->provenance->value)->toBe('auto_matched');
 });
 
 it('rejects settling a document that is not a proforma', function (): void {

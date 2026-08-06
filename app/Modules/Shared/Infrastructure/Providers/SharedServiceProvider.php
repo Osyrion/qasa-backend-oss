@@ -12,6 +12,7 @@ use App\Modules\Clients\Domain\Events\ClientDeleted;
 use App\Modules\Clients\Domain\Events\ClientUpdated;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
+use App\Modules\Invoicing\Domain\Events\InvoiceIssued;
 use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Events\InvoiceReminded;
 use App\Modules\Invoicing\Domain\Events\InvoiceSent;
@@ -26,15 +27,23 @@ use App\Modules\Orders\Domain\Events\OrderUpdated;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
+use App\Modules\Shared\Domain\Models\AccountNotification;
+use App\Modules\Shared\Infrastructure\Notifications\AccountDatabaseChannel;
 use App\Modules\Shared\Infrastructure\Repositories\EloquentActivityRecorder;
+use App\Modules\Shared\Policies\NotificationPolicy;
 use App\Modules\Shared\Presentation\Console\PurgeActivityLogCommand;
 use App\Modules\Shared\Presentation\Console\PurgeIdempotencyKeysCommand;
+use App\Modules\Shared\Presentation\Console\PurgeNotificationsCommand;
+use App\Modules\Shared\Presentation\Console\VerifyActivityChainCommand;
 use App\Modules\Shared\Support\OwnerConnection;
 use App\Modules\Shared\Support\TenantContext;
 use App\Modules\Shared\Support\TenantQueue;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
 
 class SharedServiceProvider extends ServiceProvider
@@ -49,8 +58,12 @@ class SharedServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/activity.php');
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/health.php');
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/notifications.php');
 
         $this->bindTenantContext();
+        $this->registerNotificationChannel();
+
+        Gate::policy(AccountNotification::class, NotificationPolicy::class);
 
         if ($this->app->runningInConsole()) {
             OwnerConnection::routeSchemaCommands();
@@ -71,8 +84,26 @@ class SharedServiceProvider extends ServiceProvider
         $this->registerActivityEvents();
 
         if ($this->app->runningInConsole()) {
-            $this->commands([PurgeActivityLogCommand::class, PurgeIdempotencyKeysCommand::class]);
+            $this->commands([
+                PurgeActivityLogCommand::class,
+                PurgeIdempotencyKeysCommand::class,
+                PurgeNotificationsCommand::class,
+                VerifyActivityChainCommand::class,
+            ]);
         }
+    }
+
+    /**
+     * Replace the framework's `database` channel rather than adding a new
+     * name, so a notification's via() saying 'database' keeps meaning what
+     * everyone expects — it just also records which account the row belongs
+     * to, which the RLS policy requires.
+     */
+    private function registerNotificationChannel(): void
+    {
+        Notification::resolved(function (ChannelManager $manager): void {
+            $manager->extend('database', fn (): AccountDatabaseChannel => new AccountDatabaseChannel);
+        });
     }
 
     /**
@@ -92,6 +123,7 @@ class SharedServiceProvider extends ServiceProvider
         $registry->register(OrderDeleted::class, 'order.deleted', fn (OrderDeleted $e): Order => $e->order);
 
         $registry->register(InvoiceCreated::class, 'invoice.created', fn (InvoiceCreated $e): Invoice => $e->invoice);
+        $registry->register(InvoiceIssued::class, 'invoice.issued', fn (InvoiceIssued $e): Invoice => $e->invoice);
         $registry->register(InvoiceSent::class, 'invoice.sent', fn (InvoiceSent $e): Invoice => $e->invoice);
         $registry->register(InvoicePaid::class, 'invoice.paid', fn (InvoicePaid $e): Invoice => $e->invoice);
         $registry->register(InvoiceReminded::class, 'invoice.reminded', fn (InvoiceReminded $e): Invoice => $e->invoice);

@@ -53,7 +53,8 @@ it('converts a pending inbox item into a supplier invoice', function (): void {
 
     $item->refresh();
     expect($item->status)->toBe('imported')
-        ->and($item->supplier_invoice_id)->toBe($response->json('data.id'));
+        ->and($item->supplier_invoice_id)->toBe($response->json('data.id'))
+        ->and($response->json('data.provenance'))->toBe('ai_suggested');
 
     $this->assertDatabaseHas('supplier_invoices', [
         'id' => $response->json('data.id'),

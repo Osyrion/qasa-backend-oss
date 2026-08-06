@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\DTOs\ExchangeRateData;
 use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Shared\Support\Pagination;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -15,6 +16,8 @@ use OpenApi\Attributes as OA;
 
 class ExchangeRateController extends Controller
 {
+    use AuthorizesRequests;
+
     #[OA\Get(
         path: '/api/v1/exchange-rates',
         summary: 'List exchange rates',
@@ -45,6 +48,8 @@ class ExchangeRateController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', ExchangeRate::class);
+
         $rates = ExchangeRate::query()
             ->orderBy('date', 'desc')
             ->paginate(Pagination::perPage($request));
@@ -88,6 +93,8 @@ class ExchangeRateController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', ExchangeRate::class);
+
         $data = ExchangeRateData::fromRequest($request);
 
         if ($data->base_currency === $data->target_currency) {
@@ -137,6 +144,11 @@ class ExchangeRateController extends Controller
     )]
     public function destroy(ExchangeRate $exchangeRate): JsonResponse
     {
+        // Ability first, business rule second: the policy lets a system rate
+        // through precisely so the specific message below is what a caller
+        // who *may* delete rates sees, instead of a bare 403.
+        $this->authorize('delete', $exchangeRate);
+
         if ($exchangeRate->isSystemRate()) {
             return response()->json(['message' => __('invoicing.system_rates_not_deletable')], 403);
         }

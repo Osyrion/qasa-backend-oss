@@ -43,6 +43,14 @@ interface SkRateTable extends RateTable
 
     public function childBonus15To18(): float;
 
-    /** Child bonus total is capped at this share of the business partial tax base. */
-    public function childBonusCapShare(): float;
+    /**
+     * Child bonus total is capped at this share of the business partial tax
+     * base — §33 ods. 6, and the share widens with the number of eligible
+     * children rather than being a single figure. $children is the count that
+     * actually qualifies for the bonus, not everyone the taxpayer listed.
+     *
+     * Same shape as CzRateTable::childCredits(): the ordinal, not just the
+     * headcount, is what the law keys on in both jurisdictions.
+     */
+    public function childBonusCapShare(int $children): float;
 }

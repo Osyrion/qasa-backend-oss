@@ -31,7 +31,7 @@ readonly class UpdateOrderAction
     {
         if (! ($order->status_enum?->isEditable() ?? false)) {
             throw DomainException::because(
-                "Zákazku so statusom {$order->status} nie je možné upraviť."
+                __('orders.status_not_editable', ['status' => $order->status])
             );
         }
 

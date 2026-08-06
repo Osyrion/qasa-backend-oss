@@ -133,6 +133,18 @@ final class VatRecapCalculator
     }
 
     /**
+     * Derived as subtotal minus the discounted bucket bases — not an
+     * independent `subtotal * discountPercent` rounding — so that
+     * `subtotal - discountAmount + vatAmount` (Invoice::recalculateTotals())
+     * always equals `sum(bucket.base) + sum(bucket.vat)` (what
+     * VatReportService and every recap() caller actually sum). Rounding the
+     * discount once against the whole subtotal and rounding it once per
+     * per-rate bucket are both individually correct, but on a multi-rate
+     * document they can disagree by a cent — that used to make the invoice
+     * header and the VAT report disagree by the same cent. See
+     * ENGINEERING_GUARDRAILS_PLAN.md part B / VatReportInvariantTest, which
+     * fuzzed this apart.
+     *
      * @param  iterable<InvoiceItem|QuoteItem>  $items
      */
     public function discountAmountFromItems(iterable $items, string|float|null $discountPercent): float
@@ -146,7 +158,12 @@ final class VatRecapCalculator
             $this->itemsToList($items),
         ));
 
-        return (float) Decimal::money(Decimal::percentOf($subtotal, $discountPercent));
+        $discountedBase = Decimal::sum(array_map(
+            static fn (array $bucket): BigDecimal => $bucket['base'],
+            $this->bucketsFromItems($items, $discountPercent),
+        ));
+
+        return (float) Decimal::money(Decimal::of($subtotal)->minus($discountedBase));
     }
 
     /**

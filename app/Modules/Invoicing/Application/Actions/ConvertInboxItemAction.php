@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -30,7 +31,7 @@ readonly class ConvertInboxItemAction
         }
 
         return DB::transaction(function () use ($item, $data, $user): SupplierInvoice {
-            $supplierInvoice = $this->createSupplierInvoiceAction->execute($data, $user);
+            $supplierInvoice = $this->createSupplierInvoiceAction->execute($data, $user, Provenance::AiSuggested);
 
             // An account carried over unchanged from the OCR suggestions is
             // ocr-sourced; anything the user retyped stays manual.

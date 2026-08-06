@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>První kroky s Qasa — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>První kroky s Qasa</h1>
+<p>Tento návod tě provede od registrace po první vystavenou fakturu. Qasa je určena hlavně pro OSVČ a malé firmy, které si administrativu řeší samy — bez účetní po ruce.</p>
+<h2>Registrace účtu</h2>
+<ol>
+<li>Na úvodní stránce klikni na <strong>Zaregistrovat se</strong> a zadej jméno, příjmení, e-mail a heslo.</li>
+<li>Po registraci dostaneš e-mail s odkazem na ověření adresy. Bez ověření můžeš aplikaci používat naplno — zakládat klienty, vystavovat faktury, importovat — ale aplikace za tebe <strong>nepošle nic ven</strong>. Dokud adresu nepotvrdíš, jsou zamčené: odeslání faktury a upomínky e-mailem, odeslání cenové nabídky, vytvoření veřejného odkazu na fakturu či nabídku, vytvoření klientského portálu a pozvání člena týmu. Platí to i pro automatiku — šablona opakované faktury ani automatická upomínka za neověřeným účtem neodešlou.</li>
+<li>Přihlásit se dá i přes Google účet — v tom případě heslo nepotřebuješ vůbec a adresa je ověřená hned (Google ji už ověřil za tebe).</li>
+</ol>
+<h2>Krok 2: daňová rezidence</h2>
+<p>Hned po registraci tě aplikace požádá o <strong>doplnění daňové rezidence</strong> — Slovensko nebo Česko. Tato volba je <strong>nezměnitelná</strong> po jejím potvrzení, protože se od ní odvíjí:</p>
+<ul>
+<li>které sazby DPH se ti nabízejí (CZ: 0, 12, 21 % / SK: 0, 5, 10, 23 %),</li>
+<li>formát čísla faktury a povinné náležitosti dokladu,</li>
+<li>která daňová přiznání a hlášení (kontrolní hlášení, souhrnné hlášení) umíš z aplikace vygenerovat.</li>
+</ul>
+<blockquote>
+<p>Pokud si nejsi jistý, ověř si to předem — změna rezidence po potvrzení není možná svépomocí, jen přes podporu.</p>
+</blockquote>
+<p>Součástí tohoto kroku je i doplnění IČO — aplikace umí firemní údaje (název, adresu, status plátce DPH) dotáhnout automaticky z rejstříku (ARES pro Česko, RPO pro Slovensko), stačí zadat IČO.</p>
+<h2>Krok 3: základní nastavení profilu</h2>
+<p>V <strong>Nastavení → Profil</strong> doporučujeme doplnit před první fakturou:</p>
+<ul>
+<li><strong>Fakturační údaje</strong> — adresa, IČO, DIČ, bankovní účet.</li>
+<li><strong>Formát čísla faktury</strong> — výchozí formát je <code>FA-{RRRR}-{NNN}</code> (např. <code>FA-2026-001</code>), dá se změnit podle vlastních zvyklostí.</li>
+<li><strong>Logo a patička faktury</strong> — logo se zobrazí na PDF faktuře, patička je volitelný text (např. platební podmínky).</li>
+<li><strong>Výchozí měna</strong> — CZK pro CZ, EUR pro SK; dá se změnit, pokud fakturuješ převážně v jiné měně.</li>
+</ul>
+<h2>Zkušební období</h2>
+<p>Po registraci máš <strong>14 dní zdarma a naplno</strong> — všechny funkce plánu Standard, bez zadávání platební karty. Nemusíš nic aktivovat, běží to od prvního přihlášení.</p>
+<p>V profilu (a v hlavičce aplikace) vidíš, kolik dní ti zbývá. Tři dny před koncem ti přijde upozornění e-mailem i do zvonečku, a další v den, kdy období skončí.</p>
+<p><strong>Co se stane, když zkušební období skončí a nepředplatíš si:</strong></p>
+<ul>
+<li><strong>Nic se nesmaže.</strong> Všechny faktury, klienti a doklady zůstávají.</li>
+<li>Účet se vrátí na bezplatnou úroveň: dostupných zůstane 5 nejstarších odběratelů a 1 nejstarší dodavatel, zbytek bude <strong>jen ke čtení</strong> — vidíš je, stáhneš si jejich PDF, ale nevystavíš na ně novou fakturu.</li>
+<li>Máš-li tým, přístup si ponechá <strong>jen majitel účtu</strong>.</li>
+</ul>
+<p>Předplatné kdykoli během zkušebního období obnoví plný přístup — a placené období začíná dnem zaplacení.</p>
+<h2>Přenos dat z jiné fakturační appky</h2>
+<p>Pokud jsi doteď fakturoval přes Superfakturu (nebo jiný nástroj, který umí
+exportovat data do CSV), nemusíš klienty a faktury zadávat ručně.</p>
+<ol>
+<li>V <strong>Nastavení → Import dat</strong> vyber zdroj — <strong>Superfaktura</strong> nebo <strong>CSV</strong>.</li>
+<li>U Superfaktury zadej svůj e-mail, API klíč a ID firmy (najdeš je ve svém
+účtu Superfaktury); u CSV nahraj soubor podle vzoru přímo na stránce.</li>
+<li>Klikni na <strong>Zobrazit náhled</strong> — appka ukáže, kolik klientů a faktur
+najde, aniž by cokoliv uložila. Ověř si počty a ukázku jmen.</li>
+<li>Potvrď <strong>Spustit import</strong>. Import běží na pozadí (u většího počtu faktur
+může trvat pár minut), průběh vidíš přímo na stránce.</li>
+<li>Po dokončení appka ukáže, kolik klientů/faktur se přeneslo a kolik se
+přeskočilo (spolu s důvodem — např. duplicitní záznam z předchozího
+pokusu).</li>
+</ol>
+<p>Historická čísla faktur se přenesou přesně tak, jak byla ve zdroji — nový
+formát čísla se uplatní až na další faktuře, kterou vytvoříš v Qase.
+Opakované spuštění importu nad stejnými daty nic neduplikuje.</p>
+<blockquote>
+<p>Import je součástí placených plánů. Ceníky, opakované faktury a šablony se
+zatím nepřenášejí — je třeba je nastavit znovu přímo v Qase.</p>
+</blockquote>
+<h2>Krok 4: první klient a první faktura</h2>
+<p>Onboarding checklist na dashboardu (<code>Nastavení → Stav nastavení</code>) ti ukáže, co ještě chybí do plně funkčního účtu — obvykle je to: ověřený e-mail, doplněná rezidence, alespoň jeden klient a alespoň jeden bankovní účet.</p>
+<p>Další kroky najdeš v samostatných kapitolách:</p>
+<ul>
+<li><a href="02-klienti.html">Klienti</a> — jak přidat klienta a vyhledat firmu podle IČO.</li>
+<li><a href="03-faktury.html">Faktura od konceptu po úhradu</a> — kompletní životní cyklus faktury.</li>
+</ul>
+<h2>Tým a spolupráce</h2>
+<p>Pokud s tebou administrativu řeší i někdo další (účetní, kolega), můžeš ho pozvat do týmu s omezenými právy — viz kapitola <a href="07-tim.html">Tým</a>. Bezplatný plán omezuje počet členů týmu; rozšíření je součástí vyšších plánů.</p>
+<h2>Bezpečnost účtu</h2>
+<p>Doporučujeme zapnout <strong>dvoufaktorové ověření</strong> (2FA) v <strong>Nastavení → Bezpečnost</strong> — při každém přihlášení z nového zařízení bude aplikace kromě hesla vyžadovat i kód z autentifikační aplikace (např. Google Authenticator). Zapnutí 2FA vygeneruje i sadu záložních kódů pro případ ztráty telefonu — ulož si je na bezpečné místo, zobrazí se jen jednou.</p>
+<div class="chapter-nav-links"><span></span><a href="02-klienti.html">Klienti &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="onboarding"></script>
+</body>
+</html>

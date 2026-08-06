@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Infrastructure\Providers;
 
+use App\Modules\Auth\Application\Contracts\TwoFactorServiceInterface;
 use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Application\Services\DashboardService;
+use App\Modules\Auth\Application\Services\SetupStatusService;
+use App\Modules\Auth\Application\Services\TwoFactorService;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Infrastructure\Sanctum\TenantAwarePersonalAccessToken;
 use App\Modules\Auth\Presentation\Console\CreateUserCommand;
@@ -31,6 +34,14 @@ class AuthServiceProvider extends ServiceProvider
         $this->app->bind(
             AccountExportService::class,
             fn ($app): AccountExportService => new AccountExportService($app->tagged('account.export')),
+        );
+
+        // Consumed by the admin guard too — see TwoFactorServiceInterface.
+        $this->app->bind(TwoFactorServiceInterface::class, TwoFactorService::class);
+
+        $this->app->bind(
+            SetupStatusService::class,
+            fn ($app): SetupStatusService => new SetupStatusService($app->tagged('setup.steps')),
         );
 
         // Token scopes: a scoped personal access token (created via

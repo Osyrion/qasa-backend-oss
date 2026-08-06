@@ -22,7 +22,9 @@ it('tracks a partial payment without flipping the invoice to paid', function ():
         'method' => 'bank_transfer',
     ]);
 
-    $response->assertCreated()->assertJsonPath('data.amount', 100);
+    $response->assertCreated()
+        ->assertJsonPath('data.amount', 100)
+        ->assertJsonPath('data.provenance', 'manual');
 
     $show = $this->actingAs($user)->getJson("/api/v1/invoices/{$invoice->id}");
     $show->assertOk()

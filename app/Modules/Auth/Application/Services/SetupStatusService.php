@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Application\Services;
 
+use App\Modules\Auth\Application\Contracts\SetupStepContributor;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
@@ -12,12 +13,21 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 /**
  * Onboarding checklist for a fresh account — lets the frontend build a
  * setup wizard without hand-rolling the same "is this account ready to
- * invoice?" checks. Reads live account state on every call; seven cheap
- * exists()/null checks per request need no caching, and `completed` must
- * flip the moment the underlying action happens, not after a TTL.
+ * invoice?" checks. Reads live account state on every call; a handful of
+ * cheap exists()/null checks per request need no caching, and `completed`
+ * must flip the moment the underlying action happens, not after a TTL.
+ *
+ * Premium modules append their own steps through SetupStepContributor
+ * rather than being named here — this is a core service and must stay
+ * ignorant of them.
  */
 class SetupStatusService
 {
+    /**
+     * @param  iterable<SetupStepContributor>  $contributors  Steps owned by other modules.
+     */
+    public function __construct(private readonly iterable $contributors = []) {}
+
     /**
      * @return array{items: array<int, array{key: string, done: bool, optional: bool}>, completed: bool}
      */
@@ -35,6 +45,13 @@ class SetupStatusService
             ['key' => 'first_client', 'done' => $this->hasClient($ownerId), 'optional' => false],
             ['key' => 'first_invoice', 'done' => $this->hasInvoice($ownerId), 'optional' => true],
         ];
+
+        // Appended, not interleaved — and that is also the right order in
+        // time: an account should know who it is before it starts pulling
+        // data in.
+        foreach ($this->contributors as $contributor) {
+            $items = [...$items, ...$contributor->stepsFor($ownerId)];
+        }
 
         $completed = collect($items)->filter(fn (array $item): bool => ! $item['optional'])
             ->every(fn (array $item): bool => $item['done']);

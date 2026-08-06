@@ -6,6 +6,8 @@ namespace App\Modules\Invoicing\Application\Mail;
 
 use App\Modules\Invoicing\Application\Services\QuotePdfService;
 use App\Modules\Invoicing\Domain\Models\Quote;
+use App\Modules\Shared\Enums\EmailDocumentType;
+use App\Modules\Shared\Mail\TrackedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Attachment;
@@ -31,6 +33,7 @@ class QuoteEmail extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: __('invoices::emails.quote_subject', ['number' => $this->quote->quote_number]),
+            metadata: TrackedMail::for(EmailDocumentType::Quote, $this->quote->id, $this->quote->user_id),
         );
     }
 

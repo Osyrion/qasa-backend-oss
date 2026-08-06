@@ -8,9 +8,9 @@ use Illuminate\Support\Carbon;
 
 /*
 |--------------------------------------------------------------------------
-| ⚠️ Not spec-verified — see the class docblock. This is a self-consistency
-| golden test (regression guard against an accidental behavior change),
-| not proof the payload matches the official bysquare specification.
+| Regression guard against accidental behavior changes (determinism, amount
+| sensitivity). Spec conformance against an independent reference is covered
+| separately, with byte-exact golden vectors, by PayBySquareGoldenTest.
 |--------------------------------------------------------------------------
 */
 
@@ -26,7 +26,7 @@ it('builds a deterministic Pay by Square payload', function (): void {
         paymentNote: 'FA-2026-001',
     );
 
-    expect($payload)->toBe('BK000004VVVVVVVVVVVVU00GNR04HK071EPCOQIDDAOCN73FUJ00H8792CFJM7NE3TM0922DLD0GFOSL5B44JNFACCPCFTRU74HJ4BDNCI8V8BKCNSSCRSRF9QGGQ7B5F52OA9DAI13LCB1H7C48BMP3N48R79U7OMB0BVVJC8N00')
+    expect($payload)->toBe('0806C0001ML0USEO93146TIU1R6LORO13O29PQCCON6UDUVO2JEDFOMTJQOR1KOKGTMTJGN8T9GR1THSK36PH0EUFA5MTQ391HOBKCH3NQMHKQCNP34ODU0VGS9EBE0RV7L07O1LS0EKS2IU9BD17VTO05000')
         ->and($payload)->toMatch('/^[0-9A-V]+$/');
 });
 

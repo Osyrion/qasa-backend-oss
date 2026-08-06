@@ -60,6 +60,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $emailed_to Primary recipient of the last email
  * @property list<string>|null $emailed_cc CC recipients of the last email
  * @property Carbon|null $email_failed_at Set when the queued email job permanently failed; cleared on the next send
+ * @property Carbon|null $payment_confirmation_sent_at N3 rule 1 idempotency marker (Automation, premium)
+ * @property bool $sent_automatically Set by N3 rule 3 (Automation, premium) — distinguishes an automated send from a manual one for the automation-rate metric
  * @property Carbon|null $last_reminded_at Last time a payment reminder was sent
  * @property int $reminder_count Number of payment reminders sent
  * @property string|null $public_token Grants read-only public access; set exclusively by CreateInvoicePublicLinkAction
@@ -67,6 +69,8 @@ use Illuminate\Support\Carbon;
  * @property int $public_view_count Number of times the public page was opened
  * @property Carbon|null $overdue_notified_at First time this invoice was detected past due; idempotency marker for the invoice.overdue event
  * @property Carbon|null $reminders_exhausted_notified_at Set once the owner has been notified that auto-reminders hit the limit
+ * @property string|null $external_source Set only by a competitor migration import (Integrations, premium) — e.g. superfaktura|csv
+ * @property string|null $external_id Id of this invoice in the source system; re-run idempotency key together with external_source
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -111,6 +115,11 @@ use Illuminate\Support\Carbon;
  */
 class Invoice extends Model
 {
+    /**
+     * Attribute withSum('payments', 'amount') lands in — see balance().
+     */
+    public const PAYMENTS_SUM = 'payments_sum_amount';
+
     /** @use HasFactory<InvoiceFactory> */
     use HasFactory;
 
@@ -156,6 +165,13 @@ class Invoice extends Model
         'reminder_count',
         'overdue_notified_at',
         'reminders_exhausted_notified_at',
+        'payment_confirmation_sent_at',
+        'sent_automatically',
+        // Set only by the Integrations module's competitor migration import
+        // (premium) — the columns themselves stay in this core table so an
+        // OSS invoice row has the same shape as a SaaS one.
+        'external_source',
+        'external_id',
     ];
 
     protected function casts(): array
@@ -181,6 +197,8 @@ class Invoice extends Model
             'emailed_at' => 'datetime',
             'emailed_cc' => 'array',
             'email_failed_at' => 'datetime',
+            'payment_confirmation_sent_at' => 'datetime',
+            'sent_automatically' => 'boolean',
             'last_reminded_at' => 'datetime',
             'public_first_viewed_at' => 'datetime',
             'public_view_count' => 'integer',
@@ -263,10 +281,46 @@ class Invoice extends Model
     /**
      * Outstanding amount in the invoice currency — total minus recorded
      * payments. Negative once overpaid.
+     *
+     * Prefers the aggregate a listing already paid for: the repository asks
+     * for withSum('payments', 'amount'), and this used to ignore it and issue
+     * its own sum() per call — twice per row, because InvoiceResource asks for
+     * both the balance and the payment status. Only a model that arrives
+     * without the aggregate (route binding, a freshly created invoice) falls
+     * back to the query.
+     *
+     * Anything that changes the payments must clear the cached aggregate with
+     * forgetPaymentsAggregate(), or this keeps answering with the figure from
+     * before the change.
      */
     public function balance(): float
     {
-        return round((float) $this->total - (float) $this->payments()->sum('amount'), 2);
+        $paid = $this->hasPaymentsAggregate()
+            ? Decimal::of($this->getAttribute(self::PAYMENTS_SUM))
+            : Decimal::of($this->payments()->sum('amount'));
+
+        return (float) Decimal::money(Decimal::of($this->total)->minus($paid));
+    }
+
+    /**
+     * Whether withSum('payments', 'amount') put its answer on this model.
+     */
+    public function hasPaymentsAggregate(): bool
+    {
+        return array_key_exists(self::PAYMENTS_SUM, $this->attributes);
+    }
+
+    /**
+     * Drop the cached payments aggregate so the next balance() re-reads it.
+     *
+     * The companion to unsetRelation('payments') — that clears the loaded
+     * rows, this clears the sum computed from them.
+     */
+    public function forgetPaymentsAggregate(): self
+    {
+        unset($this->attributes[self::PAYMENTS_SUM]);
+
+        return $this;
     }
 
     public function isOverdue(): bool

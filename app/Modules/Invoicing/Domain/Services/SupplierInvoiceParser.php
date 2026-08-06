@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Services;
 
+use App\Modules\Shared\Support\AmountString;
 use Illuminate\Support\Carbon;
 use Throwable;
 
@@ -113,8 +114,12 @@ final class SupplierInvoiceParser
             ['celkom k úhrade', 'celkem k úhradě', 'suma na úhradu', 'k úhradě', 'k úhrade', 'celkom', 'celkem'],
         ));
 
-        if (preg_match('/(?:'.$labelPattern.')\s*[:\s]*([\d\s]+[,.]\d{2})\s*(?:EUR|€|CZK|Kč|\$|USD)?/ui', $text, $m) === 1) {
-            return (float) str_replace([' ', ','], ['', '.'], $m[1]);
+        // The grouping separator has to be inside the capture, not just
+        // spaces: an invoice printing "1.234,56" otherwise matched from the
+        // "1." onwards and yielded 1.23. AmountString then decides which of
+        // the two separators is the decimal one.
+        if (preg_match('/(?:'.$labelPattern.')\s*[:\s]*([\d\s.,]*\d[,.]\d{2})\s*(?:EUR|€|CZK|Kč|\$|USD)?/ui', $text, $m) === 1) {
+            return AmountString::parse($m[1]);
         }
 
         return null;

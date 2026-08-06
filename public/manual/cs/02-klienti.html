@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Klienti — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Klienti</h1>
+<p>Klient je firma nebo osoba, které fakturuješ. Bez klienta nevystavíš fakturu — jedinou výjimkou je zakázka bez klienta (osobní zakázka), která slouží jen k internímu sledování práce.</p>
+<h2>Přidání klienta</h2>
+<p>V <strong>Klienti → Přidat klienta</strong> vyber typ:</p>
+<ul>
+<li><strong>Firma</strong> — vyžaduje IČO, může mít více kontaktních osob.</li>
+<li><strong>Fyzická osoba / OSVČ</strong> — jméno a příjmení, IČO volitelné (pokud fakturuješ jinému OSVČ).</li>
+</ul>
+<h3>Automatické vyhledání podle IČO</h3>
+<p>Místo ručního vypisování adresy a názvu stačí zadat IČO a kliknout na <strong>Vyhledat</strong>. Aplikace si údaje dotáhne z veřejného rejstříku:</p>
+<ul>
+<li><strong>ARES</strong> pro české firmy,</li>
+<li><strong>RPO</strong> (Register právnických osôb) pro slovenské firmy.</li>
+</ul>
+<p>Vyhledání doplní název, sídlo a základní identifikátory (IČO, DIČ). Status plátce DPH se dá následně ověřit samostatně přes <strong>VIES</strong> — tlačítko <strong>Ověřit DIČ</strong> u klienta. VIES ověřuje přímo vůči evropské databázi plátců DPH, takže výsledek je vždy aktuální; pokud je VIES dočasně nedostupný, aplikace použije poslední známý ověřený stav (po dobu několika dní), aby tě výpadek externí služby nezastavil při fakturaci.</p>
+<h3>Ruční zadání</h3>
+<p>Pokud klient nemá IČO (např. zahraniční firma mimo SK/CZ rejstříky, nebo soukromá osoba), vyplň údaje ručně — jméno/název, adresu, měnu, ve které fakturuješ, a jazyk komunikace (podle něj se volí jazyk PDF faktury a e-mailů).</p>
+<h2>Kontaktní osoby</h2>
+<p>Firemní klient může mít více kontaktních osob (např. účetní oddělení, konkrétní kontakt na projektu) — v detailu klienta <strong>Kontaktní osoby → Přidat</strong>. Při odesílání faktury si vybereš, které kontaktní osobě e-mail půjde; pokud žádnou nevybereš, použije se hlavní e-mail klienta.</p>
+<h2>Archivace klienta</h2>
+<p>Klienta, se kterým už nespolupracuješ, můžeš <strong>archivovat</strong> místo smazání — zůstanou zachovány všechny jeho faktury a historie, jen se přestane nabízet při vytváření nových dokladů. Archivovaného klienta můžeš kdykoli <strong>obnovit</strong>.</p>
+<p>Smazání klienta je možné jen tehdy, když na něj není navázán žádný doklad (faktura, zakázka, cenová nabídka) — jinak aplikace smazání odmítne, aby se neztratila historie fakturace.</p>
+<h2>Vyhledávání</h2>
+<p>Seznam klientů podporuje vyhledávání podle názvu i bez diakritiky (např. „Novak&quot; najde i „Novák&quot;) — užitečné při rychlém hledání z mobilu.</p>
+<h2>Klientský portál</h2>
+<p>Každému klientovi můžeš vydat <strong>jeden trvalý odkaz</strong>, za kterým uvidí všechny své faktury najednou — ne jen tu jednu, kterou jsi mu právě poslal.</p>
+<ol>
+<li>V detailu klienta klikni na <strong>Vytvořit portálový odkaz</strong>.</li>
+<li>Odkaz pošli klientovi (e-mailem, do smlouvy, kamkoli) — nepotřebuje účet ani heslo.</li>
+<li>Klient v portálu vidí seznam faktur, co je po splatnosti, kolik celkem dluží, a každou fakturu si umí stáhnout jako PDF.</li>
+</ol>
+<p>Portál je <strong>jen ke čtení</strong> — klient v něm nic nemění a nic nevystavuje. Koncepty faktur se mu nezobrazují, ty ještě neexistují.</p>
+<p><strong>Zrušení přístupu:</strong> tlačítkem <strong>Zrušit odkaz</strong>, nebo vydáním nového (starý tím okamžitě přestane fungovat). Hodí se, když u klienta odejde kontaktní osoba.</p>
+<blockquote>
+<p>Odkaz je dlouhý náhodný řetězec — kdo ho má, dostane se k fakturám toho jednoho klienta a k ničemu jinému. Zacházej s ním jako s heslem.</p>
+</blockquote>
+<div class="chapter-nav-links"><a href="01-onboarding.html">&larr; První kroky s Qasa</a><a href="03-faktury.html">Faktura: od konceptu po úhradu &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="klienti"></script>
+</body>
+</html>

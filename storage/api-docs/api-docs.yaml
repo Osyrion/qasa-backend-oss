@@ -443,6 +443,93 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: 'Own-account summary stats: clients, orders, invoices, twelve-month income trend'
+      description: 'Premium modules may contribute additional top-level keys (see DashboardStatsContributor).'
+      operationId: 4130eceacf30377cc78a7abecac450ac
+      responses:
+        200:
+          description: 'Dashboard stats'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      clients:
+                        properties:
+                          total:
+                            type: integer
+                        type: object
+                      orders:
+                        properties:
+                          total:
+                            type: integer
+                          active:
+                            type: integer
+                          completed:
+                            type: integer
+                          billable:
+                            type: integer
+                        type: object
+                      invoices:
+                        properties:
+                          total:
+                            type: integer
+                          draft:
+                            type: integer
+                          sent:
+                            type: integer
+                          paid:
+                            type: integer
+                          revenue_paid:
+                            type: number
+                            format: float
+                          revenue_pending:
+                            type: number
+                            format: float
+                          volume:
+                            properties:
+                              month:
+                                type: number
+                                format: float
+                              quarter:
+                                type: number
+                                format: float
+                              year:
+                                type: number
+                                format: float
+                            type: object
+                          overdue:
+                            properties:
+                              count:
+                                type: integer
+                              amount:
+                                type: number
+                                format: float
+                            type: object
+                        type: object
+                      income_trend:
+                        type: array
+                        items:
+                          properties:
+                            month:
+                              type: string
+                              example: 2026-07
+                            amount:
+                              type: number
+                              format: float
+                          type: object
+                    type: object
+                type: object
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
   '/api/v1/auth/email/verify/{id}/{hash}':
     get:
       tags:
@@ -758,6 +845,7 @@ paths:
                         items:
                           properties:
                             key:
+                              description: 'Core steps always present; premium modules append their own (see SetupStepContributor).'
                               type: string
                               enum:
                                 - billing_identity
@@ -767,6 +855,7 @@ paths:
                                 - logo
                                 - first_client
                                 - first_invoice
+                                - competitor_import
                             done:
                               type: boolean
                             optional:
@@ -1360,6 +1449,68 @@ paths:
           description: 'Client not found'
         422:
           description: 'Cannot delete client with existing orders or invoices'
+      security:
+        -
+          sanctum: []
+  '/api/v1/clients/{id}/portal-link':
+    post:
+      tags:
+        - Clients
+      summary: 'Issue (or return) the client portal link'
+      description: 'Idempotent: an existing link is returned unchanged unless regenerate=true, which replaces it and stops the old one resolving.'
+      operationId: 4870390ee313426853af61d060869c17
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        -
+          name: regenerate
+          in: query
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: 'Portal token and URL'
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:
+                    type: string
+                  url:
+                    type: string
+                type: object
+        401:
+          description: Unauthenticated
+        403:
+          description: 'Not allowed to manage this client'
+      security:
+        -
+          sanctum: []
+    delete:
+      tags:
+        - Clients
+      summary: 'Revoke the client portal link'
+      operationId: e15692506abf3862a91f74a2d4a2a3eb
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Revoked
+        401:
+          description: Unauthenticated
+        403:
+          description: 'Not allowed to manage this client'
       security:
         -
           sanctum: []
@@ -2048,6 +2199,249 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/cash-documents:
+    get:
+      tags:
+        - Cash
+      summary: 'List cash documents'
+      operationId: cbd34211dd40fd0a2a337d66c018de02
+      parameters:
+        -
+          name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - income
+              - expense
+        -
+          name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        -
+          name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        -
+          name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Paginated cash documents'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+    post:
+      tags:
+        - Cash
+      summary: 'Issue a cash receipt or payment'
+      operationId: 64d7da226b257828dd6af0ec04894529
+      responses:
+        201:
+          description: Created
+        401:
+          description: Unauthenticated
+        422:
+          description: "Validation failed, or the linked payment/expense is not this account's"
+      security:
+        -
+          sanctum: []
+  '/api/v1/cash-documents/{id}':
+    get:
+      tags:
+        - Cash
+      summary: 'Show one cash document'
+      operationId: 6e23a430eb35bd66e177fe104f620b12
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Cash document'
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/cash-documents/{id}/pdf':
+    get:
+      tags:
+        - Cash
+      summary: 'The printable slip both sides sign'
+      operationId: 6821fa34d147d7c16f4abc0cfa5edcad
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: PDF
+          content:
+            application/pdf: []
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/cash-documents/{id}/reverse':
+    post:
+      tags:
+        - Cash
+      summary: 'Reverse a cash document by issuing its mirror image'
+      description: 'The only correction path — cash documents are never updated or deleted. Both rows stay in the book and cancel out.'
+      operationId: 5b7283dd4516082b4353a023e4b5cdfe
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        201:
+          description: 'The reversing document'
+        422:
+          description: 'Already reversed, or itself a reversal'
+      security:
+        -
+          sanctum: []
+  /api/v1/cash-book:
+    get:
+      tags:
+        - Cash
+      summary: 'Cash book — every cash document in date order with a running balance per currency'
+      operationId: b3859914aa2d59e94455d6760d21456f
+      parameters:
+        -
+          name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        -
+          name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        200:
+          description: 'Opening balances, entries and closing balances'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+  '/api/v1/portal/{token}':
+    get:
+      tags:
+        - 'Client Portal'
+      summary: 'Portal summary for the client holding this link (no auth)'
+      operationId: afde3eae18703bebd9c9794ded1a1e86
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'Client name and outstanding summary'
+        404:
+          description: 'Unknown or revoked link'
+  '/api/v1/portal/{token}/invoices':
+    get:
+      tags:
+        - 'Client Portal'
+      summary: 'Invoices issued to the client holding this link (no auth)'
+      operationId: 41553b7db7af5b425e0e98b952acd4a4
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Paginated invoices'
+        404:
+          description: 'Unknown or revoked link'
+  '/api/v1/portal/{token}/invoices/{invoice}/pdf':
+    get:
+      tags:
+        - 'Client Portal'
+      summary: 'PDF of one invoice belonging to the client holding this link (no auth)'
+      operationId: a5512bcf5a759cc4d2306b19405bf06d
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: invoice
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'PDF file'
+          content:
+            application/pdf: []
+        404:
+          description: 'Unknown link, or an invoice belonging to somebody else'
+  '/api/v1/portal/{token}/quotes':
+    get:
+      tags:
+        - 'Client Portal'
+      summary: 'Quotes issued to the client holding this link (no auth, read-only)'
+      description: 'Listing only. Accepting or rejecting a quote stays on its own per-document link — one decision must not have two routes to it.'
+      operationId: c3e1561757301e170cb64809ad3426fd
+      parameters:
+        -
+          name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Paginated quotes'
+        404:
+          description: 'Unknown or revoked link'
   /api/v1/exchange-rates:
     get:
       tags:
@@ -3867,6 +4261,35 @@ paths:
             application/pdf: []
         401:
           description: Unauthenticated
+        404:
+          description: 'Invoice not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/invoices/{id}/export/ubl':
+    get:
+      tags:
+        - 'Invoice e-invoice'
+      summary: 'Download the invoice as a UBL 2.1 (EN 16931) e-invoice'
+      operationId: 26b86931def30bb5b8307cdd9032af93
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'UBL XML'
+          content:
+            application/xml: []
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Document type has no UBL equivalent (proforma, storno)'
         404:
           description: 'Invoice not found'
       security:
@@ -7609,6 +8032,120 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: 'List the notifications addressed to the authenticated user'
+      operationId: bbfcd04159c93f1ce36606c85da00041
+      parameters:
+        -
+          name: unread
+          in: query
+          description: 'Only unread when truthy'
+          schema:
+            type: boolean
+        -
+          name: category
+          in: query
+          schema:
+            type: string
+            enum:
+              - invoice
+              - quote
+              - tax
+              - billing
+              - banking
+              - system
+        -
+          name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Paginated notifications'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+  /api/v1/notifications/unread-count:
+    get:
+      tags:
+        - Notifications
+      summary: 'Number of unread notifications for the authenticated user'
+      operationId: 4701a7c80c1116621d551b78d31823a7
+      responses:
+        200:
+          description: 'Unread count'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+  '/api/v1/notifications/{notification}/read':
+    patch:
+      tags:
+        - Notifications
+      summary: 'Mark one notification as read'
+      operationId: b9a2c6d801cd8ebd6203f10ea3490655
+      parameters:
+        -
+          name: notification
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'The notification'
+        403:
+          description: 'Addressed to somebody else'
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  /api/v1/notifications/read-all:
+    post:
+      tags:
+        - Notifications
+      summary: 'Mark every unread notification of the authenticated user as read'
+      operationId: 2082bd6a5cef26ad25adebbd9e2f0202
+      responses:
+        200:
+          description: 'How many were marked'
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+  '/api/v1/notifications/{notification}':
+    delete:
+      tags:
+        - Notifications
+      summary: 'Delete a notification'
+      operationId: c57a749847d6bb38b42019e2357f49c1
+      parameters:
+        -
+          name: notification
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        204:
+          description: Deleted
+        403:
+          description: 'Addressed to somebody else'
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
   /api/v1/contributions:
     get:
       tags:
@@ -8024,6 +8561,220 @@ paths:
           description: 'Email not verified'
         422:
           description: 'Register unreachable or IČO not found — client should fall back to manual entry'
+      security:
+        -
+          sanctum: []
+  /api/v1/tax-filings:
+    get:
+      tags:
+        - Taxation
+      summary: "List the account's archived filings"
+      operationId: 87f4ede567b7a5d32315dc11c7582f85
+      parameters:
+        -
+          name: type
+          in: query
+          schema:
+            type: string
+            enum:
+              - control_statement
+              - eu_sales_list
+              - income_tax
+              - vat_return
+        -
+          name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - generated
+              - filed
+              - superseded
+        -
+          name: year
+          in: query
+          schema:
+            type: integer
+        -
+          name: per_page
+          in: query
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Paginated list, newest first'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaxFiling'
+                  meta:
+                    type: object
+                type: object
+        401:
+          description: Unauthenticated
+      security:
+        -
+          sanctum: []
+    post:
+      tags:
+        - Taxation
+      summary: 'Generate a new filing snapshot for a period'
+      description: 'control_statement, eu_sales_list and vat_return are generatable for both SK and CZ — all fully derivable server-side from (account, year, quarter/month) via the existing builders. Generating one for a period that already has a non-superseded filing of the same type supersedes the earlier one; the earlier snapshot is kept, never rewritten.'
+      operationId: 30cef5a51c949aa54c8ac0d6faf501f9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - type
+                - period_year
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - control_statement
+                    - eu_sales_list
+                    - vat_return
+                period_year:
+                  type: integer
+                  example: 2026
+                period_quarter:
+                  type: integer
+                  nullable: true
+                  maximum: 4
+                  minimum: 1
+                period_month:
+                  type: integer
+                  nullable: true
+                  maximum: 12
+                  minimum: 1
+              type: object
+      responses:
+        201:
+          description: Generated
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaxFiling'
+                type: object
+        401:
+          description: Unauthenticated
+        403:
+          description: Forbidden
+        422:
+          description: 'Validation error, or income_tax requested (not generatable)'
+      security:
+        -
+          sanctum: []
+  '/api/v1/tax-filings/{tax_filing}':
+    get:
+      tags:
+        - Taxation
+      summary: 'Show one archived filing, including its full content'
+      operationId: 37832c003a5a134a64349f6a629d9cb4
+      parameters:
+        -
+          name: tax_filing
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Filing
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaxFiling'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/tax-filings/{id}/recap.pdf':
+    get:
+      tags:
+        - Taxation
+      summary: 'Human-readable recap of the archived filing, for checking before submission'
+      description: "Every value the stored document actually carries, plus the builder's own stated assumptions. Read out of the archive, not recomputed — the point is to show what will be filed, including figures that have since moved."
+      operationId: 34caf52fa1277eaeb5ebefa4c3c18e69
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: PDF
+          content:
+            application/pdf: []
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/tax-filings/{tax_filing}/mark-filed':
+    post:
+      tags:
+        - Taxation
+      summary: 'Mark a generated filing as actually filed with the tax authority'
+      operationId: 095e9b0b905f358fed22732bb4bebd00
+      parameters:
+        -
+          name: tax_filing
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                filed_at:
+                  description: 'Defaults to now'
+                  type: string
+                  format: date-time
+                  nullable: true
+                notes:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TaxFiling'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Not in generated status — already filed, or superseded by a newer snapshot'
       security:
         -
           sanctum: []
@@ -8629,6 +9380,16 @@ components:
           type: string
           example: pro
           nullable: true
+        trial:
+          description: 'Card-free trial state; null when not on one (and always null in the core edition)'
+          properties:
+            ends_at:
+              type: string
+              format: date-time
+            days_left:
+              type: integer
+          type: object
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -8895,6 +9656,62 @@ components:
           format: date-time
           nullable: true
       type: object
+    CashDocument:
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - income
+            - expense
+        number:
+          type: string
+          example: PPD-2026-001
+        issued_at:
+          type: string
+          format: date
+        amount:
+          description: 'Always positive; direction comes from type'
+          type: string
+        currency:
+          type: string
+        vat_rate:
+          type: string
+          nullable: true
+        vat_amount:
+          type: string
+          nullable: true
+        counterparty:
+          type: string
+          nullable: true
+        description:
+          type: string
+        note:
+          type: string
+          nullable: true
+        invoice_payment_id:
+          type: string
+          format: uuid
+          nullable: true
+        expense_id:
+          type: string
+          format: uuid
+          nullable: true
+        documents_existing_record:
+          description: 'True when this only papers over an already-recorded payment/expense — excluded from tax income and expenses'
+          type: boolean
+        reverses_cash_document_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_reversed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+      type: object
     Expense:
       properties:
         id:
@@ -9091,6 +9908,15 @@ components:
             - cash
             - card
             - other
+        provenance:
+          type: string
+          enum:
+            - manual
+            - email_in
+            - api
+            - import
+            - auto_matched
+            - ai_suggested
         note:
           type: string
           nullable: true
@@ -9591,6 +10417,15 @@ components:
             - cancelled
         status_label:
           type: string
+        provenance:
+          type: string
+          enum:
+            - manual
+            - email_in
+            - api
+            - import
+            - auto_matched
+            - ai_suggested
         vat_regime:
           type: string
           enum:
@@ -9992,6 +10827,50 @@ components:
           format: date-time
           nullable: true
       type: object
+    Notification:
+      properties:
+        id:
+          description: "`type` is deliberately absent: the stored value is the notification class\nname, and the front end renders from `category`/`severity`/`action_url`\ninstead — which is what keeps a class rename from being a breaking API\nchange."
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum:
+            - invoice
+            - quote
+            - tax
+            - billing
+            - banking
+            - system
+        severity:
+          type: string
+          enum:
+            - info
+            - success
+            - warning
+            - error
+        title:
+          type: string
+        body:
+          type: string
+        action_url:
+          type: string
+          nullable: true
+        subject_type:
+          type: string
+          nullable: true
+        subject_id:
+          type: string
+          format: uuid
+          nullable: true
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      type: object
     ContributionPayment:
       properties:
         id:
@@ -10034,6 +10913,61 @@ components:
           format: date-time
           nullable: true
       type: object
+    TaxFiling:
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - control_statement
+            - eu_sales_list
+            - income_tax
+            - vat_return
+        country:
+          type: string
+          enum:
+            - SK
+            - CZ
+        period_year:
+          type: integer
+          example: 2026
+        period_quarter:
+          type: integer
+          example: 3
+          nullable: true
+        period_month:
+          type: integer
+          example: 7
+          nullable: true
+        content:
+          description: 'Raw generated document — XML for control_statement, JSON for eu_sales_list'
+          type: string
+        sha256:
+          type: string
+        status:
+          type: string
+          enum:
+            - generated
+            - filed
+            - superseded
+        filed_at:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        supersedes_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+      type: object
   securitySchemes:
     sanctum:
       type: apiKey
@@ -10041,6 +10975,8 @@ components:
       name: Authorization
       in: header
 tags:
+  - name: Dashboard
+    description: 'Home-screen summary stats for the authenticated account'
   - name: Tokens
     description: 'Scoped personal access tokens for third-party integrations'
   - name: TwoFactor
@@ -10053,6 +10989,10 @@ tags:
     description: 'Invoice, quote and supplier document management'
   - name: BankAccounts
     description: 'Supplier bank accounts printed on invoices'
+  - name: Cash
+    description: 'Cash receipts and payments (PPD/VPD) and the cash book'
+  - name: 'Client Portal'
+    description: 'Unauthenticated client-facing portal (all invoices of one client)'
   - name: 'Expense Attachments'
     description: 'Manage the receipt/invoice document attached to an expense'
   - name: Invoices
@@ -10063,6 +11003,8 @@ tags:
     description: 'Review queue for supplier invoices scanned from the inbox folder'
   - name: 'Invoice PDF'
     description: 'Invoice PDF generation endpoints'
+  - name: 'Invoice e-invoice'
+    description: 'UBL 2.1 / EN 16931 export'
   - name: 'Public Invoice'
     description: 'Unauthenticated client-facing invoice page endpoints'
   - name: 'Public Quote'
@@ -10089,6 +11031,10 @@ tags:
     description: 'Manage internal notes on orders'
   - name: Activity
     description: 'Read-only audit trail of account activity'
+  - name: Notifications
+    description: 'In-app notification centre'
+  - name: Taxation
+    description: 'Tax residency, contribution payments, income-tax-return wizard, and the filing archive'
   - name: Authentication
     description: Authentication
   - name: Profile
@@ -10097,8 +11043,6 @@ tags:
     description: ExchangeRates
   - name: Expenses
     description: Expenses
-  - name: Taxation
-    description: Taxation
 security:
   -
     sanctum: []

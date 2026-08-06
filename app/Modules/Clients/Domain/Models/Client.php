@@ -34,6 +34,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $ico
  * @property string|null $dic
  * @property string|null $vat_id IČ DPH / VAT ID
+ * @property string|null $bank_iban Counterparty account learned from a confirmed payment match (Banking, premium)
+ * @property bool $auto_send_invoices N3 rule 3 per-client opt-out (Automation, premium); default true
  * @property bool $is_vat_payer
  * @property bool $is_customer
  * @property bool $is_vendor
@@ -48,6 +50,9 @@ use Illuminate\Support\Carbon;
  * @property Currency $currency
  * @property string $locale Invoice language
  * @property string|null $note
+ * @property string|null $external_source Set only by a competitor migration import (Integrations, premium) — e.g. superfaktura|csv
+ * @property string|null $external_id Id of this client in the source system
+ * @property string|null $portal_token Grants the client read-only access to their own invoices; null = portal off
  * @property Carbon|null $archived_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -123,6 +128,8 @@ class Client extends Model
         'ico',
         'dic',
         'vat_id',
+        'bank_iban',
+        'auto_send_invoices',
         'is_vat_payer',
         'is_customer',
         'is_vendor',
@@ -138,12 +145,18 @@ class Client extends Model
         'locale',
         'note',
         'archived_at',
+        // Set only by the Integrations module's competitor migration import
+        // (premium) — the columns themselves stay in this core table so an
+        // OSS client row has the same shape as a SaaS one.
+        'external_source',
+        'external_id',
     ];
 
     protected function casts(): array
     {
         return [
             'is_vat_payer' => 'boolean',
+            'auto_send_invoices' => 'boolean',
             'is_customer' => 'boolean',
             'is_vendor' => 'boolean',
             'reverse_charge_allowed' => 'boolean',

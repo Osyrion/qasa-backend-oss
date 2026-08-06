@@ -15,7 +15,18 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', 'throttle:api', SubstituteB
 
     Route::apiResource('clients', ClientController::class);
 
+    // No scopeBindings() here, unlike the orders/invoices/quotes groups:
+    // Laravel derives the relation from the parameter name, and {contactPerson}
+    // pluralises to contactPeople() while the relation is contactPersons().
+    // ContactPersonController scopes the child to the client in the path
+    // explicitly instead — same as PriceListItemController does for its items.
     Route::prefix('clients/{client}')->group(function (): void {
+        // Publishes a durable URL the client is meant to open — same
+        // third-party boundary as e-mailing a document. Revoking is cleanup.
+        Route::post('portal-link', [ClientController::class, 'createPortalLink'])
+            ->middleware('verified')
+            ->name('clients.portal-link.store');
+        Route::delete('portal-link', [ClientController::class, 'revokePortalLink'])->name('clients.portal-link.destroy');
         Route::post('archive', [ClientController::class, 'archive'])->name('clients.archive');
         Route::post('restore', [ClientController::class, 'restore'])->name('clients.restore');
 

@@ -15,6 +15,8 @@ return [
     'unsupported_tax_year' => 'The tax return worksheet for :year is not currently supported.',
     'invalid_draft_payload' => 'The saved draft has an invalid or corrupted format.',
     'invalid_flat_rate_category' => 'Invalid flat-rate expense category for this country.',
+    'mixed_income_rate_split_note' => 'Your base combines business income eligible for the reduced rate with income taxed on the standard scale. The allowances left after NČZD are split between the two in proportion to what each contributed — have a tax advisor confirm this allocation before filing.',
+    'sk_contributions_unbounded_note' => 'The social and health contribution figures are a rough estimate: they apply the statutory rates to a share of your tax base without the statutory minimum or maximum assessment base, so they are understated at low income and overstated at high income. Use the Sociálna poisťovňa and health insurer figures for the actual amounts.',
     'foreign_income_note' => 'This worksheet does not compute double-taxation relief for foreign income — consult a tax advisor.',
     'unconverted_amounts_note' => 'Some payments could not be converted to the filing currency (no exchange rate on record) and are excluded from the totals above.',
     'draft_not_found' => 'No saved draft was found for this year.',
@@ -39,4 +41,22 @@ return [
     'pdf_contribution_social' => 'Social insurance',
     'pdf_contribution_health' => 'Health insurance',
     'pdf_generated_at' => 'Generated :date',
+
+    'tax_filing_immutable' => 'A generated filing snapshot cannot be edited — generate a new one instead, which supersedes this one.',
+    'tax_filing_type_not_generatable' => 'This filing type cannot be generated yet.',
+    'control_statement_requires_period' => 'A control statement always needs a month or quarter — there is no whole-year variant.',
+    'tax_filing_not_generated' => 'Only a filing in generated status can be marked as filed.',
+
+    // Filing recap PDF
+    'recap_title' => 'Filing recap',
+    'recap_subtitle' => 'Every value the archived document carries. Check before submitting.',
+    'recap_type' => 'Filing type',
+    'recap_country' => 'Country',
+    'recap_period' => 'Period',
+    'recap_status' => 'Status',
+    'recap_generated_at' => 'Generated',
+    'recap_values' => 'Values in the document',
+    'recap_assumptions_title' => 'Assumptions made when generating this document',
+    'recap_checksum' => 'Document checksum (SHA-256)',
+
 ];

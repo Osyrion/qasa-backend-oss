@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Přijaté faktury a inbox — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Přijaté faktury a inbox</h1>
+<p>Tato kapitola se věnuje fakturám, které <strong>přijímáš</strong> od dodavatelů — evidenci nákladů a automatickému zpracování doručené pošty.</p>
+<h2>Inbox — doklady, které přijdou samy</h2>
+<p>Místo ručního vypisování každé přijaté faktury můžeš doklady nechat zpracovat automaticky přes <strong>Přijaté faktury → Inbox</strong>:</p>
+<ol>
+<li><strong>Nahrání souboru</strong> — PDF, obrázek (JPG/PNG) nebo ISDOC nahraješ přímo přes <strong>Nahrát soubor</strong>.</li>
+<li>Aplikace ze souboru extrahuje text (OCR u naskenovaných dokumentů) a rozpozná klíčová pole — dodavatele, IČO, částku, DPH, variabilní symbol, datum splatnosti.</li>
+<li>Rozpoznané údaje se zobrazí jako <strong>návrh</strong> — zkontroluješ je a jedním kliknutím <strong>Vytvořit přijatou fakturu</strong> návrh potvrdíš. Pole, které aplikace nerozpoznala správně, si před potvrzením opravíš ručně.</li>
+<li>Pokud dokument není faktura nebo ho nechceš zpracovat, odlož ho tlačítkem <strong>Ignorovat</strong>.</li>
+</ol>
+<p>Při rozpoznávání IČO dodavatele se aplikace zároveň pokusí najít shodu s existujícím klientem/dodavatelem v tvé evidenci, aby sis nezakládal duplicity.</p>
+<h3>Přesnost rozpoznávání</h3>
+<p>Základní rozpoznávání funguje bez dalšího nastavení (pravidla + OCR). Přesnější rozpoznávání pomocí AI (LLM) vyžaduje buď platformový kredit podle plánu, nebo vlastní API klíč (BYOK — bring your own key) v <strong>Nastavení → AI klíče</strong>. Při vyčerpání kreditu nebo bez klíče se použije základní rozpoznávání podle pravidel — inbox nikdy nepřestane fungovat úplně, jen s nižší přesností návrhu.</p>
+<h2>Ruční přidání přijaté faktury</h2>
+<p>Pokud dokument nechceš procházet přes inbox, vytvoř přijatou fakturu přímo v <strong>Přijaté faktury → Přidat</strong> a vyplň pole ručně.</p>
+<h2>Stavy přijaté faktury</h2>
+<p>| Stav | Význam |
+|---|---|
+| <strong>Koncept</strong> | Rozpracovaný záznam, ještě neschválený. |
+| <strong>Přijatá</strong> | Faktura je zaevidovaná, čeká na zpracování/úhradu. |
+| <strong>Zaúčtovaná</strong> | Zaevidovaná do příslušného období (relevantní pro daňová hlášení). |
+| <strong>Uhrazená</strong> | Zaznamenaná úhrada dodavateli. |
+| <strong>Zrušená</strong> | Vyřazená z evidence (např. duplicita, chybný doklad). |</p>
+<h2>Ověření bankovního účtu dodavatele</h2>
+<p>Před úhradou můžeš ověřit, zda bankovní účet uvedený na přijaté faktuře skutečně patří danému dodavateli (ochrana proti podvodné záměně účtu) — tlačítko <strong>Ověřit účet</strong> u přijaté faktury.</p>
+<h2>Úhrada dodavateli</h2>
+<p>Přijatou fakturu můžeš uhradit dvěma způsoby:</p>
+<ul>
+<li><strong>Platební příkaz</strong> — vygeneruješ export (ABO, SEPA nebo CSV) pro import do internetového bankovnictví, případně PDF k ručnímu zadání.</li>
+<li><strong>Ruční označení jako uhrazená</strong> — pokud jsi platbu už provedl jiným způsobem.</li>
+</ul>
+<p>Podrobnosti k automatickému párování s bankovním výpisem najdeš v kapitole <a href="05-banka.html">Banka</a>.</p>
+<h2>Export pro účetnictví</h2>
+<p>Přijaté i vystavené faktury můžeš exportovat ve formátech pro běžné účetní systémy (Pohoda, Omega, ISDOC) nebo jako CSV — <strong>Faktury → Export</strong>. Tato funkce je užitečná, pokud si administrativu řešíš sám, ale roční uzávěrku předáváš účetní.</p>
+<p>CSV je připravené pro Excel v českém a slovenském prostředí: oddělovač sloupců je středník a částky mají <strong>desetinnou čárku</strong>, takže se dají rovnou sečíst. Pokud soubor otvíráš v nástroji nastaveném na anglické prostředí (desetinná tečka), naimportuj ho přes <strong>Data → Z textu/CSV</strong> a desetinný znak tam přepni — jinak se částky načtou jako text a součty vyjdou nulové.</p>
+<div class="chapter-nav-links"><a href="03-faktury.html">&larr; Faktura: od konceptu po úhradu</a><a href="05-banka.html">Banka &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="inbox"></script>
+</body>
+</html>

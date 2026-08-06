@@ -119,6 +119,15 @@ final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
     }
 
     /**
+     * Daňové zvýhodnění na vyživované dítě — §35c, scaled by ordinal
+     * (first/second/third-and-further), not by age.
+     *
+     * The age is deliberately not filtered here, unlike the SK bonus's hard
+     * 18 cut-off: a CZ dependent child qualifies up to 26 while still
+     * studying, and nothing in the wizard asks about study status, so the age
+     * alone cannot decide eligibility. The caller lists the children they are
+     * claiming for; this prices them.
+     *
      * @param  list<int>  $childrenAges
      */
     private function childCredit(array $childrenAges, CzRateTable $rates): float
@@ -126,9 +135,8 @@ final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
         $bands = $rates->childCredits();
         $total = 0.0;
 
-        foreach ($childrenAges as $index => $age) {
-            $ordinal = min($index + 1, 3);
-            $total += $bands[$ordinal];
+        foreach (array_keys($childrenAges) as $index) {
+            $total += $bands[min($index + 1, 3)];
         }
 
         return round($total, 2);

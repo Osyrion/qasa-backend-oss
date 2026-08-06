@@ -18,6 +18,7 @@ it('creates a supplier invoice with a generated internal number and totals from 
     $response->assertCreated();
 
     expect($response->json('data.status'))->toBe('draft')
+        ->and($response->json('data.provenance'))->toBe('manual')
         ->and($response->json('data.internal_number'))->toStartWith('DF-'.now()->format('Y').'-')
         ->and((float) $response->json('data.subtotal'))->toBe(100.0)
         ->and((float) $response->json('data.vat_amount'))->toBe(23.0)

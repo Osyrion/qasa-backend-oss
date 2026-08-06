@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Support\AccountLookup;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,6 +44,15 @@ class PasswordResetController extends Controller
     public function sendResetLink(Request $request): JsonResponse
     {
         $request->validate(['email' => ['required', 'email', 'max:255']]);
+
+        // The broker reads `users` through Laravel's own EloquentUserProvider,
+        // and `users` is tenant-scoped (phase 7,
+        // docs/plans/POSTGRES_RLS_PLAN.md). There is no query here to scope —
+        // the account has to be bound before the broker runs, exactly as
+        // LoginAction does it. Without this the broker returns INVALID_USER
+        // and the generic response below reports success while no mail is
+        // ever sent.
+        AccountLookup::bindByEmail($request->string('email')->toString());
 
         Password::sendResetLink($request->only('email'));
 
@@ -85,6 +95,13 @@ class PasswordResetController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'password' => ['required', 'string', 'max:255', PasswordRule::defaults()],
         ]);
+
+        // Same binding as sendResetLink() above, and needed for the write as
+        // well as the read: the callback below saves the user and deletes
+        // their tokens, and both are refused outright on an unbound
+        // connection. A wrong address binds nothing and the broker then
+        // answers INVALID_USER, which is what it should answer anyway.
+        AccountLookup::bindByEmail($request->string('email')->toString());
 
         $status = Password::reset(
             $request->only('email', 'password', 'token'),

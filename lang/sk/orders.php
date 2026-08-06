@@ -10,4 +10,7 @@ return [
     'attachment_too_large' => 'Súbor je príliš veľký. Maximálna veľkosť je 20MB.',
     'attachment_save_failed' => 'Súbor sa nepodarilo uložiť.',
     'limit_reached' => 'Dosiahli ste limit zákaziek pre váš plán. Pre pridanie ďalších zákaziek si vylepšite plán.',
+    'status_not_editable' => 'Zákazku so statusom :status nie je možné upraviť.',
+    'personal_order_cannot_have_rate' => 'Osobná zákazka (bez klienta) nemôže mať nastavenú sadzbu.',
+    'billable_type_requires_rate' => 'Fakturovateľná zákazka s typom :type musí mať nastavenú sadzbu.',
 ];

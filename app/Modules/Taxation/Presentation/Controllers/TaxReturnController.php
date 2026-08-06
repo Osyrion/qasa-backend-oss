@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Taxation\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
 use App\Modules\Taxation\Application\DTOs\TaxReturnInputData;
@@ -166,7 +167,10 @@ class TaxReturnController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $this->draftStore->put($user->id, $data->year, $request->all());
+        // The validated shape, not the raw request: caching $request->all()
+        // meant any extra key a caller attached was encrypted and kept for
+        // seven days, unbounded and never read back by anything.
+        $this->draftStore->put($user->id, $data->year, $data->toArray());
 
         return response()->json(null, 204);
     }
@@ -323,7 +327,7 @@ class TaxReturnController extends Controller
         if ($request->query('format') === 'pdf') {
             return response($this->pdfService->generate($result), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="'.$this->pdfService->filename($result).'"',
+                'Content-Disposition' => ContentDisposition::attachment($this->pdfService->filename($result)),
             ]);
         }
 

@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\CreateInvoiceActionInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Throwable;
 
-readonly class CreateInvoiceAction
+readonly class CreateInvoiceAction implements CreateInvoiceActionInterface
 {
     public function __construct(
         private InvoiceRepositoryInterface $repository,

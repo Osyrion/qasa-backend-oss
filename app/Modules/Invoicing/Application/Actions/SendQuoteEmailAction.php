@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Application\Mail\QuoteEmail;
 use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\VerifiedSenderGuard;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -28,6 +29,8 @@ readonly class SendQuoteEmailAction
      */
     public function execute(Quote $quote, ?SendInvoiceEmailData $data = null): Quote
     {
+        VerifiedSenderGuard::ensureCanSend($quote->user);
+
         // Resolve the recipient before any state change so a draft without
         // a deliverable address stays untouched.
         $recipient = $this->resolveRecipient($quote, $data);

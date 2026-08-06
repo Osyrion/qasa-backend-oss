@@ -7,8 +7,10 @@ namespace App\Modules\Clients\Presentation\Controllers;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Actions\ArchiveClientAction;
 use App\Modules\Clients\Application\Actions\CreateClientAction;
+use App\Modules\Clients\Application\Actions\CreateClientPortalLinkAction;
 use App\Modules\Clients\Application\Actions\DeleteClientAction;
 use App\Modules\Clients\Application\Actions\RestoreClientAction;
+use App\Modules\Clients\Application\Actions\RevokeClientPortalLinkAction;
 use App\Modules\Clients\Application\Actions\UpdateClientAction;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
@@ -332,6 +334,66 @@ class ClientController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    #[OA\Post(
+        path: '/api/v1/clients/{id}/portal-link',
+        summary: 'Issue (or return) the client portal link',
+        description: 'Idempotent: an existing link is returned unchanged unless regenerate=true, which replaces it and stops the old one resolving.',
+        security: [['sanctum' => []]],
+        tags: ['Clients'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'regenerate', in: 'query', schema: new OA\Schema(type: 'boolean')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Portal token and URL',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'token', type: 'string'),
+                    new OA\Property(property: 'url', type: 'string'),
+                ], type: 'object')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Not allowed to manage this client'),
+        ]
+    )]
+    public function createPortalLink(Request $request, Client $client, CreateClientPortalLinkAction $action): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $client = $action->execute($client, $request->boolean('regenerate'));
+
+        return response()->json([
+            'token' => $client->portal_token,
+            // Built from the front-end base URL, not the API host — the
+            // client opens a page, not an endpoint.
+            'url' => rtrim((string) config('app.frontend_url'), '/').'/portal/'.$client->portal_token,
+        ]);
+    }
+
+    #[OA\Delete(
+        path: '/api/v1/clients/{id}/portal-link',
+        summary: 'Revoke the client portal link',
+        security: [['sanctum' => []]],
+        tags: ['Clients'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Revoked'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Not allowed to manage this client'),
+        ]
+    )]
+    public function revokePortalLink(Client $client, RevokeClientPortalLinkAction $action): JsonResponse
+    {
+        $this->authorize('update', $client);
+
+        $action->execute($client);
+
+        return response()->json(null, 204);
     }
 
     #[OA\Post(

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API a integrace — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>API a integrace</h1>
+<p>Qasa nabízí REST API pro vlastní integrace a napojení na automatizační nástroje, a MCP server pro AI asistenty.</p>
+<h2>Osobní přístupové tokeny</h2>
+<p><strong>Nastavení → API tokeny → Vytvořit token</strong> vygeneruje token pro přihlášení do API bez použití hesla. Při vytváření vybereš, k čemu má token přístup (např. jen ke čtení faktur) — token má vždy jen takový rozsah oprávnění, jaký mu přiděluješ, nikdy víc, než má samotný účet.</p>
+<blockquote>
+<p>Token se v plném znění zobrazí <strong>jen jednou</strong>, hned po vytvoření. Ulož si ho bezpečně — při ztrátě je třeba vytvořit nový a starý zrušit.</p>
+</blockquote>
+<p>Seznam existujících tokenů (bez jejich hodnoty) najdeš na stejné stránce; nepoužívaný nebo kompromitovaný token můžeš okamžitě <strong>zrušit</strong>.</p>
+<h2>Dokumentace API</h2>
+<p>Kompletní reference všech endpointů (parametry, návratové formáty, chybové stavy) je publikovaná jako OpenAPI dokumentace na <code>/api/documentation</code>. Dokumentace je generovaná přímo z kódu API, takže je vždy aktuální.</p>
+<h2>Webhooky</h2>
+<p>Pokud chceš být o událostech v účtu (např. nová platba, vystavená faktura) informován v reálném čase ve vlastním systému místo pravidelného dotazování API, nastav si <strong>webhook</strong> — <strong>Integrace → Webhooky → Přidat endpoint</strong>:</p>
+<ol>
+<li>Zadej cílovou URL adresu, na kterou má aplikace posílat notifikace.</li>
+<li>Vyber, na které události se má endpoint přihlásit.</li>
+<li>Ulož si vygenerovaný <strong>podpisový klíč (secret)</strong> — každá doručená notifikace je jím podepsaná, abys na své straně ověřil, že zpráva skutečně přišla z Qasa.</li>
+</ol>
+<h3>Testování a historie doručení</h3>
+<p>Tlačítko <strong>Test</strong> pošle na endpoint zkušební notifikaci bez čekání na reálnou událost — ověř si takto, že endpoint je dostupný, ještě před ostrým nasazením. Historie pokusů o doručení (úspěšné i neúspěšné, včetně HTTP stavu odpovědi) je dostupná u každého endpointu; endpoint s dlouhodobě selhávajícím doručováním se po překročení limitu opakovaných chyb automaticky deaktivuje, aby neblokoval frontu.</p>
+<h2>MCP server pro AI asistenty</h2>
+<p>Qasa vystavuje i <strong>MCP</strong> (Model Context Protocol) server, který umožňuje AI asistentům (např. Claude) pracovat s tvými daty v Qasa přímo v rámci konverzace — například vyžádat si přehled neuhrazených faktur nebo připravit podklady k dokladu, bez přepínání do aplikace. Připojení k MCP serveru se autentizuje stejným přístupovým tokenem jako REST API a respektuje stejný rozsah oprávnění.</p>
+<h2>Konektory (Zapier/Make)</h2>
+<p>Jelikož REST API je veřejně zdokumentované a autentizuje se standardními tokeny, dá se napojit i na nízkokódové automatizační nástroje typu Zapier nebo Make bez nutnosti psát vlastní kód — jde o stejnou sadu endpointů jako u přímé API integrace.</p>
+<div class="chapter-nav-links"><a href="07-tim.html">&larr; Tým</a><a href="09-doklady.html">Úložiště dokladů &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="api"></script>
+</body>
+</html>

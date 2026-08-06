@@ -6,6 +6,7 @@ namespace App\Modules\Clients\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
+use App\Modules\Clients\Application\Contracts\CreateClientActionInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
 use App\Modules\Clients\Domain\Events\ClientCreated;
 use App\Modules\Clients\Domain\Models\Client;
@@ -13,20 +14,29 @@ use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-readonly class CreateClientAction
+readonly class CreateClientAction implements CreateClientActionInterface
 {
     public function __construct(
         private ClientRepositoryInterface $repository,
     ) {}
 
     /**
+     * $enforceLimit is false only for competitor migration imports — a
+     * bulk import must not be truncated mid-way by the free-tier cap; the
+     * account is left over its limit and ClientUsageGuard's existing
+     * read-only lock takes over from there instead (see
+     * docs/plans/COMPETITOR_MIGRATION_IMPORTS_PLAN.md).
+     *
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(ClientData $data, User $owner): Client
+    public function execute(ClientData $data, User $owner, bool $enforceLimit = true): Client
     {
         $this->validate($data);
-        $this->validateLimit($data, $owner);
+
+        if ($enforceLimit) {
+            $this->validateLimit($data, $owner);
+        }
 
         return DB::transaction(function () use ($data, $owner): Client {
             $client = $this->repository->create([

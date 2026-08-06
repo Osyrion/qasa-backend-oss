@@ -53,7 +53,7 @@ final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
 
         $adjustedBase = max(0.0, round($totalTaxBase - $nczd - $spouseNczd, 2));
 
-        $tax = $this->tax($businessIncome, $adjustedBase, $rates);
+        $tax = $this->tax($businessIncome, $adjustedBase, $partialBaseBusiness, $totalTaxBase, $rates);
 
         $childBonus = $this->childBonus($input->childrenAges, $partialBaseBusiness, $rates);
         $finalTax = round($tax - $childBonus, 2);
@@ -66,8 +66,32 @@ final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
             $notes[] = __('taxation.foreign_income_note');
         }
 
+        // Only when the split actually decided something: business income
+        // qualifying for the reduced rate *and* income from elsewhere in the
+        // same base. See tax() for the assumption being flagged.
+        if ($partialBaseBusiness > 0.0
+            && $businessIncome <= $rates->lowRateIncomeThreshold()
+            && round($totalTaxBase - $partialBaseBusiness, 2) > 0.0
+        ) {
+            $notes[] = __('taxation.mixed_income_rate_split_note');
+        }
+
         if ($input->systemIncome->unconvertedAmounts !== []) {
             $notes[] = __('taxation.unconverted_amounts_note');
+        }
+
+        // The assessment base here is a straight share of the partial base,
+        // bounded at neither end. SK law bounds it at both — and the error is
+        // material in both directions: a small income lands under the
+        // statutory minimum, a large one runs away without the ceiling
+        // (€400k of income produces a five-figure over-estimate). The figures
+        // themselves belong in SkRateTable once they have been read off the
+        // Sociálna poisťovňa / health insurer tables for the year; until then
+        // this says so rather than letting the number pass for a computed
+        // liability. CzIncomeTaxReturnCalculator already applies its minimum
+        // monthly bases.
+        if ($contributions['social'] > 0.0 || $contributions['health'] > 0.0) {
+            $notes[] = __('taxation.sk_contributions_unbounded_note');
         }
 
         return new TaxReturnResult(
@@ -128,22 +152,56 @@ final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
         return round(max(0.0, 63.4 * $lm - $totalTaxBase / 4), 2);
     }
 
-    private function tax(float $businessIncome, float $adjustedBase, SkRateTable $rates): float
+    /**
+     * The reduced rate is a §6 concession: it is gated on §6 business income
+     * and applies to the §6 partial tax base. It used to be applied to the
+     * whole adjusted base, so any base at all was taxed at 15% as long as
+     * business income stayed under the threshold — including the case of no
+     * business income whatsoever, where `0 <= threshold` held trivially and
+     * an employee's entire salary came out at 15%. The 25% bracket was
+     * skipped on that path too. Every test in the suite passed
+     * employmentIncome: 0.0, so the mixed case the wizard accepts was never
+     * exercised.
+     *
+     * How the allowances split between the two portions is a question for a
+     * tax advisor, not for this class; the neutral choice is taken — what
+     * survives NČZD is divided in the same proportion the two sources
+     * contributed to the base before it — and surfaced as a note on the
+     * result whenever it actually changes the answer.
+     */
+    private function tax(float $businessIncome, float $adjustedBase, float $partialBaseBusiness, float $totalTaxBase, SkRateTable $rates): float
     {
-        if ($businessIncome <= $rates->lowRateIncomeThreshold()) {
-            return round($adjustedBase * $rates->lowTaxRate(), 2);
+        if ($adjustedBase <= 0.0) {
+            return 0.0;
         }
 
+        $businessPortion = $this->reducedRatePortion($businessIncome, $adjustedBase, $partialBaseBusiness, $totalTaxBase, $rates);
+        $remainder = round($adjustedBase - $businessPortion, 2);
         $threshold = $rates->highRateThreshold();
 
-        if ($adjustedBase <= $threshold) {
-            return round($adjustedBase * $rates->standardTaxRate(), 2);
+        $tax = $businessPortion * $rates->lowTaxRate();
+
+        $tax += $remainder <= $threshold
+            ? $remainder * $rates->standardTaxRate()
+            : $threshold * $rates->standardTaxRate() + ($remainder - $threshold) * $rates->highTaxRate();
+
+        return round($tax, 2);
+    }
+
+    /**
+     * The slice of the adjusted base the 15% rate may be applied to: nothing
+     * unless §6 income qualifies, and never more than the share the business
+     * partial base contributed to the pre-allowance base.
+     */
+    private function reducedRatePortion(float $businessIncome, float $adjustedBase, float $partialBaseBusiness, float $totalTaxBase, SkRateTable $rates): float
+    {
+        if ($businessIncome > $rates->lowRateIncomeThreshold() || $partialBaseBusiness <= 0.0 || $totalTaxBase <= 0.0) {
+            return 0.0;
         }
 
-        return round(
-            $threshold * $rates->standardTaxRate() + ($adjustedBase - $threshold) * $rates->highTaxRate(),
-            2,
-        );
+        $share = min(1.0, $partialBaseBusiness / $totalTaxBase);
+
+        return round($adjustedBase * $share, 2);
     }
 
     /**
@@ -151,17 +209,22 @@ final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
      */
     private function childBonus(array $childrenAges, float $partialBaseBusiness, SkRateTable $rates): float
     {
+        $eligible = array_values(array_filter($childrenAges, static fn (int $age): bool => $age <= 18));
+
+        if ($eligible === []) {
+            return 0.0;
+        }
+
         $total = 0.0;
 
-        foreach ($childrenAges as $age) {
-            if ($age > 18) {
-                continue;
-            }
-
+        foreach ($eligible as $age) {
             $total += $age < 15 ? $rates->childBonusUnder15() : $rates->childBonus15To18();
         }
 
-        $cap = round($partialBaseBusiness * $rates->childBonusCapShare(), 2);
+        // The cap band is keyed on how many children actually qualify, not on
+        // how many the taxpayer listed — an adult child neither earns a bonus
+        // nor widens the ceiling for their siblings.
+        $cap = round($partialBaseBusiness * $rates->childBonusCapShare(count($eligible)), 2);
 
         return round(min($total, $cap), 2);
     }

@@ -18,7 +18,8 @@ use App\Modules\Invoicing\Infrastructure\Ocr\RegexFieldExtractor;
  * heuristics or the LLM — see
  * docs/plans/BYOK_MULTI_PROVIDER_EXTRACTION_PLAN.md §4:
  *
- * 1. INVOICING_EXTRACTION_DRIVER=regex kill switch          → regex
+ * 1. QASA_AI_DISABLED global kill switch (every AI path, phase 3 Part C)
+ *    or INVOICING_EXTRACTION_DRIVER=regex kill switch         → regex
  * 2. account owner's ai_extraction_enabled switch is off    → regex
  * 3. ai_byok feature not granted                            → regex
  * 4. BYOK credential exists                                 → LLM via its
@@ -41,6 +42,10 @@ final readonly class FieldExtractorFactory
 
     public function forOwner(User $owner): FieldExtractorSelection
     {
+        if ((bool) config('qasa.ai.disabled', false)) {
+            return new FieldExtractorSelection($this->regexExtractor);
+        }
+
         if ((string) config('invoicing.inbox.extraction.driver', 'regex') === 'regex') {
             return new FieldExtractorSelection($this->regexExtractor);
         }

@@ -69,6 +69,8 @@ class UpdateProfileAction
                 'auto_remind_after_days' => $data->auto_remind_after_days,
                 'auto_remind_max_count' => $data->auto_remind_max_count,
                 'overdue_digest_enabled' => $data->overdue_digest_enabled,
+                'vat_filing_frequency' => $data->vat_filing_frequency?->value,
+                'tax_filing_reminder_enabled' => $data->tax_filing_reminder_enabled,
             ], fn ($value) => $value !== null);
 
             if ($data->invoice_number_mask_provided) {

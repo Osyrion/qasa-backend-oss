@@ -12,6 +12,7 @@ use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Events\PaymentRecorded;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
+use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -35,41 +36,57 @@ readonly class RecordPaymentAction implements RecordPaymentActionInterface
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Invoice $invoice, PaymentData $data, bool $enforceUsageGuard = true): InvoicePayment
+    public function execute(Invoice $invoice, PaymentData $data, bool $enforceUsageGuard = true, Provenance $provenance = Provenance::Manual): InvoicePayment
     {
         if ($enforceUsageGuard && $invoice->client !== null) {
             $this->usageGuard->ensureUsable($invoice->client);
-        }
-
-        if (! $invoice->statusEnum()->isOpen() && ! $invoice->isPaid()) {
-            throw DomainException::because(
-                __('invoicing.payment_requires_open_invoice', ['status' => $invoice->statusEnum()->label()])
-            );
         }
 
         if ($invoice->isCreditNote()) {
             throw DomainException::because(__('invoicing.payment_not_for_credit_note'));
         }
 
-        return DB::transaction(function () use ($invoice, $data): InvoicePayment {
+        return DB::transaction(function () use ($invoice, $data, $provenance): InvoicePayment {
+            // Re-read under a row lock before deciding anything. This action
+            // is reached from the Stripe webhook, the bank matcher and a
+            // person clicking "mark paid", so $invoice can already be stale:
+            // its status may have been settled or cancelled since, and the
+            // balance below has to be computed against payments nobody else
+            // is inserting concurrently. Same reasoning, same shape as
+            // UpdateInvoiceStatusAction.
+            $locked = Invoice::query()->lockForUpdate()->whereKey($invoice->getKey())->firstOrFail();
+
+            if (! $locked->statusEnum()->isOpen() && ! $locked->isPaid()) {
+                throw DomainException::because(
+                    __('invoicing.payment_requires_open_invoice', ['status' => $locked->statusEnum()->label()])
+                );
+            }
+
             /** @var InvoicePayment $payment */
-            $payment = $invoice->payments()->create([
+            $payment = $locked->payments()->create([
                 'amount' => $data->amount,
                 'paid_at' => $data->paid_at,
                 'method' => $data->method,
+                'provenance' => $provenance->value,
                 'note' => $data->note,
                 'bank_reference' => $data->bank_reference,
                 'stripe_payment_intent_id' => $data->stripe_payment_intent_id,
             ]);
 
-            $invoice->unsetRelation('payments');
+            $locked->unsetRelation('payments')->forgetPaymentsAggregate();
 
-            if ($invoice->balance() <= 0 && ! $invoice->isPaid()) {
-                $invoice->update(['status' => InvoiceStatus::Paid->value]);
-                event(new InvoicePaid($invoice));
+            if ($locked->balance() <= 0 && ! $locked->isPaid()) {
+                $locked->update(['status' => InvoiceStatus::Paid->value]);
+                event(new InvoicePaid($locked));
             }
 
-            event(new PaymentRecorded($invoice, $payment));
+            event(new PaymentRecorded($locked, $payment));
+
+            // The caller still holds the pre-lock instance and goes on to
+            // serialise it — hand it the state the transaction settled on
+            // rather than the one it read before.
+            $invoice->setRawAttributes($locked->getAttributes(), true);
+            $invoice->unsetRelation('payments')->forgetPaymentsAggregate();
 
             return $payment;
         });

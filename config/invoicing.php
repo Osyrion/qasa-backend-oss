@@ -108,4 +108,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | UBL 2.1 / EN 16931 e-invoice
+    |--------------------------------------------------------------------------
+    |
+    | The specification identifiers stamped on every exported e-invoice
+    | (EN 16931 BT-24 and BT-23). Configurable rather than hard-coded so a
+    | national CIUS — or Peppol BIS Billing, once an access point is in the
+    | picture — is a deployment setting instead of a code change.
+    |
+    */
+
+    'ubl' => [
+        'customization_id' => env('QASA_UBL_CUSTOMIZATION_ID', 'urn:cen.eu:en16931:2017'),
+        'profile_id' => env('QASA_UBL_PROFILE_ID', 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0'),
+    ],
+
 ];

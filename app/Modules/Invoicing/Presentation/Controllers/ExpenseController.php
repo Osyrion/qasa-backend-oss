@@ -52,6 +52,8 @@ class ExpenseController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Expense::class);
+
         $expenses = $this->repository->paginate(
             perPage: Pagination::perPage($request),
             filters: $request->only(['category', 'currency', 'date_from', 'date_to', 'year']),
@@ -120,6 +122,8 @@ class ExpenseController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
+        $this->authorize('create', Expense::class);
+
         $data = ExpenseData::validateAndCreate($request->all());
 
         /** @var User $user */

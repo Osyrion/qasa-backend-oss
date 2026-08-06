@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
+use App\Modules\Shared\Enums\PaymentMethod;
+use App\Modules\Shared\Enums\Provenance;
 use Database\Factories\Modules\Invoicing\Domain\Models\InvoicePaymentFactory;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +20,8 @@ use Illuminate\Support\Carbon;
  * @property string $invoice_id
  * @property numeric $amount In the invoice currency
  * @property Carbon $paid_at
- * @property string|null $method bank_transfer | cash | card | other
+ * @property PaymentMethod|null $method
+ * @property Provenance $provenance How this payment came to exist — manual|email_in|api|import|auto_matched|ai_suggested
  * @property string|null $note
  * @property string|null $bank_reference External transaction id from an imported bank statement
  * @property string|null $stripe_payment_intent_id Set only for payments recorded by the Stripe Connect webhook
@@ -45,6 +48,7 @@ class InvoicePayment extends Model
         'amount',
         'paid_at',
         'method',
+        'provenance',
         'note',
         'bank_reference',
         'stripe_payment_intent_id',
@@ -55,6 +59,8 @@ class InvoicePayment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'date',
+            'method' => PaymentMethod::class,
+            'provenance' => Provenance::class,
         ];
     }
 

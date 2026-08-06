@@ -37,6 +37,12 @@ Schedule::command('qasa:activity:purge')
     ->withoutOverlapping()
     ->onOneServer();
 
+Schedule::command('qasa:notifications:purge')
+    ->dailyAt('04:45')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('qasa:idempotency-keys:purge')
     ->hourly()
     ->withoutOverlapping()

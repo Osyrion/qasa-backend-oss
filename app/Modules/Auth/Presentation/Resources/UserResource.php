@@ -74,6 +74,16 @@ use OpenApi\Attributes as OA;
             nullable: true,
         ),
         new OA\Property(property: 'plan', type: 'string', example: 'pro', nullable: true),
+        new OA\Property(
+            property: 'trial',
+            description: 'Card-free trial state; null when not on one (and always null in the core edition)',
+            properties: [
+                new OA\Property(property: 'ends_at', type: 'string', format: 'date-time'),
+                new OA\Property(property: 'days_left', type: 'integer'),
+            ],
+            type: 'object',
+            nullable: true,
+        ),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
     ]
 )]
@@ -139,6 +149,10 @@ class UserResource extends JsonResource
                 $this->resource->exposesPlan(),
                 fn () => $this->resource->planSlug(),
             ),
+
+            // Always present, unlike `plan`: the front end counts down on it
+            // and needs to distinguish "no trial" from "not loaded".
+            'trial' => $this->resource->trialMeta(),
 
             'created_at' => $this->resource->created_at?->toISOString(),
         ];

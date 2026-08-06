@@ -11,6 +11,7 @@ use App\Modules\Taxation\Domain\Contracts\EuSalesListBuilder;
 use App\Modules\Taxation\Domain\Contracts\IncomeTaxReturnCalculator;
 use App\Modules\Taxation\Domain\Contracts\TaxSystem;
 use App\Modules\Taxation\Domain\Contracts\VatRegimeResolver;
+use App\Modules\Taxation\Domain\Contracts\VatReturnBuilder;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use App\Modules\Taxation\Domain\Rules\ValidSkDic;
 use App\Modules\Taxation\Domain\Rules\ValidSkIco;
@@ -30,6 +31,7 @@ final readonly class SkTaxSystem implements TaxSystem
         private SkEuSalesListBuilder $euSalesListBuilder,
         private array $exportBuilders,
         private SkIncomeTaxReturnCalculator $incomeTaxReturnCalculator,
+        private SkVatReturnService $vatReturnBuilder,
     ) {}
 
     public function residency(): TaxResidency
@@ -75,6 +77,11 @@ final readonly class SkTaxSystem implements TaxSystem
     public function euSalesListBuilder(): EuSalesListBuilder
     {
         return $this->euSalesListBuilder;
+    }
+
+    public function vatReturnBuilder(): VatReturnBuilder
+    {
+        return $this->vatReturnBuilder;
     }
 
     public function accountingExports(): array

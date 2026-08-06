@@ -73,6 +73,11 @@ class InvoiceResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Once, not twice: balance() falls back to an aggregate query when
+        // the model arrives without withSum('payments'), and both fields
+        // below are derived from the same figure.
+        $balance = $this->resource->balance();
+
         return [
             'id' => $this->resource->id,
             'invoice_number' => $this->resource->invoice_number,
@@ -113,10 +118,10 @@ class InvoiceResource extends JsonResource
             'email_failed_at' => $this->resource->email_failed_at?->toISOString(),
             'last_reminded_at' => $this->resource->last_reminded_at?->toISOString(),
             'reminder_count' => $this->resource->reminder_count,
-            'balance' => $this->resource->balance(),
+            'balance' => $balance,
             'payment_status' => PaymentStatus::fromAmounts(
                 (float) $this->resource->total,
-                (float) $this->resource->total - $this->resource->balance(),
+                (float) $this->resource->total - $balance,
             )->value,
             'qr_scheme' => app(PaymentQrService::class)->scheme($this->resource)?->name(),
             'public_link' => $this->resource->hasPublicLink() ? [

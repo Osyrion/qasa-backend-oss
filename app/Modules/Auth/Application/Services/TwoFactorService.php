@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Application\Services;
 
+use App\Modules\Auth\Application\Contracts\TwoFactorServiceInterface;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
@@ -17,7 +18,7 @@ use PragmaRX\Google2FA\Google2FA;
  * verification) and chillerlan/php-qrcode (provisioning QR), mirroring
  * PaymentQrService's SVG data-URI style for the invoice payment QR.
  */
-class TwoFactorService
+class TwoFactorService implements TwoFactorServiceInterface
 {
     /**
      * A TOTP code is valid for one window either side of the current one

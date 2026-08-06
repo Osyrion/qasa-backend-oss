@@ -33,4 +33,12 @@ interface ProvidesAccountMeta
     public function exposesPlan(): bool;
 
     public function planSlug(): ?string;
+
+    /**
+     * Card-free trial state, or null when the edition has no trials or the
+     * account is not on one.
+     *
+     * @return array{ends_at: string, days_left: int}|null
+     */
+    public function trialMeta(): ?array;
 }

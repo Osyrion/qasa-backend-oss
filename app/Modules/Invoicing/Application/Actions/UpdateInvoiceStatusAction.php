@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\UpdateInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
+use App\Modules\Invoicing\Domain\Events\InvoiceIssued;
 use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Events\InvoiceSent;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -13,7 +15,7 @@ use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-readonly class UpdateInvoiceStatusAction
+readonly class UpdateInvoiceStatusAction implements UpdateInvoiceStatusActionInterface
 {
     public function __construct(
         private InvoiceRepositoryInterface $repository,
@@ -57,6 +59,7 @@ readonly class UpdateInvoiceStatusAction
             ]);
 
             match ($newStatus) {
+                InvoiceStatus::Issued => event(new InvoiceIssued($updated)),
                 InvoiceStatus::Sent => event(new InvoiceSent($updated)),
                 InvoiceStatus::Paid => event(new InvoicePaid($updated)),
                 default => null,

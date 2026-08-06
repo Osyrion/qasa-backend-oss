@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
+use App\Modules\Invoicing\Application\Contracts\AddInvoiceItemActionInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceItemData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
@@ -13,7 +14,7 @@ use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
-class AddInvoiceItemAction
+class AddInvoiceItemAction implements AddInvoiceItemActionInterface
 {
     public function __construct(
         private readonly ClientUsageGuardInterface $usageGuard,

@@ -117,3 +117,31 @@ it('rejects an invalid flat-rate category', function (): void {
         'spouse_eligible_for_credit' => false,
     ])->assertStatus(422);
 });
+
+it('stores only the validated wizard fields in the draft, not the raw request', function (): void {
+    $user = createSaasUser(['country' => 'SK']);
+    subscribeToPaidPlan($user);
+
+    $this->actingAs($user)
+        ->putJson('/api/v1/tax-return/draft', [
+            'year' => 2026,
+            'use_actual_expenses' => false,
+            'is_main_activity' => true,
+            'months_active' => 12,
+            'spouse_eligible_for_credit' => false,
+            // Not part of the wizard. It used to be persisted verbatim: the
+            // endpoint validated into a DTO and then cached $request->all(),
+            // so anything a caller attached rode along into the encrypted
+            // cache entry, unbounded and unread.
+            'smuggled' => str_repeat('x', 1024),
+        ])
+        ->assertNoContent();
+
+    $draft = $this->actingAs($user)
+        ->getJson('/api/v1/tax-return/draft?year=2026')
+        ->assertOk()
+        ->json('data');
+
+    expect($draft)->not->toHaveKey('smuggled')
+        ->and($draft)->toHaveKey('months_active');
+});

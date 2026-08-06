@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\DTOs;
 
+use App\Modules\Shared\Enums\PaymentMethod;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\LaravelData\Attributes\Validation\Nullable;
 use Spatie\LaravelData\Data;
 
@@ -15,7 +17,7 @@ class PaymentData extends Data
         public readonly string $paid_at,
 
         #[Nullable]
-        public readonly ?string $method = null,
+        public readonly ?PaymentMethod $method = null,
 
         #[Nullable]
         public readonly ?string $note = null,
@@ -41,7 +43,10 @@ class PaymentData extends Data
         return [
             'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
             'paid_at' => ['required', 'date'],
-            'method' => ['nullable', 'string', 'in:bank_transfer,cash,card,other'],
+            // Rule::enum, not a hand-written in: list — a new payment
+            // method should not need somebody to find every place the values
+            // were spelled out.
+            'method' => ['nullable', Rule::enum(PaymentMethod::class)],
             'note' => ['nullable', 'string', 'max:255'],
             'bank_reference' => ['nullable', 'string', 'max:255'],
         ];
@@ -52,7 +57,7 @@ class PaymentData extends Data
         return new self(
             amount: (float) $request->input('amount'),
             paid_at: $request->string('paid_at')->toString(),
-            method: $request->filled('method') ? $request->string('method')->toString() : null,
+            method: PaymentMethod::tryFrom($request->string('method')->toString()),
             note: $request->filled('note') ? $request->string('note')->toString() : null,
             bank_reference: $request->filled('bank_reference') ? $request->string('bank_reference')->toString() : null,
         );

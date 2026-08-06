@@ -13,9 +13,11 @@ use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderAttachment;
 use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Shared\Authorization\AbilityCatalog;
+use App\Modules\Shared\Domain\Models\AccountNotification;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Taxation\Domain\Enums\VatFilingFrequency;
 use Database\Factories\Modules\Auth\Domain\Models\UserFactory;
 use Eloquent;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -24,9 +26,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\DatabaseNotificationCollection;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -69,6 +71,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property int $auto_remind_after_days Days after due_at before the first automatic reminder
  * @property int $auto_remind_max_count Cap on total reminders (manual + automatic) sent for one invoice
  * @property bool $overdue_digest_enabled Owner notification when an invoice newly crosses into overdue — distinct from auto_remind_enabled, which emails the client
+ * @property VatFilingFrequency|null $vat_filing_frequency How often this VAT payer files a return — null until set via profile, drives the TaxFiling archive/reminder period
+ * @property bool $tax_filing_reminder_enabled Opt-in for the VAT filing deadline reminder (Automation module)
  * @property string $locale UI language
  * @property string|null $country ISO 3166-1 alpha-2 — SK/CZ only; null until complete-residency (step 2), then immutable
  * @property string|null $company_name Sole source of the supplier's printed name once set — see supplierName()
@@ -96,7 +100,7 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property-read string $full_name
  * @property-read Collection<int, Invoice> $invoices
  * @property-read int|null $invoices_count
- * @property-read DatabaseNotificationCollection<int, DatabaseNotification> $notifications
+ * @property-read DatabaseNotificationCollection<int, AccountNotification> $notifications
  * @property-read int|null $notifications_count
  * @property-read Collection<int, OrderAttachment> $orderAttachments
  * @property-read int|null $order_attachments_count
@@ -163,6 +167,7 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         'supplier_invoice_number_mask', 'supplier_invoice_number_start',
         'quote_number_mask', 'quote_number_start', 'invoice_inbox_enabled',
         'auto_remind_enabled', 'auto_remind_after_days', 'auto_remind_max_count', 'overdue_digest_enabled',
+        'vat_filing_frequency', 'tax_filing_reminder_enabled',
         'country', 'company_name', 'address', 'city', 'postal_code',
         'logo_path', 'vat_id', 'website', 'invoice_footer_text',
         'clockify_api_key', 'clockify_workspace_id', 'ai_extraction_enabled',
@@ -218,6 +223,8 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
             'auto_remind_after_days' => 'integer',
             'auto_remind_max_count' => 'integer',
             'overdue_digest_enabled' => 'boolean',
+            'vat_filing_frequency' => VatFilingFrequency::class,
+            'tax_filing_reminder_enabled' => 'boolean',
             'default_currency' => Currency::class,
             'clockify_api_key' => 'encrypted',
             'ai_extraction_enabled' => 'boolean',
@@ -349,7 +356,30 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         return null;
     }
 
+    /**
+     * The core edition has no plans, so it has no trial either.
+     */
+    public function trialMeta(): ?array
+    {
+        return null;
+    }
+
     // ── Relations ─────────────────────────────────────────────────────────────
+
+    /**
+     * In-app notifications addressed to this user.
+     *
+     * Overrides HasDatabaseNotifications so the rows come back as
+     * AccountNotification — the tenant-scoped model — rather than the
+     * framework's own. readNotifications()/unreadNotifications() are defined
+     * in terms of this method, so they follow.
+     *
+     * @return MorphMany<AccountNotification, $this>
+     */
+    public function notifications(): MorphMany
+    {
+        return $this->morphMany(AccountNotification::class, 'notifiable')->latest();
+    }
 
     /**
      * @return HasMany<Client, $this>

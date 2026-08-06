@@ -14,6 +14,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Events\InboxItemCreated;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
+use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceParser;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -47,6 +48,7 @@ final class ProcessInboxItemJob implements ShouldQueue
         FieldExtractorFactory $extractorFactory,
         InvoiceFieldExtractor $regexExtractor,
         ClientRepositoryInterface $clients,
+        Ubl21InvoiceParser $ublParser,
     ): void {
         $item = $this->findItem();
 
@@ -55,6 +57,14 @@ final class ProcessInboxItemJob implements ShouldQueue
         }
 
         $absolutePath = Storage::disk($item->disk)->path($item->path);
+
+        // A structured e-invoice states its fields instead of rendering them,
+        // so there is nothing to OCR and nothing to guess. Short-circuiting
+        // here is the whole reason to support UBL on the receiving side.
+        if ($this->settleFromUbl($item, $ublParser, $clients)) {
+            return;
+        }
+
         $extraction = $extractor->extract($absolutePath, $item->mime_type);
 
         if (trim($extraction->text) === '') {
@@ -94,6 +104,46 @@ final class ProcessInboxItemJob implements ShouldQueue
         $item->save();
 
         event(new InboxItemCreated($item));
+    }
+
+    /**
+     * Settles the item straight from a UBL payload, or reports that this is
+     * not one and leaves it to OCR.
+     */
+    private function settleFromUbl(
+        InvoiceInboxItem $item,
+        Ubl21InvoiceParser $ublParser,
+        ClientRepositoryInterface $clients,
+    ): bool {
+        // Cheap gate first: only an XML-ish payload is worth reading into a
+        // DOM at all, and the inbox mostly carries PDFs and scans.
+        if (! str_contains($item->mime_type, 'xml')) {
+            return false;
+        }
+
+        $suggestions = $ublParser->parse((string) Storage::disk($item->disk)->get($item->path));
+
+        if ($suggestions === null) {
+            return false;
+        }
+
+        $ico = $suggestions['ico'] ?? null;
+
+        $item->status = InvoiceInboxStatus::Pending->value;
+        // No OCR ran, so there is no extracted text and no engine to name —
+        // recording either would misrepresent where the fields came from.
+        $item->ocr_text = null;
+        $item->ocr_engine = null;
+        $item->suggestions = $suggestions;
+        $item->suggestions_source = 'ubl';
+        $item->suggestions_provider = null;
+        $item->matched_client_id = is_string($ico) ? $clients->findVendorByIco($item->user_id, $ico)?->id : null;
+        $item->error = null;
+        $item->save();
+
+        event(new InboxItemCreated($item));
+
+        return true;
     }
 
     /**

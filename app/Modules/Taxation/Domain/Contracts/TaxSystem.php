@@ -46,6 +46,8 @@ interface TaxSystem
 
     public function euSalesListBuilder(): EuSalesListBuilder;
 
+    public function vatReturnBuilder(): VatReturnBuilder;
+
     /**
      * @return list<AccountingExportBuilder> SK: Omega; CZ: Pohoda, ISDOC
      */

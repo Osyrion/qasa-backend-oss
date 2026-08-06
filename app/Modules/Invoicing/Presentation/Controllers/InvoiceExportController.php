@@ -8,6 +8,7 @@ use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceExportData;
 use App\Modules\Invoicing\Application\Services\InvoiceCsvBuilder;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Support\ContentDisposition;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class InvoiceExportController extends Controller
 
         return response($body, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$this->filename($filter, 'faktury', 'csv').'"',
+            'Content-Disposition' => ContentDisposition::attachment($this->filename($filter, 'faktury', 'csv')),
         ]);
     }
 

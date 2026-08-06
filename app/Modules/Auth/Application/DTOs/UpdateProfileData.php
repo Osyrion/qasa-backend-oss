@@ -8,6 +8,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Rules\ValidInvoiceNumberMask;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Enums\VatStatus;
+use App\Modules\Taxation\Domain\Enums\VatFilingFrequency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -145,6 +146,12 @@ class UpdateProfileData extends Data
 
         #[Sometimes]
         public readonly ?bool $overdue_digest_enabled = null,
+
+        #[Sometimes]
+        public readonly ?VatFilingFrequency $vat_filing_frequency = null,
+
+        #[Sometimes]
+        public readonly ?bool $tax_filing_reminder_enabled = null,
     ) {}
 
     /**
@@ -186,6 +193,8 @@ class UpdateProfileData extends Data
             'auto_remind_after_days' => ['sometimes', 'integer', 'between:0,90'],
             'auto_remind_max_count' => ['sometimes', 'integer', 'between:1,10'],
             'overdue_digest_enabled' => ['sometimes', 'boolean'],
+            'vat_filing_frequency' => ['sometimes', 'nullable', Rule::enum(VatFilingFrequency::class)],
+            'tax_filing_reminder_enabled' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -231,6 +240,8 @@ class UpdateProfileData extends Data
             auto_remind_after_days: $request->filled('auto_remind_after_days') ? $request->integer('auto_remind_after_days') : null,
             auto_remind_max_count: $request->filled('auto_remind_max_count') ? $request->integer('auto_remind_max_count') : null,
             overdue_digest_enabled: $request->has('overdue_digest_enabled') ? $request->boolean('overdue_digest_enabled') : null,
+            vat_filing_frequency: $request->filled('vat_filing_frequency') ? VatFilingFrequency::from($request->string('vat_filing_frequency')->toString()) : null,
+            tax_filing_reminder_enabled: $request->has('tax_filing_reminder_enabled') ? $request->boolean('tax_filing_reminder_enabled') : null,
         );
     }
 }

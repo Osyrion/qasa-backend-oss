@@ -10,6 +10,7 @@ use App\Modules\Invoicing\Domain\Events\InvoiceReminded;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Presentation\Mail\InvoiceReminderMail;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\VerifiedSenderGuard;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -29,6 +30,8 @@ readonly class RemindInvoiceAction
      */
     public function execute(Invoice $invoice): Invoice
     {
+        VerifiedSenderGuard::ensureCanSend($invoice->user);
+
         if ($invoice->client !== null) {
             $this->usageGuard->ensureUsable($invoice->client);
         }

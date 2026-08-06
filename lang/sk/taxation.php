@@ -15,6 +15,8 @@ return [
     'unsupported_tax_year' => 'Podklad pre daňové priznanie za rok :year nie je momentálne podporovaný.',
     'invalid_draft_payload' => 'Rozpracovaný podklad má neplatný alebo poškodený formát.',
     'invalid_flat_rate_category' => 'Neplatná kategória paušálnych výdavkov pre túto krajinu.',
+    'mixed_income_rate_split_note' => 'Základ dane kombinuje príjem z podnikania s nárokom na zníženú sadzbu a príjem zdaňovaný štandardnou stupnicou. To, čo zostane po NČZD, je medzi ne rozdelené v pomere, akým do základu prispeli — pred podaním si nechajte toto rozdelenie potvrdiť daňovým poradcom.',
+    'sk_contributions_unbounded_note' => 'Sociálne a zdravotné odvody sú len hrubý odhad: sadzby sa aplikujú na podiel zo základu dane bez minimálneho a maximálneho vymeriavacieho základu, takže pri nízkom príjme sú podhodnotené a pri vysokom nadhodnotené. Skutočnú výšku si overte podľa Sociálnej poisťovne a zdravotnej poisťovne.',
     'foreign_income_note' => 'Tento podklad nepočíta zamedzenie dvojitého zdanenia pri zahraničných príjmoch — konzultujte daňového poradcu.',
     'unconverted_amounts_note' => 'Niektoré platby sa nepodarilo prepočítať do meny priznania (chýba kurzový záznam) a nie sú zahrnuté vo vyššie uvedených súčtoch.',
     'draft_not_found' => 'Pre tento rok nebol nájdený žiadny rozpracovaný podklad.',
@@ -39,4 +41,22 @@ return [
     'pdf_contribution_social' => 'Sociálne poistenie',
     'pdf_contribution_health' => 'Zdravotné poistenie',
     'pdf_generated_at' => 'Vygenerované :date',
+
+    'tax_filing_immutable' => 'Vygenerovaný snapshot podania nie je možné upraviť — vygenerujte nový, ktorý tento nahradí.',
+    'tax_filing_type_not_generatable' => 'Tento typ podania zatiaľ nie je možné vygenerovať.',
+    'control_statement_requires_period' => 'Kontrolný výkaz vždy potrebuje mesiac alebo kvartál — celoročný variant neexistuje.',
+    'tax_filing_not_generated' => 'Ako podané je možné označiť len podanie v stave generated.',
+
+    // Filing recap PDF
+    'recap_title' => 'Rekapitulácia podania',
+    'recap_subtitle' => 'Všetky hodnoty, ktoré archivovaný dokument nesie. Skontrolujte pred podaním.',
+    'recap_type' => 'Typ podania',
+    'recap_country' => 'Krajina',
+    'recap_period' => 'Obdobie',
+    'recap_status' => 'Stav',
+    'recap_generated_at' => 'Vygenerované',
+    'recap_values' => 'Hodnoty v dokumente',
+    'recap_assumptions_title' => 'Predpoklady použité pri generovaní dokumentu',
+    'recap_checksum' => 'Kontrolný súčet dokumentu (SHA-256)',
+
 ];

@@ -5,25 +5,39 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Infrastructure\Providers;
 
 use App\Modules\Auth\Domain\Events\TaxResidencyCompleted;
+use App\Modules\Invoicing\Application\Actions\AddInvoiceItemAction;
+use App\Modules\Invoicing\Application\Actions\CreateInvoiceAction;
+use App\Modules\Invoicing\Application\Actions\ProcessInboxFileAction;
 use App\Modules\Invoicing\Application\Actions\RecordPaymentAction;
+use App\Modules\Invoicing\Application\Actions\SendInvoiceEmailAction;
+use App\Modules\Invoicing\Application\Actions\SettleProformaAction;
+use App\Modules\Invoicing\Application\Actions\UpdateInvoiceStatusAction;
 use App\Modules\Invoicing\Application\Actions\UpdateSupplierInvoiceStatusAction;
+use App\Modules\Invoicing\Application\Contracts\AddInvoiceItemActionInterface;
+use App\Modules\Invoicing\Application\Contracts\AiAssistantServiceInterface;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\CnbRateClientInterface;
+use App\Modules\Invoicing\Application\Contracts\CreateInvoiceActionInterface;
 use App\Modules\Invoicing\Application\Contracts\ExchangeRateServiceInterface;
 use App\Modules\Invoicing\Application\Contracts\ExpenseRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\ProcessInboxFileActionInterface;
 use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\RecordPaymentActionInterface;
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\SendInvoiceEmailActionInterface;
+use App\Modules\Invoicing\Application\Contracts\SettleProformaActionInterface;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\TrackedWorkLinkInterface;
+use App\Modules\Invoicing\Application\Contracts\UpdateInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Application\Contracts\UpdateSupplierInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Application\Contracts\UsageQuotaInterface;
 use App\Modules\Invoicing\Application\Contracts\VatRateRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\WorkReportGeneratorInterface;
 use App\Modules\Invoicing\Application\Listeners\SeedVatRatesForNewUser;
 use App\Modules\Invoicing\Application\Listeners\SendQuoteDecisionNotification;
+use App\Modules\Invoicing\Application\Services\AiAssistantService;
 use App\Modules\Invoicing\Application\Services\ExchangeRateService;
 use App\Modules\Invoicing\Application\Services\LlmProviderRegistry;
 use App\Modules\Invoicing\Application\Services\NoTrackedWorkLink;
@@ -38,6 +52,8 @@ use App\Modules\Invoicing\Domain\Contracts\OnlinePaymentAvailabilityInterface;
 use App\Modules\Invoicing\Domain\Events\QuoteAccepted;
 use App\Modules\Invoicing\Domain\Events\QuoteRejected;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
+use App\Modules\Invoicing\Domain\Models\CashDocument;
+use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
@@ -63,6 +79,8 @@ use App\Modules\Invoicing\Presentation\Console\BackfillVatRatesCommand;
 use App\Modules\Invoicing\Presentation\Console\ScanInboxCommand;
 use App\Modules\Invoicing\Presentation\Console\SendOverdueDigestCommand;
 use App\Modules\Invoicing\Presentation\Policies\BankAccountPolicy;
+use App\Modules\Invoicing\Presentation\Policies\CashDocumentPolicy;
+use App\Modules\Invoicing\Presentation\Policies\ExchangeRatePolicy;
 use App\Modules\Invoicing\Presentation\Policies\ExpensePolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoiceInboxItemPolicy;
 use App\Modules\Invoicing\Presentation\Policies\InvoicePolicy;
@@ -136,6 +154,17 @@ class InvoicingServiceProvider extends ServiceProvider
             UnlimitedUsageQuota::class,
         );
 
+        // Phase 3 Part C — premium modules (Reports, Automation) depend on
+        // this contract, never the concrete AiAssistantService, per
+        // ModuleBoundariesTest. One implementation regardless of edition
+        // (unlike UsageQuotaInterface above): AiAssistantService already
+        // degrades to "unavailable" on its own when ai_assistant isn't on
+        // the plan, so OSS/no-plan accounts don't need a different binding.
+        $this->app->bind(
+            AiAssistantServiceInterface::class,
+            AiAssistantService::class,
+        );
+
         // OSS core default (button never shows); IntegrationsServiceProvider
         // overrides this against the owner's Stripe Connect account.
         $this->app->bind(
@@ -151,6 +180,36 @@ class InvoicingServiceProvider extends ServiceProvider
         $this->app->bind(
             RecordPaymentActionInterface::class,
             RecordPaymentAction::class,
+        );
+
+        $this->app->bind(
+            CreateInvoiceActionInterface::class,
+            CreateInvoiceAction::class,
+        );
+
+        $this->app->bind(
+            AddInvoiceItemActionInterface::class,
+            AddInvoiceItemAction::class,
+        );
+
+        $this->app->bind(
+            UpdateInvoiceStatusActionInterface::class,
+            UpdateInvoiceStatusAction::class,
+        );
+
+        $this->app->bind(
+            ProcessInboxFileActionInterface::class,
+            ProcessInboxFileAction::class,
+        );
+
+        $this->app->bind(
+            SettleProformaActionInterface::class,
+            SettleProformaAction::class,
+        );
+
+        $this->app->bind(
+            SendInvoiceEmailActionInterface::class,
+            SendInvoiceEmailAction::class,
         );
 
         $this->app->bind(
@@ -234,6 +293,14 @@ class InvoicingServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->ip());
         });
 
+        // Client portal: a durable link a client keeps and revisits, so the
+        // budget sits between public-doc (one document, occasional reload)
+        // and an authenticated session.
+        RateLimiter::for('client-portal', function (Request $request): Limit {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
+        Gate::policy(CashDocument::class, CashDocumentPolicy::class);
         Gate::policy(Invoice::class, InvoicePolicy::class);
         Gate::policy(BankAccount::class, BankAccountPolicy::class);
         Gate::policy(RecurringInvoiceTemplate::class, RecurringInvoiceTemplatePolicy::class);
@@ -242,6 +309,7 @@ class InvoicingServiceProvider extends ServiceProvider
         Gate::policy(VatRate::class, VatRatePolicy::class);
         Gate::policy(Quote::class, QuotePolicy::class);
         Gate::policy(Expense::class, ExpensePolicy::class);
+        Gate::policy(ExchangeRate::class, ExchangeRatePolicy::class);
 
         Event::listen(TaxResidencyCompleted::class, SeedVatRatesForNewUser::class);
         Event::listen(QuoteAccepted::class, SendQuoteDecisionNotification::class);

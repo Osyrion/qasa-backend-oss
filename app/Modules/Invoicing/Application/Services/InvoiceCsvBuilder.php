@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Services;
 
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Support\CsvFormulaEscape;
 use League\Csv\Bom;
-use League\Csv\EscapeFormula;
 use League\Csv\Writer;
 
 /**
  * One row per invoice (header-level export) for a general-purpose
- * spreadsheet. Uses ';' + UTF-8 BOM for Excel compatibility in CZ/SK locale.
+ * spreadsheet. Uses ';' + UTF-8 BOM + comma decimals for Excel in the CZ/SK locale
+ * — the delimiter and the decimal separator have to agree, or the amount
+ * columns come out as text and will not sum.
  */
 final class InvoiceCsvBuilder
 {
@@ -33,7 +35,7 @@ final class InvoiceCsvBuilder
         // Neutralise spreadsheet formula injection: a cell whose value starts
         // with =, +, -, @ (e.g. a client-controlled company name) is prefixed
         // so Excel/LibreOffice treat it as text, never as a formula.
-        $writer->addFormatter(new EscapeFormula);
+        $writer->addFormatter(CsvFormulaEscape::formatter());
 
         $writer->insertOne(array_map(
             static fn (string $column): string => (string) __("invoicing.export.csv_headers.{$column}"),
@@ -98,6 +100,9 @@ final class InvoiceCsvBuilder
 
     private function money(float $value, int $decimals = 2): string
     {
-        return number_format($value, $decimals, '.', '');
+        // Comma, matching the ';' delimiter above: the two go together in
+        // the locale this export targets, and Excel there reads a dot-decimal
+        // cell as text — a column that will not sum.
+        return number_format($value, $decimals, ',', '');
     }
 }

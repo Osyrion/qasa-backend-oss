@@ -6,6 +6,8 @@ namespace App\Modules\Taxation\Application\Services;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\ExchangeRateServiceInterface;
+use App\Modules\Invoicing\Domain\Enums\CashDocumentType;
+use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
@@ -41,7 +43,7 @@ final readonly class TaxIncomeAggregator
         $unconverted = [];
 
         $businessIncome = $this->sumConverted(
-            $this->businessIncomeRows($user, $year),
+            $this->businessIncomeRows($user, $year)->concat($this->standaloneCashRows($user, $year, CashDocumentType::Income)),
             $filingCurrency,
             $user->id,
             $unconverted,
@@ -55,7 +57,7 @@ final readonly class TaxIncomeAggregator
         );
 
         $otherExpenses = $this->sumConverted(
-            $this->expenseRows($user, $year),
+            $this->expenseRows($user, $year)->concat($this->standaloneCashRows($user, $year, CashDocumentType::Expense)),
             $filingCurrency,
             $user->id,
             $unconverted,
@@ -143,6 +145,35 @@ final readonly class TaxIncomeAggregator
                 amount: (float) $expense->amount,
                 currency: $expense->currency->value,
                 date: $expense->date->toDateString(),
+            ));
+    }
+
+    /**
+     * Cash documents the system would otherwise know nothing about.
+     *
+     * A receipt carrying invoice_payment_id or expense_id is a piece of
+     * paper for money already counted through that payment or expense —
+     * including it here would double every cash-paid invoice. Only the
+     * standalone ones are genuinely new information, and a reversal cancels
+     * its original because it is itself a standalone document of the
+     * opposite type.
+     *
+     * @return Collection<int, AggregatedAmountRow>
+     */
+    private function standaloneCashRows(User $user, int $year, CashDocumentType $type): Collection
+    {
+        return CashDocument::query()
+            ->withoutGlobalScope('user')
+            ->where('user_id', $user->id)
+            ->where('type', $type->value)
+            ->whereNull('invoice_payment_id')
+            ->whereNull('expense_id')
+            ->whereYear('issued_at', $year)
+            ->get(['amount', 'currency', 'issued_at'])
+            ->map(fn (CashDocument $document): AggregatedAmountRow => new AggregatedAmountRow(
+                amount: (float) $document->amount,
+                currency: $document->currency->value,
+                date: $document->issued_at->toDateString(),
             ));
     }
 

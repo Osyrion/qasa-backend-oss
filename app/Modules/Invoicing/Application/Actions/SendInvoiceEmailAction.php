@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
+use App\Modules\Invoicing\Application\Contracts\SendInvoiceEmailActionInterface;
 use App\Modules\Invoicing\Application\DTOs\SendInvoiceEmailData;
 use App\Modules\Invoicing\Application\Mail\InvoiceEmail;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\VerifiedSenderGuard;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-readonly class SendInvoiceEmailAction
+readonly class SendInvoiceEmailAction implements SendInvoiceEmailActionInterface
 {
     public function __construct(
         private UpdateInvoiceStatusAction $updateStatusAction,
@@ -29,6 +31,8 @@ readonly class SendInvoiceEmailAction
      */
     public function execute(Invoice $invoice, ?SendInvoiceEmailData $data = null): Invoice
     {
+        VerifiedSenderGuard::ensureCanSend($invoice->user);
+
         if ($invoice->client !== null) {
             $this->usageGuard->ensureUsable($invoice->client);
         }

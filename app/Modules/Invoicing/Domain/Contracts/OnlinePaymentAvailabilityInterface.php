@@ -12,7 +12,7 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
  * button never appears without Stripe configured; the SaaS edition
  * (Integrations module) overrides this against the owner's Stripe Connect
  * account and plan feature — same null-object pattern as
- * ClientUsagePolicyInterface/FreeTierClientUsagePolicy.
+ * ClientUsagePolicyInterface/PlanClientUsagePolicy.
  */
 interface OnlinePaymentAvailabilityInterface
 {

@@ -59,6 +59,18 @@ return [
             'after_commit' => false,
         ],
 
+        // Competitor migration imports (RunImportJob) can walk thousands of
+        // invoices — same reasoning as calendar-sync above, its own name so
+        // WithoutOverlapping/retry_after tuning stay independent per feature.
+        'imports' => [
+            'driver' => 'database',
+            'connection' => env('DB_QUEUE_CONNECTION'),
+            'table' => env('DB_QUEUE_TABLE', 'jobs'),
+            'queue' => 'imports',
+            'retry_after' => 1800,
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

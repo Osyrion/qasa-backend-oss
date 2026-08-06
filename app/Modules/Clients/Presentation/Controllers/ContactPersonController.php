@@ -177,16 +177,21 @@ class ContactPersonController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function update(Request $request, ContactPerson $contactPerson): JsonResponse
+    // NOTE (not a docblock — swagger-php publishes those as the operation
+    // description): the {client} segment has to be a typed parameter even
+    // though the client is reachable through $contactPerson->client. Route
+    // parameters are handed to the action positionally, so an un-typehinted
+    // {client} was passed into the $contactPerson slot and every call to this
+    // endpoint died with a TypeError before it ran. See ContactPersonScopingTest.
+    public function update(Request $request, Client $client, ContactPerson $contactPerson): JsonResponse
     {
-        $this->authorize('update', $contactPerson->client);
+        $this->authorize('update', $client);
+        $this->ensureContactBelongsToClient($client, $contactPerson);
 
         $data = ContactPersonData::fromRequest($request);
 
-        DB::transaction(function () use ($contactPerson, $data): void {
+        DB::transaction(function () use ($client, $contactPerson, $data): void {
             if ($data->is_primary) {
-                /** @var Client $client */
-                $client = $contactPerson->client;
                 $client->contactPersons()
                     ->where('id', '!=', $contactPerson->id)
                     ->update(['is_primary' => false]);
@@ -236,12 +241,28 @@ class ContactPersonController extends Controller
             new OA\Response(response: 404, description: 'Contact person not found'),
         ]
     )]
-    public function destroy(ContactPerson $contactPerson): JsonResponse
+    // Typed {client} for the same reason as update() above.
+    public function destroy(Client $client, ContactPerson $contactPerson): JsonResponse
     {
-        $this->authorize('update', $contactPerson->client);
+        $this->authorize('update', $client);
+        $this->ensureContactBelongsToClient($client, $contactPerson);
 
         $contactPerson->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * The nested path claims to address one client's contact person, so make
+     * it true. Not a tenancy control — the Policy above and RLS behind it
+     * already answer that — but without it any of the caller's client ids
+     * addresses any of their contact people and the {client} segment means
+     * nothing. Mirrors PriceListItemController::ensureItemBelongsToList().
+     */
+    private function ensureContactBelongsToClient(Client $client, ContactPerson $contactPerson): void
+    {
+        if ($contactPerson->client_id !== $client->id) {
+            abort(404);
+        }
     }
 }

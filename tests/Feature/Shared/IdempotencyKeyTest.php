@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Domain\Models\IdempotencyKey as IdempotencyKeyModel;
 
 it('returns the original response instead of creating a duplicate invoice on retry', function (): void {
     $user = createUser();
@@ -107,4 +108,91 @@ it('scopes the same key to different users independently', function (): void {
     // applies, so each account's rows are counted while bound to it.
     asAccount($userA, fn () => expect(Invoice::withoutGlobalScope('user')->where('user_id', $userA->id)->count())->toBe(1));
     asAccount($userB, fn () => expect(Invoice::withoutGlobalScope('user')->where('user_id', $userB->id)->count())->toBe(1));
+});
+
+it('claims the key before running the handler, so a concurrent retry cannot duplicate the work', function (): void {
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    $payload = [
+        'client_id' => $client->id,
+        'issued_at' => today()->toDateString(),
+        'due_at' => today()->addDays(14)->toDateString(),
+        'currency' => 'EUR',
+    ];
+
+    // A second request that arrives while the first is still in flight sees
+    // the claim, not an empty table — check-then-act would let both through
+    // and only fail the loser's insert, after it had already created a
+    // second invoice.
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'in-flight-key'])
+        ->postJson('/api/v1/invoices', $payload)
+        ->assertCreated();
+
+    expect(IdempotencyKeyModel::query()->where('key_hash', '!=', '')->count())->toBe(1);
+
+    // Simulate the in-flight window: the claim exists, no response stored yet.
+    IdempotencyKeyModel::query()->update(['response_status' => null, 'response_body' => null]);
+
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'in-flight-key'])
+        ->postJson('/api/v1/invoices', $payload)
+        ->assertStatus(409);
+
+    expect(Invoice::where('user_id', $user->id)->count())->toBe(1);
+});
+
+it('releases the claim when the handler fails, so the request can be retried', function (): void {
+    $user = createUser();
+
+    // A validation failure (422) is a legitimate answer and gets stored; a
+    // server fault is not, and must not wedge the key forever.
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'boom-key'])
+        ->postJson('/api/v1/invoices', ['client_id' => 'not-a-uuid'])
+        ->assertStatus(422);
+
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    // Same key, different body — the stored 422 is a real response, so this
+    // is the documented conflict, not a wedge.
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'boom-key'])
+        ->postJson('/api/v1/invoices', [
+            'client_id' => $client->id,
+            'issued_at' => today()->toDateString(),
+            'due_at' => today()->addDays(14)->toDateString(),
+            'currency' => 'EUR',
+        ])
+        ->assertStatus(422);
+});
+
+it('lets an expired key be claimed again', function (): void {
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    $payload = [
+        'client_id' => $client->id,
+        'issued_at' => today()->toDateString(),
+        'due_at' => today()->addDays(14)->toDateString(),
+        'currency' => 'EUR',
+    ];
+
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'stale-key'])
+        ->postJson('/api/v1/invoices', $payload)
+        ->assertCreated();
+
+    // Past the 24h TTL the stored response is no longer replayable — but the
+    // unique key_hash still occupies the slot, so the claim has to displace
+    // it rather than collide with it.
+    IdempotencyKeyModel::query()->update(['created_at' => now()->subHours(25)]);
+
+    $this->actingAs($user)
+        ->withHeaders(['Idempotency-Key' => 'stale-key'])
+        ->postJson('/api/v1/invoices', $payload)
+        ->assertCreated();
+
+    expect(Invoice::where('user_id', $user->id)->count())->toBe(2);
 });

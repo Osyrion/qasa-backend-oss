@@ -7,9 +7,11 @@ namespace App\Modules\Taxation\Infrastructure\Providers;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Application\Services\TaxSystemResolver;
 use App\Modules\Taxation\Domain\Models\ContributionPayment;
+use App\Modules\Taxation\Domain\Models\TaxFiling;
 use App\Modules\Taxation\Infrastructure\Cz\CzTaxSystem;
 use App\Modules\Taxation\Infrastructure\Sk\SkTaxSystem;
 use App\Modules\Taxation\Presentation\Policies\ContributionPaymentPolicy;
+use App\Modules\Taxation\Presentation\Policies\TaxFilingPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -42,6 +44,7 @@ class TaxationServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../Views', 'taxation');
 
         Gate::policy(ContributionPayment::class, ContributionPaymentPolicy::class);
+        Gate::policy(TaxFiling::class, TaxFilingPolicy::class);
 
         // Authenticated (step 2 runs post-login), but still throttled — a
         // logged-in scraper against ARES/RPO is still a scraper.

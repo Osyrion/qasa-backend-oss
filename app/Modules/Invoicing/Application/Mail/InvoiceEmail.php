@@ -6,6 +6,8 @@ namespace App\Modules\Invoicing\Application\Mail;
 
 use App\Modules\Invoicing\Application\Services\InvoicePdfService;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Enums\EmailDocumentType;
+use App\Modules\Shared\Mail\TrackedMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Attachment;
@@ -33,6 +35,7 @@ class InvoiceEmail extends Mailable implements ShouldQueue
     {
         return new Envelope(
             subject: __('invoices::emails.subject', ['number' => $this->invoice->invoice_number]),
+            metadata: TrackedMail::for(EmailDocumentType::Invoice, $this->invoice->id, $this->invoice->user_id),
         );
     }
 

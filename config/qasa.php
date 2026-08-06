@@ -46,6 +46,24 @@ return [
         'tools' => [],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Global AI kill switch
+    |--------------------------------------------------------------------------
+    |
+    | Extends the invoicing.inbox.extraction.driver=regex idea to every AI
+    | path in the app, not just inbox OCR — AiAssistantService (phase 3 Part
+    | C: dashboard summaries, reminder drafts, low-confidence categorization)
+    | checks this first, and FieldExtractorFactory checks it alongside its
+    | own driver toggle. One env flag turns off every outbound LLM call
+    | account-wide, regardless of plan/feature/BYOK.
+    |
+    */
+
+    'ai' => [
+        'disabled' => (bool) env('QASA_AI_DISABLED', false),
+    ],
+
     'features' => [
 
         // Public registration endpoint; the OSS edition creates users via
@@ -96,5 +114,27 @@ return [
     */
 
     'vies_grace_days' => (int) env('QASA_VIES_GRACE_DAYS', 30),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Require a verified sender before mailing third parties
+    |--------------------------------------------------------------------------
+    |
+    | On by default: an account whose owner never proved the address it
+    | registered with may not have this deployment e-mail invoices, payment
+    | reminders, quotes or team invitations on its behalf. Enforced in
+    | Shared\Support\VerifiedSenderGuard, which the scheduler and the
+    | automation listener go through too — not only in route middleware.
+    |
+    | The escape hatch is always open (resend verification, click the link),
+    | so this cannot strand an account the way a hard lockout would. It is a
+    | flag rather than a constant for one operational case: if outbound mail
+    | itself breaks, verification e-mails stop arriving and every account
+    | looks unverified at once. Turning this off restores sending while that
+    | is fixed.
+    |
+    */
+
+    'require_verified_sender' => (bool) env('QASA_REQUIRE_VERIFIED_SENDER', true),
 
 ];

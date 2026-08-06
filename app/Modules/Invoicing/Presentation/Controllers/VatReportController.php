@@ -10,6 +10,7 @@ use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
 use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
 use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Taxation\Application\Services\TaxSystemResolver;
 use App\Modules\Taxation\Domain\Contracts\ControlStatementBuilder;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
@@ -191,7 +192,7 @@ class VatReportController extends Controller
 
         return response($body, 200, [
             'Content-Type' => 'application/xml; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => ContentDisposition::attachment($filename),
         ]);
     }
 

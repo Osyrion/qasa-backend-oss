@@ -64,6 +64,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias($aliases);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // A rule saying no is an answer, not a fault. Reporting these filled
+        // the log with "the client has no e-mail address" and "SEPA export
+        // requires an IBAN", each with a stack trace — 28 MB of them in
+        // development, and the reason a real fault would be invisible in
+        // production. The 422 below is what tells the caller; nobody is
+        // paged for it.
+        $exceptions->dontReport(DomainException::class);
+
         // Business-rule violations always surface as 422 JSON — the single
         // error convention across all modules. Controllers may still catch
         // earlier for a custom payload; this is the safety net.

@@ -90,8 +90,12 @@ final readonly class SkRates2026 implements SkRateTable
         return 600.0;
     }
 
-    public function childBonusCapShare(): float
+    public function childBonusCapShare(int $children): float
     {
-        return 0.20;
+        // §33 ods. 6 — the cap widens with each additional eligible child and
+        // stops widening at six. Keyed by ordinal like CzRateTable::childCredits().
+        $bands = [1 => 0.20, 2 => 0.27, 3 => 0.34, 4 => 0.41, 5 => 0.48, 6 => 0.55];
+
+        return $bands[min(max($children, 1), 6)];
     }
 }

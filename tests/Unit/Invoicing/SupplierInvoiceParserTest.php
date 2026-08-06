@@ -52,3 +52,22 @@ it('returns only matched fields for sparse text', function (): void {
 
     expect($suggestions)->toBe([]);
 });
+
+/*
+ * The capture used to allow only digits and spaces before the separator, so
+ * an invoice printing its total with a dot for thousands matched from the
+ * "1." onwards and produced 1.23 out of 1.234,56 — the same three orders of
+ * magnitude AmountString exists to stop. Both fixtures above print the
+ * space-separated form, which is why it stood.
+ */
+it('reads a total however the supplier groups its thousands', function (string $printed, float $expected): void {
+    $suggestions = (new SupplierInvoiceParser)->parse("Celkom k úhrade: {$printed} EUR");
+
+    expect($suggestions['total'])->toBe($expected);
+})->with([
+    'space thousands' => ['1 234,56', 1234.56],
+    'dot thousands' => ['1.234,56', 1234.56],
+    'comma thousands' => ['1,234.56', 1234.56],
+    'millions' => ['1.234.567,89', 1234567.89],
+    'no thousands' => ['999,00', 999.0],
+]);

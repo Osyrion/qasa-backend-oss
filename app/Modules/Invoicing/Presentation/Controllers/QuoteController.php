@@ -29,6 +29,7 @@ use App\Modules\Invoicing\Presentation\Resources\QuoteResource;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Presentation\Resources\OrderResource;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -463,7 +464,7 @@ class QuoteController extends Controller
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Content-Disposition' => ContentDisposition::attachment($filename),
             'Content-Length' => strlen($pdf),
         ]);
     }
@@ -490,7 +491,7 @@ class QuoteController extends Controller
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+            'Content-Disposition' => ContentDisposition::inline($filename),
         ]);
     }
 

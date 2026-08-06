@@ -89,6 +89,8 @@ it('reports paid amount and balance from recorded payments', function (): void {
 
     $csv = app(InvoiceCsvBuilder::class)->build([$invoice]);
 
-    expect($csv)->toContain('200.00')
-        ->toContain(number_format($invoice->balance(), 2, '.', ''));
+    // Comma decimals, to agree with the ';' delimiter — see
+    // InvoiceCsvBuilder::money().
+    expect($csv)->toContain('200,00')
+        ->toContain(number_format($invoice->balance(), 2, ',', ''));
 });

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Faktúra: od draftu po úhradu — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/sk/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/cs/index.html">Česky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Faktúra: od draftu po úhradu</h1>
+<p>Táto kapitola popisuje celý životný cyklus faktúry — od vytvorenia konceptu (draftu), cez vystavenie a odoslanie, až po prijatie platby.</p>
+<h2>Stavy faktúry</h2>
+<p>Faktúra prechádza týmito stavmi:</p>
+<p>| Stav | Význam |
+|---|---|
+| <strong>Koncept (draft)</strong> | Rozpracovaná faktúra, nemá pridelené číslo. Dá sa ľubovoľne upravovať aj mazať. |
+| <strong>Vystavená (sent)</strong> | Faktúra má pridelené číslo, je uzamknutá voči úpravám položiek a poslaná/pripravená na odoslanie klientovi. |
+| <strong>Pripomenutá (reminded)</strong> | Bola odoslaná aspoň jedna automatická alebo ručná upomienka. |
+| <strong>Uhradená (paid)</strong> | Prijatá platba pokrýva celú sumu faktúry. |
+| <strong>Zrušená (cancelled)</strong> | Zrušená stornom. |</p>
+<h2>Vytvorenie konceptu</h2>
+<p><strong>Faktúry → Nová faktúra</strong>: vyber klienta, menu, dátum vystavenia a splatnosti. Položky faktúry vieš pridávať priebežne — kým je faktúra v stave koncept, môžeš meniť čokoľvek vrátane klienta a mien.</p>
+<h3>Položky faktúry</h3>
+<p>Ku každej položke zadávaš:</p>
+<ul>
+<li><strong>Popis</strong>, <strong>množstvo</strong>, <strong>jednotku</strong> (ks, hod, deň…),</li>
+<li><strong>jednotkovú cenu bez DPH</strong>,</li>
+<li><strong>sadzbu DPH</strong> — ponúkajú sa len sadzby platné pre tvoju daňovú rezidenciu (SK: 0, 5, 10, 23 % / CZ: 0, 12, 21 %).</li>
+</ul>
+<p>Súčet položiek, DPH podľa jednotlivých sadzieb a celková suma sa prepočítavajú automaticky. Ak fakturuješ so <strong>zľavou</strong>, zadaj percento zľavy na úrovni celej faktúry — rozpočíta sa proporcionálne cez všetky sadzby DPH.</p>
+<h3>Fakturácia zo zákazky</h3>
+<p>Ak si prácu alebo výdavky evidoval na zákazke (pozri modul Zákazky/Časové výkazy), faktúru vieš vygenerovať priamo zo zákazky tlačidlom <strong>Vyfakturovať</strong> — položky sa predvyplnia z odpracovaných hodín a nákladov.</p>
+<h2>Vystavenie (pridelenie čísla)</h2>
+<p>Kým je faktúra draft, nemá číslo — číslo sa prideľuje až pri <strong>vystavení</strong>, nie pri vytvorení konceptu. Vďaka tomu nevznikajú diery v číselnom rade, keď draft zmažeš bez vystavenia. Formát čísla si nastavíš v <strong>Nastavenia → Profil → Formát čísla faktúry</strong> (napr. <code>FA-{RRRR}-{NNN}</code>).</p>
+<p>Po vystavení už nie je možné meniť položky ani sumy — jediný spôsob opravy vystavenej faktúry je <strong>dobropis</strong> alebo <strong>storno</strong> (pozri nižšie).</p>
+<h2>Odoslanie klientovi</h2>
+<p><strong>Odoslať e-mailom</strong> pošle PDF faktúry na e-mail klienta (alebo vybranej kontaktnej osoby) spolu so sprievodným textom. Klient zároveň dostane <strong>verejný odkaz</strong> na online zobrazenie faktúry a jej stiahnutie bez potreby prihlásenia — tento odkaz vieš kedykoľvek zrušiť.</p>
+<blockquote>
+<p>Odosielanie aj vytvorenie verejného odkazu vyžadujú <strong>overenú e-mailovú adresu vlastníka účtu</strong>. Ak si ju ešte nepotvrdil, appka odoslanie odmietne — v <strong>Nastavenia → Profil</strong> si vieš overovací e-mail poslať znova. Pozri <a href="01_onboarding.md">kapitolu 1</a>.</p>
+</blockquote>
+<p>Ak máš napojený <strong>Stripe Connect</strong> účet, verejný odkaz obsahuje aj tlačidlo na online úhradu kartou.</p>
+<h2>Platby a QR kód</h2>
+<p>Faktúra v PDF obsahuje platobný QR kód:</p>
+<ul>
+<li><strong>Pay by Square</strong> pre slovenské faktúry,</li>
+<li><strong>SPAYD</strong> pre české faktúry,</li>
+<li><strong>SEPA/EPC QR</strong> ako medzinárodný fallback.</li>
+</ul>
+<p>Naskenovaním kódu v mobilnej bankovej aplikácii sa predvyplnia všetky platobné údaje (účet, suma, variabilný symbol) — klient nemusí nič prepisovať ručne.</p>
+<h3>Ručné zaznamenanie platby</h3>
+<p>Platbu na bankový účet, ktorá nepríde cez automatické párovanie výpisu (pozri kapitolu <a href="05-banka.html">Banka</a>), vieš priradiť k faktúre ručne v <strong>Platby → Pridať platbu</strong>. Faktúra podporuje aj <strong>čiastočné úhrady</strong> — stav sa zmení na uhradenú až po pokrytí celej sumy.</p>
+<h2>Upomienky</h2>
+<p>Pri faktúre po splatnosti vieš poslať <strong>ručnú upomienku</strong>, alebo zapnúť <strong>automatické upomienky</strong> (Nastavenia → Automatizácia) — aplikácia sama odošle e-mail podľa nastaveného počtu dní po splatnosti, až do nastaveného maximálneho počtu upomienok.</p>
+<h2>E-faktúra (EN 16931 / UBL)</h2>
+<p>Okrem PDF si vieš každú vystavenú faktúru stiahnuť aj ako <strong>e-faktúru</strong> — strojovo čitateľný XML súbor podľa európskej normy EN 16931 vo formáte UBL 2.1. Nájdeš to pri faktúre pod <strong>Stiahnuť → e-faktúra (XML)</strong>.</p>
+<p>Na čo je to dobré:</p>
+<ul>
+<li>Protistrana ju vie načítať priamo do svojho systému — bez prepisovania a bez skenovania.</li>
+<li>Európska legislatíva smeruje k tomu, že štruktúrovaná e-faktúra bude v B2B povinná; toto je ten formát.</li>
+<li>Dobropis sa exportuje ako samostatný typ dokumentu s odkazom na pôvodnú faktúru.</li>
+</ul>
+<p>Proforma a storno sa ako e-faktúra exportovať nedajú — nie sú to daňové doklady a norma pre ne nemá typ.</p>
+<p><strong>Keď e-faktúru dostaneš ty:</strong> stačí XML nahrať do <strong>Doručenej pošty</strong> (alebo ho nechať prísť e-mailom, ak máš e-mail-in). Appka z neho prečíta údaje priamo — žiadne OCR, žiadne hádanie. Skontroluješ a potvrdíš; čísla sedia presne tak, ako ich dodávateľ vystavil.</p>
+<blockquote>
+<p>Export je postavený podľa EN 16931 a overený proti oficiálnej schéme UBL 2.1. Zapojenie do siete Peppol (automatické odosielanie protistrane) zatiaľ súčasťou nie je — faktúru posielaš e-mailom ako doteraz, len s XML prílohou navyše.</p>
+</blockquote>
+<h2>Dobropis a storno</h2>
+<p>Na vystavenú faktúru (v stave odoslaná alebo uhradená) vieš vystaviť:</p>
+<ul>
+<li><strong>Dobropis (credit note)</strong> — nový doklad s opačným znamienkom (záporné množstvo), ktorý čiastočne alebo úplne stornuje pôvodnú faktúru bez toho, aby ju vymazal z histórie.</li>
+<li><strong>Storno</strong> — dostupné len pre faktúru v stave odoslaná (nie uhradená); zruší pôvodnú faktúru úplne a vytvorí storno doklad.</li>
+</ul>
+<p>Oba doklady odkazujú na pôvodnú faktúru, takže história zostáva prehľadná pri kontrole aj pri daňových výkazoch.</p>
+<h2>Opakované faktúry (šablóny)</h2>
+<p>Pre pravidelnú fakturáciu (napr. mesačný paušál) si vytvor <strong>šablónu opakovanej faktúry</strong> (<strong>Faktúry → Šablóny → Nová šablóna</strong>) s periodicitou (mesačne, kvartálne, ročne). Aplikácia podľa šablóny sama vygeneruje nový draft (alebo rovno vystavenú a odoslanú faktúru, ak zapneš <strong>automatické odoslanie</strong>) v nastavený deň. Šablónu vieš kedykoľvek pozastaviť alebo obnoviť.</p>
+<h2>Cenové ponuky</h2>
+<p>Pred vystavením faktúry vieš klientovi poslať <strong>cenovú ponuku</strong> (funkcia dostupná podľa plánu) — po jej prijatí klientom (cez verejný odkaz) ju jedným kliknutím premeníš na faktúru alebo zákazku.</p>
+<div class="chapter-nav-links"><a href="02-klienti.html">&larr; Klienti</a><a href="04-inbox.html">Prijaté faktúry a inbox &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="sk" data-active="faktury"></script>
+</body>
+</html>

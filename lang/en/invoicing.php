@@ -9,6 +9,14 @@ return [
     'expense_attachment_too_large' => 'The file exceeds the maximum allowed size of 20 MB.',
     'expense_attachment_save_failed' => 'Failed to save the uploaded file.',
     'expense_attachment_missing' => 'This expense has no attachment.',
+    'expense_category_office' => 'Office',
+    'expense_category_travel' => 'Travel',
+    'expense_category_software' => 'Software',
+    'expense_category_hardware' => 'Hardware',
+    'expense_category_marketing' => 'Marketing',
+    'expense_category_education' => 'Education',
+    'expense_category_services' => 'Services',
+    'expense_category_other' => 'Other',
     'ai_credential' => [
         'saved' => 'The API key was saved.',
         'deleted' => 'The API key was removed.',
@@ -113,4 +121,36 @@ return [
             'exchange_rate' => 'Exchange rate',
         ],
     ],
+
+    // UBL 2.1 / EN 16931 e-invoice
+    'ubl_unsupported_document_type' => 'Only invoices and credit notes can be exported as an e-invoice.',
+    'ubl_exemption_reverse_charge' => 'Reverse charge — VAT is accounted for by the recipient.',
+    'ubl_exemption_intra_community' => 'Intra-Community supply — exempt under Article 138 of Directive 2006/112/EC.',
+    'ubl_exemption_not_registered' => 'The supplier is not registered for VAT.',
+    'ubl_exemption_zero_rated' => 'Zero-rated supply.',
+    'ubl_credit_note_terms' => 'Credit note relating to the original invoice; settlement date :date.',
+
+    // Cash documents (PPD/VPD)
+    'cash_document_link_not_found' => 'The linked payment or expense does not belong to this account.',
+    'cash_document_already_reversed' => 'This cash document has already been reversed.',
+    'cash_document_reversal_not_reversible' => 'A reversal cannot itself be reversed.',
+    'cash_document_reversal_of' => 'Reversal of :number',
+
+    // Cash document printout
+    'cash_pdf_income_title' => 'Cash receipt',
+    'cash_pdf_expense_title' => 'Cash payment voucher',
+    'cash_pdf_ico' => 'Reg. No',
+    'cash_pdf_vat_id' => 'VAT ID',
+    'cash_pdf_issued_at' => 'Date',
+    'cash_pdf_received_from' => 'Received from',
+    'cash_pdf_paid_to' => 'Paid to',
+    'cash_pdf_description' => 'For',
+    'cash_pdf_vat_rate' => 'VAT rate',
+    'cash_pdf_vat_amount' => 'VAT amount',
+    'cash_pdf_note' => 'Note',
+    'cash_pdf_issued_by' => 'Issued by',
+    'cash_pdf_paid_by' => 'Paid by',
+    'cash_pdf_received_by' => 'Received by',
+    'cash_pdf_is_reversal' => 'This document reverses an earlier one; the two cancel out in the cash book.',
+
 ];

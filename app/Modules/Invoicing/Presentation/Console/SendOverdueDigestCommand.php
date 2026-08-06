@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Presentation\Console;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Notifications\OverdueInvoicesDigestNotification;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceOverdue;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -89,6 +90,14 @@ class SendOverdueDigestCommand extends Command
             try {
                 Mail::to($user->email)->queue(
                     (new OverdueInvoicesDigestMail($newlyOverdue))->locale($user->locale)
+                );
+
+                // Same message, second channel. Sent separately rather than
+                // as another via() of one notification — see the class
+                // docblock for why wrapping the Mailable costs more than it
+                // saves.
+                $user->notify(
+                    (new OverdueInvoicesDigestNotification($newlyOverdue))->locale($user->locale)
                 );
                 $digestsSent++;
                 $this->line("Owner {$user->email}: overdue digest sent for {$newlyOverdue->count()} invoice(s).");

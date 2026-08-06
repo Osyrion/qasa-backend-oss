@@ -9,6 +9,14 @@ return [
     'expense_attachment_too_large' => 'Soubor překračuje maximální povolenou velikost 20 MB.',
     'expense_attachment_save_failed' => 'Nepodařilo se uložit nahraný soubor.',
     'expense_attachment_missing' => 'Tento výdaj nemá přiložený doklad.',
+    'expense_category_office' => 'Kancelář',
+    'expense_category_travel' => 'Cestovné',
+    'expense_category_software' => 'Software',
+    'expense_category_hardware' => 'Hardware',
+    'expense_category_marketing' => 'Marketing',
+    'expense_category_education' => 'Vzdělávání',
+    'expense_category_services' => 'Služby',
+    'expense_category_other' => 'Ostatní',
     'ai_credential' => [
         'saved' => 'API klíč byl uložen.',
         'deleted' => 'API klíč byl odstraněn.',
@@ -113,4 +121,36 @@ return [
             'exchange_rate' => 'Kurz',
         ],
     ],
+
+    // UBL 2.1 / EN 16931 e-invoice
+    'ubl_unsupported_document_type' => 'Jako e-fakturu lze exportovat pouze fakturu a dobropis.',
+    'ubl_exemption_reverse_charge' => 'Přenesení daňové povinnosti — daň odvede příjemce.',
+    'ubl_exemption_intra_community' => 'Intrakomunitární dodání — osvobozeno podle článku 138 směrnice 2006/112/ES.',
+    'ubl_exemption_not_registered' => 'Dodavatel není plátcem DPH.',
+    'ubl_exemption_zero_rated' => 'Dodání s nulovou sazbou daně.',
+    'ubl_credit_note_terms' => 'Dobropis k původní faktuře; datum vyrovnání :date.',
+
+    // Cash documents (PPD/VPD)
+    'cash_document_link_not_found' => 'Navázaná platba nebo výdaj nepatří tomuto účtu.',
+    'cash_document_already_reversed' => 'Tento pokladní doklad už byl stornován.',
+    'cash_document_reversal_not_reversible' => 'Storno nelze stornovat.',
+    'cash_document_reversal_of' => 'Storno dokladu :number',
+
+    // Cash document printout
+    'cash_pdf_income_title' => 'Příjmový pokladní doklad',
+    'cash_pdf_expense_title' => 'Výdajový pokladní doklad',
+    'cash_pdf_ico' => 'IČO',
+    'cash_pdf_vat_id' => 'DIČ',
+    'cash_pdf_issued_at' => 'Datum',
+    'cash_pdf_received_from' => 'Přijato od',
+    'cash_pdf_paid_to' => 'Vyplaceno komu',
+    'cash_pdf_description' => 'Účel',
+    'cash_pdf_vat_rate' => 'Sazba DPH',
+    'cash_pdf_vat_amount' => 'Částka DPH',
+    'cash_pdf_note' => 'Poznámka',
+    'cash_pdf_issued_by' => 'Vystavil',
+    'cash_pdf_paid_by' => 'Zaplatil',
+    'cash_pdf_received_by' => 'Přijal',
+    'cash_pdf_is_reversal' => 'Tento doklad je stornem dřívějšího dokladu; v peněžním deníku se navzájem vyruší.',
+
 ];

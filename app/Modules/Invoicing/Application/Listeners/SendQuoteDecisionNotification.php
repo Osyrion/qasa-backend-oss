@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Listeners;
 
 use App\Modules\Invoicing\Application\Mail\QuoteDecisionMail;
+use App\Modules\Invoicing\Application\Notifications\QuoteDecisionNotification;
 use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
 use App\Modules\Invoicing\Domain\Events\QuoteAccepted;
 use App\Modules\Invoicing\Domain\Events\QuoteRejected;
@@ -27,6 +28,10 @@ class SendQuoteDecisionNotification implements ShouldQueue
 
         Mail::to($owner->email)->queue(
             (new QuoteDecisionMail($quote, $decision))->locale($owner->locale)
+        );
+
+        $owner->notify(
+            (new QuoteDecisionNotification($quote, $decision))->locale($owner->locale)
         );
     }
 }

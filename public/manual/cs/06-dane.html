@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daně pro OSVČ — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Daně pro OSVČ</h1>
+<p>Tato kapitola shrnuje daňové a pojistné funkce — co aplikace připraví za tebe a co je potřeba odevzdat/podat sám na finančním úřadě či u pojišťovny.</p>
+<h2>Sazby DPH</h2>
+<p>Sazby DPH se řídí tvou daňovou rezidencí nastavenou při onboardingu (viz kapitola <a href="01-onboarding.html">První kroky</a>):</p>
+<ul>
+<li><strong>Česko</strong>: 0 %, 12 %, 21 %,</li>
+<li><strong>Slovensko</strong>: 0 %, 5 %, 10 %, 23 %.</li>
+</ul>
+<p>Seznam platných sazeb najdeš v <strong>Nastavení → Sazby DPH</strong> — můžeš si zde doplnit i historické sazby, pokud fakturuješ se zpětným datem.</p>
+<h2>Přenesení daňové povinnosti (reverse charge)</h2>
+<p>Při fakturaci do zahraničí (zejména B2B v rámci EU) umí aplikace označit fakturu jako <strong>přenesení daňové povinnosti</strong> — všechny položky se automaticky přepočítají s 0 % DPH a na PDF se vytiskne příslušná zákonná poznámka.</p>
+<h2>Kontrolní hlášení</h2>
+<p>Pokud jsi plátce DPH, <strong>Daně → Kontrolní hlášení</strong> vygeneruje přehled vystavených a přijatých faktur rozdělený podle sazeb DPH za zvolené období, včetně exportu do formátu <strong>XML</strong> připraveného k podání přes portál finanční správy (EPO).</p>
+<h2>Souhrnné hlášení (EU)</h2>
+<p>Pro B2B dodávky do jiných členských států EU (s přenesením daňové povinnosti) <strong>Daně → Souhrnné hlášení</strong> připraví seznam faktur seskupený podle DIČ odběratele — přesně ve struktuře potřebné k podání souhrnného hlášení.</p>
+<h2>Archiv podání a připomínka termínu DPH</h2>
+<p>Každé vygenerované <strong>kontrolní hlášení</strong> nebo <strong>souhrnné hlášení</strong> se uloží jako neměnný záznam do archivu — vrátíš se k němu kdykoli přesně v podobě, v jaké jsi ho podal(a), i když mezitím přibudou nebo se opraví doklady za dané období. Po podání na portálu finanční správy (EPO) výkaz označíš jako <strong>podaný</strong>; při opětovném vygenerování za stejné období se předchozí verze označí jako nahrazená, nikdy se nepřepíše.</p>
+<p>Pokud jsi měsíční nebo čtvrtletní plátce DPH, v <strong>Nastavení → Profil → Frekvence podávání DPH</strong> si nastavíš periodicitu, kterou ti přidělil finanční úřad, a zapneš <strong>připomínku blížícího se termínu podání</strong> — přijde e-mailem 7 dní před zákonným termínem (25. den následujícího měsíce), pokud za dané období ještě nemáš uložené kontrolní hlášení.</p>
+<h2>Daňové přiznání</h2>
+<p>Sekce <strong>Daně → Daňové přiznání</strong> ti připraví <strong>koncept</strong> daňového přiznání k dani z příjmů na základě údajů z tvých vystavených a přijatých dokladů za dané zdaňovací období:</p>
+<ol>
+<li>Zkontroluj předvyplněné systémové údaje (příjmy, výdaje, případně výdajový paušál, pokud ho využíváš).</li>
+<li>Doplň pole, která aplikace neumí odvodit automaticky (např. nezdanitelné části základu daně).</li>
+<li>Rozpracovaný koncept se průběžně ukládá — k podání se můžeš kdykoli vrátit.</li>
+<li>Náhled před finálním podáním ti ukáže výpočet daně včetně mezisoučtů.</li>
+</ol>
+<p>Finální podání probíhá mimo aplikaci (portál MOJE daně/EPO) — aplikace připravuje podklady a výpočet, nenahrazuje samotné podání.</p>
+<p><strong>Děti a daňové zvýhodnění.</strong> Ve wizardu vyplňuješ věk každého dítěte. Částka se řídí <strong>pořadím</strong> dítěte, ne jeho věkem — první, druhé a třetí a další dítě mají jinou sazbu. Věk aplikace záměrně nefiltruje: vyživované dítě má nárok až do 26 let, pokud studuje, a na studium se wizard neptá. Uveď proto jen ty děti, na které zvýhodnění skutečně uplatňuješ.</p>
+<h2>Pojistné (sociální a zdravotní)</h2>
+<p><strong>Daně → Odvody</strong> eviduje platby zdravotního a sociálního pojištění OSVČ — pomáhá sledovat, zda máš pojistné za dané období zaplacené, a slouží jako podklad k daňovému přiznání (zaplacené pojistné snižuje základ daně).</p>
+<h2>Rezidence je neměnná</h2>
+<p>Jak je zmíněno v kapitole o onboardingu: daňová rezidence (CZ/SK) se nastavuje jednou a není možné ji běžně měnit — od ní se odvíjejí všechny sazby, formuláře i hlášení výše. Změnu řeš přes podporu, jen pokud ses skutečně spletl při onboardingu.</p>
+<h2>Pokladna a hotovost</h2>
+<p>Přijímáš-li nebo platíš v hotovosti, patří to do <strong>Pokladny</strong> — jinak o těch penězích aplikace neví a nedostanou se ani do podkladu pro daňové přiznání.</p>
+<h3>Příjmový a výdajový doklad</h3>
+<ul>
+<li><strong>Příjmový (PPD)</strong> — přijal jsi hotovost. Číslování <code>PPD-2026-001</code>.</li>
+<li><strong>Výdajový (VPD)</strong> — vydal jsi hotovost. Číslování <code>VPD-2026-001</code>.</li>
+</ul>
+<p>Při vytvoření doklad volitelně <strong>navážeš na už zaevidovanou platbu faktury nebo na výdaj</strong>. To je důležité: navázaný doklad je jen papír k penězům, které aplikace už zná, takže se do příjmů/výdajů <strong>nepočítá podruhé</strong>. Samostatný doklad (hotovostní prodej bez faktury, nákup bez dokladu v evidenci) se počítá.</p>
+<h3>Oprava chyby</h3>
+<p>Pokladní doklad se <strong>nedá přepsat ani smazat</strong> — je to účetní záznam. Opravíš ho <strong>stornem</strong>: aplikace vystaví doklad opačného typu se stejnou částkou a datem, oba zůstanou v deníku a v součtu se vyruší. Přesně jako v papírní pokladní knize. Storno už dále stornovat nelze a jeden doklad lze stornovat jen jednou.</p>
+<h3>Peněžní deník</h3>
+<p>V <strong>Pokladna → Deník</strong> vidíš všechny doklady chronologicky s průběžným zůstatkem. Zůstatek se vede <strong>zvlášť pro každou měnu</strong> — bereš-li hotovost v eurech i korunách, uvidíš dva zůstatky, ne jeden smíchaný. Při filtrování období se nahoře ukáže počáteční zůstatek přenesený z předchozího období.</p>
+<h3>Jak se to promítne do daně</h3>
+<p>Samostatné příjmové doklady se přičtou k příjmům, samostatné výdajové k výdajům v podkladu pro daňové přiznání. Navázané doklady ne — ty už aplikace počítá přes fakturu nebo výdaj.</p>
+<div class="chapter-nav-links"><a href="05-banka.html">&larr; Banka</a><a href="07-tim.html">Tým &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="dane"></script>
+</body>
+</html>

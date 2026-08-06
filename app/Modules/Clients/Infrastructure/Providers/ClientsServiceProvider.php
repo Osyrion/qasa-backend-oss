@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Infrastructure\Providers;
 
+use App\Modules\Clients\Application\Actions\CreateClientAction;
 use App\Modules\Clients\Application\Actions\FetchCompanyDataAction;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
 use App\Modules\Clients\Application\Contracts\ClientUsagePolicyInterface;
+use App\Modules\Clients\Application\Contracts\CreateClientActionInterface;
 use App\Modules\Clients\Application\Contracts\VatValidatorInterface;
 use App\Modules\Clients\Application\Services\AlwaysUsableClientPolicy;
 use App\Modules\Clients\Application\Services\ClientUsageGuard;
@@ -43,6 +45,11 @@ class ClientsServiceProvider extends ServiceProvider
         $this->app->bind(
             ClientUsageGuardInterface::class,
             ClientUsageGuard::class,
+        );
+
+        $this->app->bind(
+            CreateClientActionInterface::class,
+            CreateClientAction::class,
         );
 
         $this->app->bind(FetchCompanyDataAction::class, fn (): FetchCompanyDataAction => new FetchCompanyDataAction([

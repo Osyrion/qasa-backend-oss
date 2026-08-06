@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notifikace — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Notifikace</h1>
+<p>Aplikace ti důležité věci řekne na dvou místech: <strong>e-mailem</strong> a <strong>ve zvonečku v aplikaci</strong>. Zvoneček je tam proto, aby ti nic nezapadlo v přeplněné schránce — a abys viděl i to, co se e-mailem oznámit nedá.</p>
+<h2>Zvoneček — co v něm najdeš</h2>
+<p>Číslo u zvonečku ukazuje počet nepřečtených zpráv. Po kliknutí uvidíš seznam, který lze filtrovat:</p>
+<ul>
+<li><strong>Faktury</strong> — nové faktury po splatnosti, vyčerpané upomínky, nedoručený e-mail</li>
+<li><strong>Nabídky</strong> — klient nabídku přijal nebo odmítl</li>
+<li><strong>Daně</strong> — blíží se termín podání kontrolního hlášení DPH</li>
+<li><strong>Předplatné</strong> — vystavená obnova, blížící se splatnost, expirace</li>
+<li><strong>Systém</strong> — ostatní</li>
+</ul>
+<p>Každá zpráva má odkaz přímo na doklad, kterého se týká. Kliknutím se označí jako přečtená; tlačítkem <strong>Označit vše jako přečtené</strong> vyčistíš celý seznam najednou.</p>
+<h2>Co dostaneš e-mailem i v aplikaci</h2>
+<p>| Událost | E-mail | Zvoneček |
+|---|---|---|
+| Denní souhrn faktur, které právě přešly splatnost | ano | ano |
+| Automatické upomínky se vyčerpaly a faktura stále není uhrazena | ano | ano |
+| Klient přijal nebo odmítl nabídku | ano | ano |
+| Blíží se termín podání kontrolního hlášení DPH | ano | ano |
+| Obnova nebo expirace předplatného | ano | ano |
+| Tvůj e-mail s fakturou se nedoručil | — | ano |</p>
+<p>Poslední řádek není překlep: oznamovat e-mailem, že e-mail nefunguje, nemá smysl.</p>
+<p>Upomínka, která jde <strong>klientovi</strong>, do zvonečku nepatří — klient není uživatel tvého účtu.</p>
+<h2>Notifikace jsou osobní</h2>
+<p>Máš-li v účtu tým, každý člen vidí <strong>jen své</strong> notifikace. Zpráva adresovaná majiteli účtu („blíží se termín DPH“) se účetnímu v týmu nezobrazí a naopak. Data účtu jsou společná, schránka ne.</p>
+<h2>Jak dlouho se notifikace drží</h2>
+<p>Přečtené notifikace se po <strong>90 dnech</strong> automaticky smažou. Nepřečtené se nemažou nikdy — nevyřízená zpráva nemá zmizet jen proto, že je stará.</p>
+<h2>Doručení odeslaných e-mailů</h2>
+<p>U každé faktury a nabídky, kterou jsi poslal e-mailem, vidíš, co se se zprávou stalo:</p>
+<ul>
+<li><strong>Odesláno</strong> — aplikace zprávu předala poštovnímu serveru</li>
+<li><strong>Doručeno</strong> — server příjemce ji převzal, i s časem</li>
+<li><strong>Otevřeno</strong> — příjemce zprávu otevřel (a kolikrát)</li>
+<li><strong>Nedoručeno</strong> — zpráva se vrátila, i s důvodem (např. neexistující adresa)</li>
+</ul>
+<p>Když se e-mail nedoručí, dozvíš se to hned ve zvonečku — ne až za tři týdny od klienta. Adresu klienta pak oprav v <strong>Klienti → detail</strong> a fakturu pošli znovu.</p>
+<blockquote>
+<p>Sledování doručení je součástí placených plánů a funguje, když má provoz nastavené propojení na poštovní službu. Bez něj zůstává stav na hodnotě <em>Odesláno</em>.</p>
+</blockquote>
+<div class="chapter-nav-links"><a href="09-doklady.html">&larr; Úložiště dokladů</a><span></span></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="notifikace"></script>
+</body>
+</html>

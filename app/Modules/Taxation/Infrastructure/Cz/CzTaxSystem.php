@@ -11,6 +11,7 @@ use App\Modules\Taxation\Domain\Contracts\EuSalesListBuilder;
 use App\Modules\Taxation\Domain\Contracts\IncomeTaxReturnCalculator;
 use App\Modules\Taxation\Domain\Contracts\TaxSystem;
 use App\Modules\Taxation\Domain\Contracts\VatRegimeResolver;
+use App\Modules\Taxation\Domain\Contracts\VatReturnBuilder;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use App\Modules\Taxation\Domain\Rules\ValidCzDic;
 use App\Modules\Taxation\Domain\Rules\ValidCzIco;
@@ -29,6 +30,7 @@ final readonly class CzTaxSystem implements TaxSystem
         private CzEuSalesListBuilder $euSalesListBuilder,
         private array $exportBuilders,
         private CzIncomeTaxReturnCalculator $incomeTaxReturnCalculator,
+        private CzVatReturnService $vatReturnBuilder,
     ) {}
 
     public function residency(): TaxResidency
@@ -74,6 +76,11 @@ final readonly class CzTaxSystem implements TaxSystem
     public function euSalesListBuilder(): EuSalesListBuilder
     {
         return $this->euSalesListBuilder;
+    }
+
+    public function vatReturnBuilder(): VatReturnBuilder
+    {
+        return $this->vatReturnBuilder;
     }
 
     public function accountingExports(): array

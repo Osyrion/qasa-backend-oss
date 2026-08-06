@@ -112,3 +112,74 @@ it('does not include another account invoices', function (): void {
     $response->assertOk();
     expect((string) $response->getContent())->not->toContain($ownerInvoice->invoice_number);
 });
+
+/*
+ * Formula-injection escaping fires on a leading `-`, which is also how every
+ * negative amount begins. A credit note exports with negative subtotal, VAT,
+ * total and balance, and escaping all four made them text: opened in Excel or
+ * LibreOffice they sat outside any SUM() over the column, so the figure read
+ * off the export was too high by exactly the credit notes in it, silently.
+ */
+it('exports credit note amounts as numbers, not quoted text', function (): void {
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    issuedInvoiceFor($user->id, $client->id, [
+        'type' => 'credit_note',
+        'invoice_number' => 'DOB-1',
+        'subtotal' => '-1000.00',
+        'vat_amount' => '-200.00',
+        'total' => '-1200.00',
+    ]);
+
+    $csv = (string) $this->actingAs($user)->get('/api/v1/invoices/export/csv?date_from=2026-01-01&date_to=2026-12-31')->assertOk()->getContent();
+
+    // Comma decimals, matching the ';' delimiter — see CsvFormulaEscape and
+    // InvoiceCsvBuilder::money().
+    expect($csv)->toContain(';-1200,00')
+        ->and($csv)->not->toContain("'-1200,00")
+        ->and($csv)->not->toContain("'-1000,00")
+        ->and($csv)->not->toContain("'-200,00");
+});
+
+it('still neutralises a formula a client name smuggles into the export', function (): void {
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    // The export reads the snapshot frozen at issue time, which is where a
+    // name typed before issuing ends up.
+    issuedInvoiceFor($user->id, $client->id, [
+        'invoice_number' => 'FA-1',
+        'client_snapshot' => ['name' => "=cmd|'/c calc'!A1", 'ico' => '87654321'],
+    ]);
+
+    $csv = (string) $this->actingAs($user)->get('/api/v1/invoices/export/csv?date_from=2026-01-01&date_to=2026-12-31')->assertOk()->getContent();
+
+    expect($csv)->toContain("'=cmd|'/c calc'!A1")
+        ->and($csv)->not->toContain(';=cmd');
+});
+
+/*
+ * The ';' delimiter is chosen for the CZ/SK locale, and that is exactly the
+ * locale whose decimal separator is a comma — Excel there reads a dot-decimal
+ * cell as text, so the column will not sum. The two choices have to agree;
+ * this pins that they do, since nothing else in the suite fixed the format.
+ */
+it('writes amounts with a comma decimal to match the delimiter', function (): void {
+    $user = createUser();
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    issuedInvoiceFor($user->id, $client->id, [
+        'invoice_number' => 'FA-7',
+        'subtotal' => '1000.00',
+        'vat_amount' => '230.00',
+        'total' => '1230.00',
+    ]);
+
+    $csv = (string) $this->actingAs($user)
+        ->get('/api/v1/invoices/export/csv?date_from=2026-01-01&date_to=2026-12-31')
+        ->assertOk()->getContent();
+
+    expect($csv)->toContain(';1230,00')
+        ->and($csv)->not->toContain(';1230.00');
+});

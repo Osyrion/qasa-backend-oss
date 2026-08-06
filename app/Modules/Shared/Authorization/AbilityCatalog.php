@@ -35,6 +35,8 @@ final class AbilityCatalog
             'calendar.view',
             'calendar.manage',
             'integrations.manage',
+            'documents.view',
+            'documents.manage',
             'taxation.view',
             'taxation.manage',
             'logbook.view',

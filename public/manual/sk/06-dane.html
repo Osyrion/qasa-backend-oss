@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dane pre SZČO — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/sk/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/cs/index.html">Česky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Dane pre SZČO</h1>
+<p>Táto kapitola zhŕňa daňové a odvodové funkcie — čo aplikácia pripraví za teba a čo si treba odovzdať/podať sám na daňovom úrade či poisťovni.</p>
+<h2>Sadzby DPH</h2>
+<p>Sadzby DPH sa riadia tvojou daňovou rezidenciou nastavenou pri onboardingu (pozri kapitolu <a href="01-onboarding.html">Prvé kroky</a>):</p>
+<ul>
+<li><strong>Slovensko</strong>: 0 %, 5 %, 10 %, 23 %,</li>
+<li><strong>Česko</strong>: 0 %, 12 %, 21 %.</li>
+</ul>
+<p>Zoznam platných sadzieb nájdeš v <strong>Nastavenia → Sadzby DPH</strong> — vieš si tu doplniť aj historické sadzby, ak fakturuješ so spätným dátumom.</p>
+<h2>Prenesenie daňovej povinnosti (reverse charge)</h2>
+<p>Pri fakturácii do zahraničia (najmä B2B v rámci EÚ) aplikácia vie označiť faktúru ako <strong>prenesenie daňovej povinnosti</strong> — všetky položky sa automaticky prepočítajú s 0 % DPH a na PDF sa vytlačí príslušná zákonná poznámka.</p>
+<h2>Kontrolný výkaz DPH</h2>
+<p>Ak si platiteľ DPH, <strong>Dane → Kontrolný výkaz</strong> vygeneruje prehľad vystavených a prijatých faktúr rozdelený podľa sadzieb DPH za zvolené obdobie, vrátane exportu do formátu <strong>XML</strong> pripraveného na podanie cez portál finančnej správy.</p>
+<h2>Súhrnný výkaz (EÚ)</h2>
+<p>Pre B2B dodávky do iných členských štátov EÚ (s prenesením daňovej povinnosti) <strong>Dane → Súhrnný výkaz</strong> pripraví zoznam faktúr zoskupený podľa IČ DPH odberateľa — presne v štruktúre potrebnej na podanie súhrnného výkazu.</p>
+<h2>Archív podaní a pripomienka termínu DPH</h2>
+<p>Každé vygenerované <strong>kontrolné hlásenie/výkaz</strong> alebo <strong>súhrnný výkaz</strong> sa uloží ako nemenný záznam do archívu — vieš sa k nemu kedykoľvek vrátiť presne v podobe, v akej si ho podal(a), aj keď medzičasom pribudnú alebo sa opravia doklady za dané obdobie. Po podaní na portáli finančnej správy si výkaz označíš ako <strong>podaný</strong>; pri opätovnom vygenerovaní za rovnaké obdobie sa predchádzajúca verzia označí ako nahradená, nikdy sa neprepíše.</p>
+<p>Ak si mesačný alebo kvartálny platiteľ DPH, v <strong>Nastavenia → Profil → Frekvencia podávania DPH</strong> si vieš nastaviť periodicitu, akú ti pridelil daňový úrad, a zapnúť <strong>pripomienku blížiaceho sa termínu podania</strong> — príde e-mailom 7 dní pred zákonným termínom (25. deň nasledujúceho mesiaca), pokiaľ za dané obdobie ešte nemáš uložené kontrolné hlásenie.</p>
+<h2>Daňové priznanie (DPFO)</h2>
+<p>Sekcia <strong>Dane → Daňové priznanie</strong> ti pripraví <strong>koncept</strong> daňového priznania k dani z príjmu na základe údajov z tvojich vystavených a prijatých dokladov za dané zdaňovacie obdobie:</p>
+<ol>
+<li>Skontroluj predvyplnené systémové údaje (príjmy, výdavky, prípadne paušálne výdavky, ak ich využívaš).</li>
+<li>Doplň polia, ktoré aplikácia nevie odvodiť automaticky (napr. nezdaniteľné časti základu dane).</li>
+<li>Rozpracovaný koncept sa priebežne ukladá — k podaniu sa vieš kedykoľvek vrátiť.</li>
+<li>Náhľad pred finálnym podaním ti ukáže výpočet dane vrátane medzisúčtov.</li>
+</ol>
+<p>Finálne podanie prebieha mimo aplikácie (portál finančnej správy/daňového priznania) — aplikácia pripravuje podklady a výpočet, nenahrádza samotné podanie.</p>
+<p><strong>Deti a daňový bonus.</strong> Vo wizarde vypĺňaš vek každého dieťaťa. Bonus dostaneš len na deti do 18 rokov a jeho suma závisí od veku (iná do 15 rokov, iná od 15 do 18). Celý bonus je navyše zastropovaný podielom z čiastkového základu dane z podnikania a <strong>tento strop rastie s počtom detí</strong> — pri jednom dieťati je to 20 %, pri dvoch 27 %, pri troch 34 %, pri štyroch 41 %, pri piatich 48 % a pri šiestich a viac 55 %. Do počtu, ktorý strop určuje, sa rátajú len deti s nárokom na bonus; dospelé dieťa v zozname teda strop súrodencom nezvýši.</p>
+<h2>Odvody (zdravotné a sociálne poistenie)</h2>
+<p><strong>Dane → Odvody</strong> eviduje platby zdravotného a sociálneho poistenia SZČO — pomáha sledovať, či máš odvody za dané obdobie zaplatené, a slúži ako podklad k daňovému priznaniu (odvody znižujú základ dane).</p>
+<h2>Rezidencia je nemenná</h2>
+<p>Ako je spomenuté v kapitole o onboardingu: daňová rezidencia (SK/CZ) sa nastavuje raz a nie je možné ju bežne meniť — od nej sa odvíjajú všetky sadzby, formuláre aj výkazy vyššie. Zmenu rieš cez podporu, len ak si sa naozaj pomýlil pri onboardingu.</p>
+<h2>Pokladňa a hotovosť</h2>
+<p>Ak prijímaš alebo platíš v hotovosti, patrí to do <strong>Pokladne</strong> — inak o tých peniazoch appka nevie a nedostanú sa ani do podkladu pre daňové priznanie.</p>
+<h3>Príjmový a výdavkový doklad</h3>
+<ul>
+<li><strong>Príjmový (PPD)</strong> — prijal si hotovosť. Číslovanie <code>PPD-2026-001</code>.</li>
+<li><strong>Výdavkový (VPD)</strong> — vydal si hotovosť. Číslovanie <code>VPD-2026-001</code>.</li>
+</ul>
+<p>Pri vytvorení doklad voliteľne <strong>naviažeš na už zaevidovanú platbu faktúry alebo na výdavok</strong>. To je dôležité: naviazaný doklad je len papier k peniazom, ktoré už appka pozná, takže sa do príjmov/výdavkov <strong>nepočíta druhýkrát</strong>. Samostatný doklad (hotovostný predaj bez faktúry, nákup bez dokladu v evidencii) sa počíta.</p>
+<h3>Oprava chyby</h3>
+<p>Pokladničný doklad sa <strong>nedá prepísať ani zmazať</strong> — je to účtovný záznam. Opravíš ho <strong>stornom</strong>: appka vystaví doklad opačného typu s rovnakou sumou a dátumom, oba zostanú v denníku a v súčte sa vyrušia. Presne ako v papierovej pokladničnej knihe. Storno sa už ďalej stornovať nedá a jeden doklad vieš stornovať len raz.</p>
+<h3>Peňažný denník</h3>
+<p>V <strong>Pokladňa → Denník</strong> vidíš všetky doklady chronologicky s priebežným zostatkom. Zostatok sa vedie <strong>zvlášť pre každú menu</strong> — ak berieš hotovosť v eurách aj korunách, uvidíš dva zostatky, nie jeden zmiešaný. Pri filtrovaní obdobia sa navrchu ukáže počiatočný zostatok prenesený z predchádzajúceho obdobia.</p>
+<h3>Ako sa to premietne do dane</h3>
+<p>Samostatné príjmové doklady sa pripočítajú k príjmom, samostatné výdavkové k výdavkom v podklade pre daňové priznanie. Naviazané doklady nie — tie už appka počíta cez faktúru alebo výdavok.</p>
+<div class="chapter-nav-links"><a href="05-banka.html">&larr; Banka</a><a href="07-tim.html">Tím &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="sk" data-active="dane"></script>
+</body>
+</html>

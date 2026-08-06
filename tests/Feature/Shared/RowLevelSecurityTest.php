@@ -173,20 +173,25 @@ it('guards the tables the policies were written for', function (): void {
     // that matters.
     $expected = collect([
         // own their account through user_id, or — users — their own id
-        'activity_log', 'ai_credentials', 'bank_accounts', 'clients',
-        'contribution_payments', 'events', 'expenses',
+        'activity_log', 'ai_credentials', 'bank_accounts', 'bank_connections',
+        'cash_documents',
+        'clients', 'contribution_payments', 'document_tags', 'documents',
+        'email_deliveries', 'events', 'expenses',
         'google_calendar_connections', 'google_calendar_sync_runs',
-        'idempotency_keys', 'invoice_inbox_items', 'invoices', 'orders',
+        'idempotency_keys', 'import_runs', 'import_source_credentials',
+        'invoice_inbox_items', 'invoices', 'notifications', 'orders',
         'payment_orders', 'price_lists', 'quotes', 'rates',
         'recurring_invoice_templates', 'stripe_connect_accounts',
-        'supplier_invoices', 'time_entries', 'trips', 'users', 'vat_rates',
+        'supplier_invoices', 'tax_filings', 'time_entries', 'trips', 'users', 'vat_rates',
         'vehicles', 'webhook_endpoints',
 
         // own their account through owner_id
         'team_invitations',
 
         // reach it through a parent
-        'contact_persons', 'google_calendar_event_links', 'invoice_items',
+        'bank_statement_suggestions', 'contact_persons',
+        'document_document_tag', 'documentables',
+        'google_calendar_event_links', 'invoice_items',
         'invoice_payments', 'invoice_work_report_lines', 'model_has_permissions',
         'model_has_roles', 'order_attachments', 'order_items', 'order_notes',
         'payment_order_items', 'personal_access_tokens', 'price_list_items',

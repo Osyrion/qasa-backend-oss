@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-slk \
     tesseract-ocr-ces \
     tesseract-ocr-eng \
+    # Saxon (Java) runs the official EN 16931 Schematron in
+    # tests/Feature/Invoicing/UblSchematronTest.php. PHP cannot: the compiled
+    # Schematron is XSLT 2.0 and libxslt only implements 1.0, so php-xsl does
+    # not help — this was measured, not assumed. The headless JRE is the cost
+    # of having the strongest correctness check in the e-invoicing path run
+    # on every suite run instead of being skipped.
+    default-jre-headless \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

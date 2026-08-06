@@ -17,6 +17,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/en16931-validator
 /storage/pail
 /vendor
 _ide_helper.php

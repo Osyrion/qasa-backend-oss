@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\ProcessInboxFileActionInterface;
 use App\Modules\Invoicing\Application\Jobs\ProcessInboxItemJob;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
@@ -22,10 +23,8 @@ use Illuminate\Support\Str;
  * callers decide how to handle that (e.g. move to processed, or reject).
  * Callers are expected to have already validated the MIME type and size.
  */
-readonly class ProcessInboxFileAction
+readonly class ProcessInboxFileAction implements ProcessInboxFileActionInterface
 {
-    public const array ALLOWED_MIMES = ['application/pdf', 'image/jpeg', 'image/png'];
-
     public function __construct(
         private InvoiceInboxRepositoryInterface $repository,
     ) {}

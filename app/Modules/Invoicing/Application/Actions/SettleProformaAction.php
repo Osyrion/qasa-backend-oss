@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\SettleProformaActionInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
@@ -23,7 +24,7 @@ use Throwable;
  * exclude proforma, record the sale exactly once). The new invoice is
  * issued immediately and created already fully paid.
  */
-readonly class SettleProformaAction
+readonly class SettleProformaAction implements SettleProformaActionInterface
 {
     public function __construct(
         private InvoiceRepositoryInterface $repository,
@@ -40,16 +41,30 @@ readonly class SettleProformaAction
             throw DomainException::because(__('invoicing.settle_only_proforma'));
         }
 
-        if (! $proforma->isPaid()) {
-            throw DomainException::because(__('invoicing.settle_requires_paid_proforma'));
-        }
-
-        if ($proforma->settled_invoice_id !== null) {
-            throw DomainException::because(__('invoicing.proforma_already_settled'));
-        }
-
         return DB::transaction(function () use ($proforma): Invoice {
-            $proforma->loadMissing(['items', 'payments']);
+            // The two state guards below decide whether a second numbered,
+            // issued-and-paid invoice comes into existence, so they read a
+            // row nobody else can be settling concurrently — not the instance
+            // the caller bound, which says "not settled yet" for as long as it
+            // was loaded before the other settle committed. Two triggers reach
+            // here at once without anything exotic: the settle endpoint has no
+            // idempotency key, so a double submit suffices, and
+            // AutoSettleProforma settles synchronously on InvoicePaid. Nothing
+            // in the schema objects to the duplicate either — credit notes
+            // share related_invoice_id, so there is no unique index available
+            // as a backstop. See SettleProformaConcurrencyTest.
+            $locked = Invoice::query()->lockForUpdate()->whereKey($proforma->getKey())->firstOrFail();
+
+            if (! $locked->isPaid()) {
+                throw DomainException::because(__('invoicing.settle_requires_paid_proforma'));
+            }
+
+            if ($locked->settled_invoice_id !== null) {
+                throw DomainException::because(__('invoicing.proforma_already_settled'));
+            }
+
+            $proforma->setRawAttributes($locked->getAttributes(), true);
+            $proforma->load(['items', 'payments']);
 
             $lastPaymentAt = $proforma->payments->max('paid_at');
 
@@ -99,6 +114,10 @@ readonly class SettleProformaAction
                     'amount' => $payment->amount,
                     'paid_at' => $payment->paid_at,
                     'method' => $payment->method,
+                    // Carried over from the deposit payment being settled,
+                    // not reset to manual — a bank-matched or Stripe deposit
+                    // stays counted as automated after settlement.
+                    'provenance' => $payment->provenance,
                     'note' => __('invoicing.settled_from_proforma', ['number' => $proforma->invoice_number]),
                 ]);
             }

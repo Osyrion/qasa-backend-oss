@@ -36,10 +36,16 @@ class SetupStatusController extends Controller
                                     type: 'array',
                                     items: new OA\Items(
                                         properties: [
-                                            new OA\Property(property: 'key', type: 'string', enum: [
-                                                'billing_identity', 'vat_status', 'bank_account',
-                                                'invoice_numbering', 'logo', 'first_client', 'first_invoice',
-                                            ]),
+                                            new OA\Property(
+                                                property: 'key',
+                                                description: 'Core steps always present; premium modules append their own (see SetupStepContributor).',
+                                                type: 'string',
+                                                enum: [
+                                                    'billing_identity', 'vat_status', 'bank_account',
+                                                    'invoice_numbering', 'logo', 'first_client', 'first_invoice',
+                                                    'competitor_import',
+                                                ],
+                                            ),
                                             new OA\Property(property: 'done', type: 'boolean'),
                                             new OA\Property(property: 'optional', type: 'boolean'),
                                         ]

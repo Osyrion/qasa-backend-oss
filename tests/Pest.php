@@ -23,7 +23,7 @@ if (file_exists(__DIR__.'/Pest.edition.php')) {
     require __DIR__.'/Pest.oss.php';
 }
 
-uses(TestCase::class, RefreshDatabaseAsOwner::class)->in('Feature', 'Unit');
+uses(TestCase::class, RefreshDatabaseAsOwner::class)->in('Feature', 'Unit', 'Invariants');
 
 /**
  * The edition's User model class (auth provider config).
@@ -79,6 +79,33 @@ function createUser(array $attributes = [], ?Closure $configureFactory = null): 
     // the Owner-role assignment its listener would do.
     if (function_exists('grantOwnerRole')) {
         grantOwnerRole($user);
+    }
+
+    return $user;
+}
+
+/**
+ * An account owner with nothing switched off.
+ *
+ * In the SaaS edition that means a paid plan: feature gates and — the one
+ * that bites in tests that never mention billing — EnsureApiTokenFeatureAccess,
+ * which rejects any request authenticated by a token whose abilities are not
+ * literally ['*'] once the plan lacks api_access. Sanctum::actingAs() builds a
+ * mock token, so every scoped-token test trips that without a plan. The core
+ * edition has no plans and the user is already unrestricted, so this is
+ * createUser() there.
+ *
+ * Same function_exists shape as grantOwnerRole above: the helper it reaches
+ * for ships only in tests/Pest.edition.php.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createEntitledOwner(array $attributes = []): User
+{
+    $user = createUser($attributes);
+
+    if (function_exists('subscribeToPaidPlan')) {
+        subscribeToPaidPlan($user);
     }
 
     return $user;

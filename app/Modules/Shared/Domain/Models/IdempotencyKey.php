@@ -18,7 +18,8 @@ use Illuminate\Support\Carbon;
  * @property string $user_id
  * @property string $key_hash
  * @property string $body_hash
- * @property int $response_status
+ * @property int|null $response_status null while the claim is in flight — the
+ *                                     row exists to hold the key, the response has not been produced yet
  * @property array<string, mixed>|null $response_body
  * @property Carbon|null $created_at
  * @property-read User|null $user

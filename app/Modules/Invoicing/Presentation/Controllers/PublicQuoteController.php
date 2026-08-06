@@ -11,6 +11,7 @@ use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Invoicing\Domain\Services\VatRecapRow;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\ContentDisposition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -204,7 +205,7 @@ class PublicQuoteController extends Controller
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+            'Content-Disposition' => ContentDisposition::inline($filename),
         ]);
     }
 

@@ -82,7 +82,7 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
         // Personal order cannot have a rate — no client to bill
         if ($data->client_id === null && $data->rate !== null) {
             throw DomainException::because(
-                'Osobná zákazka (bez klienta) nemôže mať nastavenú sadzbu.'
+                __('orders.personal_order_cannot_have_rate')
             );
         }
 
@@ -92,7 +92,7 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
             && $data->rate === null
         ) {
             throw DomainException::because(
-                "Fakturovateľná zákazka s typom {$data->billing_type->label()} musí mať nastavenú sadzbu."
+                __('orders.billable_type_requires_rate', ['type' => $data->billing_type->label()])
             );
         }
     }

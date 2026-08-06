@@ -27,6 +27,8 @@ use Illuminate\Support\Carbon;
  * @property string $subject_id
  * @property string $event e.g. invoice.sent
  * @property array<string, mixed>|null $changes Old/new values, shape varies per event
+ * @property string|null $prev_hash SHA-256 of the account's previous entry, null for the chain's first row
+ * @property string|null $row_hash SHA-256 of this entry's own canonical fields + prev_hash
  * @property Carbon|null $created_at
  * @property-read User|null $user
  * @property-read User|null $actor
@@ -59,6 +61,14 @@ class ActivityLog extends Model
         'subject_id',
         'event',
         'changes',
+        // Settable explicitly so the timestamp used to compute row_hash and
+        // the one actually persisted are the exact same value — passing it
+        // to create() while it wasn't fillable used to be silently dropped
+        // in favour of a fresh now() from the creating hook below, a few
+        // microseconds off from whatever was hashed.
+        'created_at',
+        'prev_hash',
+        'row_hash',
     ];
 
     protected function casts(): array
@@ -74,6 +84,42 @@ class ActivityLog extends Model
         static::creating(function (self $entry): void {
             $entry->created_at ??= now();
         });
+    }
+
+    /**
+     * Canonical SHA-256 for one hash-chain link — the single implementation
+     * EloquentActivityRecorder (new rows), the backfill migration (existing
+     * rows) and qasa:activity:verify-chain (checking either) all share, so
+     * the three can never quietly compute it three different ways.
+     *
+     * Field order is fixed and part of the hash's meaning: changing it
+     * changes every hash computed from it, which would look identical to
+     * tampering to every row already written.
+     *
+     * @param  array<string, mixed>|null  $changes
+     */
+    public static function computeRowHash(
+        string $userId,
+        ?string $actorId,
+        string $subjectType,
+        string $subjectId,
+        string $event,
+        ?array $changes,
+        string $createdAtIso,
+        ?string $prevHash,
+    ): string {
+        $canonical = [
+            'user_id' => $userId,
+            'actor_id' => $actorId,
+            'subject_type' => $subjectType,
+            'subject_id' => $subjectId,
+            'event' => $event,
+            'changes' => $changes,
+            'created_at' => $createdAtIso,
+            'prev_hash' => $prevHash,
+        ];
+
+        return hash('sha256', json_encode($canonical, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 
     /**

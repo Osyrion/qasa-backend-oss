@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Presentation\Controllers;
 
 use App\Modules\Invoicing\Application\Services\InvoicePdfService;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Support\ContentDisposition;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -57,7 +58,7 @@ class InvoicePdfController extends Controller
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Content-Disposition' => ContentDisposition::attachment($filename),
             'Content-Length' => strlen($pdf),
         ]);
     }
@@ -95,7 +96,7 @@ class InvoicePdfController extends Controller
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "inline; filename=\"{$filename}\"",
+            'Content-Disposition' => ContentDisposition::inline($filename),
         ]);
     }
 }

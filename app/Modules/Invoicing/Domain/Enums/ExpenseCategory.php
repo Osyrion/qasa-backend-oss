@@ -17,15 +17,6 @@ enum ExpenseCategory: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Office => 'Kancelária',
-            self::Travel => 'Cestovné',
-            self::Software => 'Software',
-            self::Hardware => 'Hardware',
-            self::Marketing => 'Marketing',
-            self::Education => 'Vzdelávanie',
-            self::Services => 'Služby',
-            self::Other => 'Ostatné',
-        };
+        return __('invoicing.expense_category_'.$this->value);
     }
 }

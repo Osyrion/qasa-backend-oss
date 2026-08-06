@@ -12,6 +12,7 @@ use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,7 @@ readonly class CreateSupplierInvoiceAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(SupplierInvoiceData $data, User $user): SupplierInvoice
+    public function execute(SupplierInvoiceData $data, User $user, Provenance $provenance = Provenance::Manual): SupplierInvoice
     {
         $client = $this->clients->findByIdOrFail($data->client_id);
 
@@ -43,7 +44,7 @@ readonly class CreateSupplierInvoiceAction
             throw DomainException::because(__('invoicing.supplier_invoice.self_assessment_requires_vat_status'));
         }
 
-        return DB::transaction(function () use ($data, $user): SupplierInvoice {
+        return DB::transaction(function () use ($data, $user, $provenance): SupplierInvoice {
             $userId = $user->accountOwnerId();
 
             $mask = new InvoiceNumberMask(
@@ -64,6 +65,7 @@ readonly class CreateSupplierInvoiceAction
                 'supplier_invoice_number' => $data->supplier_invoice_number,
                 'variable_symbol' => $data->variable_symbol,
                 'status' => 'draft',
+                'provenance' => $provenance->value,
                 'vat_regime' => $data->vat_regime->value,
                 'issued_at' => $data->issued_at,
                 'taxable_supply_at' => $data->taxable_supply_at,

@@ -6,6 +6,7 @@ return [
     'invalid_credentials' => 'Nesprávný e-mail nebo heslo.',
     'google_account' => 'Tento účet se přihlašuje přes Google.',
     'invalid_verification_link' => 'Neplatný ověřovací odkaz.',
+    'invalid_oauth_state' => 'Neplatný nebo prošlý požadavek na přihlášení. Zkuste to prosím znovu.',
     'email_verified' => 'E-mail byl úspěšně ověřen.',
     'email_already_verified' => 'E-mail je již ověřen.',
     'verification_email_sent' => 'Ověřovací e-mail byl odeslán.',
@@ -24,4 +25,5 @@ return [
     'legacy_vat_payer_conflicts_with_identified' => 'Tento účet je veden jako identifikovaná osoba; pro změnu daňového statusu použijte pole "vat_status" místo zastaralého příznaku "is_vat_payer".',
     'export_owner_only' => 'Tuto akci může provést pouze vlastník účtu.',
     'invalid_delete_confirmation' => 'Pro potvrzení smazání účtu propojeného pouze s Google napište "DELETE".',
+    'email_already_taken' => 'Tento e-mail je již zaregistrován.',
 ];

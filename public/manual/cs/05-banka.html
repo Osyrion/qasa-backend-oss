@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Banka — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Banka</h1>
+<p>Modul Banka pomáhá párovat bankovní výpisy s vystavenými fakturami a připravit platební příkazy pro přijaté faktury.</p>
+<h2>Bankovní účty</h2>
+<p>V <strong>Nastavení → Bankovní účty</strong> přidej účty, ze kterých fakturuješ a platíš. Každá faktura si vybírá konkrétní účet — díky tomu můžeš mít samostatné účty např. pro různé měny.</p>
+<h2>Import výpisu</h2>
+<p><strong>Banka → Importovat výpis</strong> přijímá výpis ve formátu <strong>CSV</strong> nebo <strong>GPC</strong> (formát běžně exportovaný slovenskými a českými bankami z internetového bankovnictví).</p>
+<p>Import probíhá ve dvou krocích:</p>
+<ol>
+<li><strong>Náhled (preview)</strong> — aplikace řádky výpisu spáruje s vystavenými fakturami podle variabilního symbolu, částky a měny a ukáže ti návrh párování ještě před uložením. Řádky, ke kterým se nenašla jednoznačná shoda, se označí k ručnímu přiřazení.</li>
+<li><strong>Potvrzení (apply)</strong> — po zkontrolování návrhu potvrdíš import; spárované platby se zapíšou k příslušným fakturám a faktury s plnou úhradou se označí jako uhrazené.</li>
+</ol>
+<p>Řádek výpisu, který nechceš párovat s žádnou fakturou (např. bankovní poplatek), jednoduše přeskoč — do evidence faktur se nepromítne.</p>
+<h2>Platební příkazy pro přijaté faktury</h2>
+<p><strong>Banka → Platební příkazy → Kandidáti</strong> ti ukáže přehled přijatých faktur, které čekají na úhradu a blíží se (nebo už prošly) splatností. Vyber, které chceš zaplatit, a vytvoř z nich <strong>platební příkaz</strong>.</p>
+<p>Hotový příkaz můžeš exportovat ve formátu:</p>
+<ul>
+<li><strong>ABO</strong> — pro banky, které tento formát k importu podporují,</li>
+<li><strong>SEPA XML</strong> — standardní evropský formát,</li>
+<li><strong>CSV</strong> — univerzální formát pro ruční kontrolu nebo jiné systémy,</li>
+<li><strong>PDF</strong> — k ručnímu zadání platby, pokud import do internetového bankovnictví nevyužíváš.</li>
+</ul>
+<h2>Co modul (zatím) nedělá automaticky</h2>
+<p>Import výpisu i dnes vyžaduje ruční stažení souboru z internetového bankovnictví a jeho nahrání — přímé propojení na banku (open banking) je připravovaná funkce, ne součást aktuální verze. Stejně tak platba dodavateli se neodesílá z aplikace přímo — připravený export se importuje nebo zadává v tvém internetovém bankovnictví.</p>
+<div class="chapter-nav-links"><a href="04-inbox.html">&larr; Přijaté faktury a inbox</a><a href="06-dane.html">Daně pro OSVČ &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="cs" data-active="banka"></script>
+</body>
+</html>

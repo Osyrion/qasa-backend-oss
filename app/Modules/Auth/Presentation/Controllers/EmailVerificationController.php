@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Support\AccountLookup;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,14 @@ class EmailVerificationController extends Controller
     )]
     public function verify(Request $request, string $id, string $hash): JsonResponse
     {
+        // Clicking the link is an unauthenticated request, so nothing has
+        // bound the connection — and `users` is tenant-scoped (phase 7,
+        // docs/plans/POSTGRES_RLS_PLAN.md), which makes the row below
+        // invisible and turns a valid link into a 404. The signed URL is what
+        // proves this id was issued by us, so binding from it is safe; the
+        // hash below still has to match before anything is marked verified.
+        AccountLookup::bindById($id);
+
         $user = User::findOrFail($id);
 
         if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
