@@ -70,7 +70,7 @@ class VatRateController extends Controller
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'VAT rate', content: new OA\JsonContent(ref: '#/components/schemas/VatRate')),
+            new OA\Response(response: 200, description: 'VAT rate', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/VatRate')], type: 'object')),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
@@ -129,6 +129,39 @@ class VatRateController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/vat-rates/{id}',
+        summary: 'Update VAT rate',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['code', 'country', 'rate'],
+                properties: [
+                    new OA\Property(property: 'code', type: 'string', maxLength: 10),
+                    new OA\Property(property: 'country', type: 'string'),
+                    new OA\Property(property: 'rate', type: 'number', format: 'float'),
+                    new OA\Property(property: 'label', type: 'string', nullable: true),
+                    new OA\Property(property: 'is_default', type: 'boolean'),
+                    new OA\Property(property: 'valid_from', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'valid_to', type: 'string', format: 'date', nullable: true),
+                ]
+            )
+        ),
+        tags: ['VatRates'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/VatRate')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/vat-rates/{id}',
         summary: 'Update VAT rate',
         security: [['sanctum' => []]],

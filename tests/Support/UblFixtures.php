@@ -16,11 +16,18 @@ use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceBuilder;
 
 /**
  * @param  array<string, mixed>  $attributes
+ * @param  float|list<float>  $vatRate  A list builds one line per rate, which
+ *                                      is what a document-level discount has
+ *                                      to be split across (BR-S-08)
+ * @param  array<string, mixed>  $clientAttributes  Overrides on the buyer —
+ *                                                  `peppol_id`, mostly, which
+ *                                                  is what makes a document
+ *                                                  routable
  */
-function ublInvoice(array $attributes = [], float $vatRate = 23.0, ?User $owner = null): Invoice
+function ublInvoice(array $attributes = [], float|array $vatRate = 23.0, ?User $owner = null, array $clientAttributes = []): Invoice
 {
     $owner ??= createUser(['country' => 'SK']);
-    $client = Client::factory()->create(['user_id' => $owner->id]);
+    $client = Client::factory()->create(['user_id' => $owner->id, ...$clientAttributes]);
 
     $invoice = Invoice::factory()->create([
         'user_id' => $owner->id,
@@ -41,6 +48,7 @@ function ublInvoice(array $attributes = [], float $vatRate = 23.0, ?User $owner 
         'client_snapshot' => [
             'name' => 'Odberateľ a.s.',
             'ico' => '87654321',
+            'dic' => '9080706050',
             'vat_id' => 'SK9080706050',
             'address' => 'Vedľajšia 2',
             'city' => 'Košice',
@@ -61,20 +69,22 @@ function ublInvoice(array $attributes = [], float $vatRate = 23.0, ?User $owner 
     // and price, so overriding only the inputs would leave the line
     // internally inconsistent — and the round-trip assertions below would
     // compare two different invoices.
-    $base = 200.0;
-    $vat = round($base * $vatRate / 100, 2);
+    foreach (is_array($vatRate) ? $vatRate : [$vatRate] as $rate) {
+        $base = 200.0;
+        $vat = round($base * $rate / 100, 2);
 
-    InvoiceItem::factory()->create([
-        'invoice_id' => $invoice->id,
-        'description' => 'Konzultácie',
-        'quantity' => 2,
-        'unit' => 'hod',
-        'unit_price' => 100,
-        'vat_rate' => $vatRate,
-        'vat_amount' => $vat,
-        'total_excl_vat' => $base,
-        'total_incl_vat' => $base + $vat,
-    ]);
+        InvoiceItem::factory()->create([
+            'invoice_id' => $invoice->id,
+            'description' => 'Konzultácie',
+            'quantity' => 2,
+            'unit' => 'hod',
+            'unit_price' => 100,
+            'vat_rate' => $rate,
+            'vat_amount' => $vat,
+            'total_excl_vat' => $base,
+            'total_incl_vat' => $base + $vat,
+        ]);
+    }
 
     // The factory seeds its own header totals; recompute them from the item
     // actually attached above, so "the export equals what the invoice holds"
@@ -97,4 +107,45 @@ function buildUbl(Invoice $invoice): string
     assert($fresh !== null);
 
     return app(Ubl21InvoiceBuilder::class)->build($fresh);
+}
+
+/**
+ * A received e-invoice, hand-written rather than exported: the receiving side
+ * has to cope with what a supplier's system emits, which is never our own
+ * builder's output. Shared by the inbox tests and the inbound-email ones.
+ */
+function minimalUbl(string $number = 'DODA-1', string $ico = '12345678'): string
+{
+    return <<<XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+             xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+      <cbc:ID>{$number}</cbc:ID>
+      <cbc:IssueDate>2026-03-01</cbc:IssueDate>
+      <cbc:DueDate>2026-03-15</cbc:DueDate>
+      <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+      <cac:AccountingSupplierParty><cac:Party>
+        <cac:PartyLegalEntity><cbc:CompanyID>{$ico}</cbc:CompanyID></cac:PartyLegalEntity>
+      </cac:Party></cac:AccountingSupplierParty>
+      <cac:PaymentMeans>
+        <cbc:PaymentID>7788</cbc:PaymentID>
+        <cac:PayeeFinancialAccount><cbc:ID>SK3112000000198742637541</cbc:ID></cac:PayeeFinancialAccount>
+      </cac:PaymentMeans>
+      <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="EUR">46.00</cbc:TaxAmount>
+        <cac:TaxSubtotal>
+          <cbc:TaxableAmount currencyID="EUR">200.00</cbc:TaxableAmount>
+          <cbc:TaxAmount currencyID="EUR">46.00</cbc:TaxAmount>
+          <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>23.00</cbc:Percent></cac:TaxCategory>
+        </cac:TaxSubtotal>
+      </cac:TaxTotal>
+      <cac:LegalMonetaryTotal><cbc:TaxInclusiveAmount currencyID="EUR">246.00</cbc:TaxInclusiveAmount></cac:LegalMonetaryTotal>
+      <cac:InvoiceLine>
+        <cbc:ID>1</cbc:ID>
+        <cbc:LineExtensionAmount currencyID="EUR">200.00</cbc:LineExtensionAmount>
+        <cac:Item><cbc:Name>Služby</cbc:Name></cac:Item>
+      </cac:InvoiceLine>
+    </Invoice>
+    XML;
 }

@@ -154,7 +154,7 @@ class SupplierInvoiceController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Supplier invoice details',
-                content: new OA\JsonContent(ref: '#/components/schemas/SupplierInvoice')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/SupplierInvoice')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Supplier invoice not found'),
@@ -247,6 +247,65 @@ class SupplierInvoiceController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/supplier-invoices/{id}',
+        summary: 'Update draft supplier invoice',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'supplier_invoice_number', 'issued_at', 'currency', 'vat_lines'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'supplier_invoice_number', type: 'string', maxLength: 60),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'vat_regime', type: 'string', enum: ['domestic', 'eu_reverse_charge', 'import'], default: 'domestic'),
+                    new OA\Property(property: 'taxable_supply_at', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'due_at', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'received_at', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'exchange_rate', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'variable_symbol', type: 'string', nullable: true, maxLength: 10),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(
+                        property: 'vat_lines',
+                        type: 'array',
+                        items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: 'vat_rate', type: 'number', format: 'float'),
+                                new OA\Property(property: 'base', type: 'number', format: 'float'),
+                                new OA\Property(property: 'vat_amount', type: 'number', format: 'float'),
+                                new OA\Property(property: 'sort_order', type: 'integer'),
+                            ]
+                        )
+                    ),
+                ]
+            )
+        ),
+        tags: ['SupplierInvoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'Supplier invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Supplier invoice updated',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'data', ref: '#/components/schemas/SupplierInvoice')],
+                    type: 'object',
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Supplier invoice not found'),
+            new OA\Response(response: 422, description: 'Validation error, client is not a vendor, or invoice not editable'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/supplier-invoices/{id}',
         summary: 'Update draft supplier invoice',
         security: [['sanctum' => []]],

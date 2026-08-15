@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Presentation\Controllers;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Clients\Application\Actions\AnonymizeClientAction;
 use App\Modules\Clients\Application\Actions\ArchiveClientAction;
 use App\Modules\Clients\Application\Actions\CreateClientAction;
 use App\Modules\Clients\Application\Actions\CreateClientPortalLinkAction;
@@ -41,6 +42,7 @@ class ClientController extends Controller
         private readonly DeleteClientAction $deleteAction,
         private readonly ArchiveClientAction $archiveAction,
         private readonly RestoreClientAction $restoreAction,
+        private readonly AnonymizeClientAction $anonymizeAction,
     ) {
         $this->authorizeResource(Client::class, 'client');
     }
@@ -150,7 +152,7 @@ class ClientController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Client details',
-                content: new OA\JsonContent(ref: '#/components/schemas/Client')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Client')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Client not found'),
@@ -231,6 +233,63 @@ class ClientController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/clients/{id}',
+        summary: 'Update client',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_type', 'country', 'currency', 'locale'],
+                properties: [
+                    new OA\Property(property: 'client_type', type: 'string', enum: ['individual', 'self_employed', 'company']),
+                    new OA\Property(property: 'title', type: 'string', nullable: true, maxLength: 100),
+                    new OA\Property(property: 'name', type: 'string', nullable: true, maxLength: 150),
+                    new OA\Property(property: 'surname', type: 'string', nullable: true, maxLength: 150),
+                    new OA\Property(property: 'company_name', type: 'string', nullable: true, maxLength: 200),
+                    new OA\Property(property: 'ico', type: 'string', nullable: true, maxLength: 20),
+                    new OA\Property(property: 'dic', type: 'string', nullable: true, maxLength: 20),
+                    new OA\Property(property: 'vat_id', type: 'string', nullable: true, maxLength: 20),
+                    new OA\Property(property: 'is_vat_payer', type: 'boolean'),
+                    new OA\Property(property: 'is_customer', type: 'boolean', default: true),
+                    new OA\Property(property: 'is_vendor', type: 'boolean', default: false),
+                    new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true, maxLength: 255),
+                    new OA\Property(property: 'phone', type: 'string', nullable: true, maxLength: 30),
+                    new OA\Property(property: 'address', type: 'string', nullable: true, maxLength: 255),
+                    new OA\Property(property: 'city', type: 'string', nullable: true, maxLength: 100),
+                    new OA\Property(property: 'postal_code', type: 'string', nullable: true, maxLength: 10),
+                    new OA\Property(property: 'country', type: 'string', example: 'SK', maxLength: 2),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'locale', type: 'string', example: 'sk', maxLength: 5),
+                    new OA\Property(property: 'color', type: 'string', example: '#3B82F6', nullable: true, maxLength: 7),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Clients'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'Client ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Client updated',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Client')],
+                    type: 'object',
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Client not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/clients/{id}',
         summary: 'Update client',
         security: [['sanctum' => []]],
@@ -420,6 +479,49 @@ class ClientController extends Controller
         $this->authorize('update', $client);
 
         return ClientResource::make($this->archiveAction->execute($client))->response();
+    }
+
+    /**
+     * @throws Throwable
+     */
+    #[OA\Post(
+        path: '/api/v1/clients/{id}/anonymize',
+        summary: 'Erase a client\'s personal data (GDPR right to erasure)',
+        description: 'For a client who cannot be deleted because documents reference them. '
+            .'Clears every identifying column, deletes the contact persons and archives the '
+            .'client. Issued invoices and quotes are NOT touched: they carry the client '
+            .'frozen at issue and stay valid accounting records. Drafts have no snapshot yet '
+            .'and will read as anonymised — affected_drafts says how many.',
+        security: [['sanctum' => []]],
+        tags: ['Clients'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Client anonymised',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', ref: '#/components/schemas/Client'),
+                    new OA\Property(property: 'affected_drafts', type: 'integer', example: 0),
+                    new OA\Property(property: 'message', type: 'string'),
+                ], type: 'object')
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Client not found'),
+        ]
+    )]
+    public function anonymize(Client $client): JsonResponse
+    {
+        $this->authorize('delete', $client);
+
+        $affectedDrafts = $this->anonymizeAction->execute($client);
+
+        return response()->json([
+            'data' => ClientResource::make($client->refresh()),
+            'affected_drafts' => $affectedDrafts,
+            'message' => __('clients.anonymized'),
+        ]);
     }
 
     #[OA\Post(

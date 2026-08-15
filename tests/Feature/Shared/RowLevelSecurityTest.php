@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
+use App\Modules\Shared\Presentation\Console\VerifyRowLevelSecurityCommand;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -173,14 +174,15 @@ it('guards the tables the policies were written for', function (): void {
     // that matters.
     $expected = collect([
         // own their account through user_id, or — users — their own id
+        'account_entitlements',
         'activity_log', 'ai_credentials', 'bank_accounts', 'bank_connections',
         'cash_documents',
         'clients', 'contribution_payments', 'document_tags', 'documents',
-        'email_deliveries', 'events', 'expenses',
+        'einvoice_dispatches', 'email_deliveries', 'events', 'expenses',
         'google_calendar_connections', 'google_calendar_sync_runs',
         'idempotency_keys', 'import_runs', 'import_source_credentials',
         'invoice_inbox_items', 'invoices', 'notifications', 'orders',
-        'payment_orders', 'price_lists', 'quotes', 'rates',
+        'payment_orders', 'peppol_credentials', 'peppol_registrations', 'price_lists', 'quotes', 'rates',
         'recurring_invoice_templates', 'stripe_connect_accounts',
         'supplier_invoices', 'tax_filings', 'time_entries', 'trips', 'users', 'vat_rates',
         'vehicles', 'webhook_endpoints',
@@ -222,19 +224,10 @@ it('leaves no tenant-owned table unprotected', function (): void {
     // Both column names, because both are used: user_id is the usual one,
     // owner_id is what team_invitations calls it — and looking only for
     // user_id is exactly how that one went unnoticed.
-    $allowed = [
-        // Billing, read across accounts by the Admin module on purpose. Not
-        // auto-scoped in the application either — see the tenant scope
-        // allowlist in tests/Architecture/TenantScopeTest.php.
-        'subscriptions' => 'billing, read across accounts by Admin',
-        'subscription_invoices' => 'billing, read across accounts by Admin',
-        'subscription_orders' => 'billing, read across accounts by Admin',
-        'subscription_usages' => 'usage metering, aggregated across accounts by Admin',
-
-        // Laravel's own session table, keyed by user_id but managed by the
-        // framework and never read as tenant data.
-        'sessions' => 'framework-managed',
-    ];
+    // The exemptions live on the command, not here: qasa:rls:verify runs this
+    // same invariant against a production database, and two copies of a list
+    // that must agree is how the edition boundary drifted once already.
+    $allowed = VerifyRowLevelSecurityCommand::UNPROTECTED_BY_DESIGN;
 
     $unprotected = DB::table('pg_class as c')
         ->join('pg_namespace as n', 'n.oid', '=', 'c.relnamespace')

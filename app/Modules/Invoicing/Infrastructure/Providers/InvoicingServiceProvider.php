@@ -30,6 +30,7 @@ use App\Modules\Invoicing\Application\Contracts\SendInvoiceEmailActionInterface;
 use App\Modules\Invoicing\Application\Contracts\SettleProformaActionInterface;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\TrackedWorkLinkInterface;
+use App\Modules\Invoicing\Application\Contracts\UblInvoiceBuilderInterface;
 use App\Modules\Invoicing\Application\Contracts\UpdateInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Application\Contracts\UpdateSupplierInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Application\Contracts\UsageQuotaInterface;
@@ -38,7 +39,9 @@ use App\Modules\Invoicing\Application\Contracts\WorkReportGeneratorInterface;
 use App\Modules\Invoicing\Application\Listeners\SeedVatRatesForNewUser;
 use App\Modules\Invoicing\Application\Listeners\SendQuoteDecisionNotification;
 use App\Modules\Invoicing\Application\Services\AiAssistantService;
+use App\Modules\Invoicing\Application\Services\ConfiguredAiModelResolver;
 use App\Modules\Invoicing\Application\Services\ExchangeRateService;
+use App\Modules\Invoicing\Application\Services\InvoiceExtractionAiFeature;
 use App\Modules\Invoicing\Application\Services\LlmProviderRegistry;
 use App\Modules\Invoicing\Application\Services\NoTrackedWorkLink;
 use App\Modules\Invoicing\Application\Services\NoWorkReportGenerator;
@@ -75,6 +78,7 @@ use App\Modules\Invoicing\Infrastructure\Repositories\EloquentQuoteRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentRecurringInvoiceTemplateRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentSupplierInvoiceRepository;
 use App\Modules\Invoicing\Infrastructure\Repositories\EloquentVatRateRepository;
+use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceBuilder;
 use App\Modules\Invoicing\Presentation\Console\BackfillVatRatesCommand;
 use App\Modules\Invoicing\Presentation\Console\ScanInboxCommand;
 use App\Modules\Invoicing\Presentation\Console\SendOverdueDigestCommand;
@@ -88,6 +92,7 @@ use App\Modules\Invoicing\Presentation\Policies\QuotePolicy;
 use App\Modules\Invoicing\Presentation\Policies\RecurringInvoiceTemplatePolicy;
 use App\Modules\Invoicing\Presentation\Policies\SupplierInvoicePolicy;
 use App\Modules\Invoicing\Presentation\Policies\VatRatePolicy;
+use App\Modules\Shared\Application\Contracts\AiModelResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -102,6 +107,14 @@ class InvoicingServiceProvider extends ServiceProvider
         $this->app->bind(
             InvoiceRepositoryInterface::class,
             EloquentInvoiceRepository::class,
+        );
+
+        // Reached from outside the module by the premium Peppol transport;
+        // inside the module the concrete builder is used directly, same
+        // convention as ProcessInboxFileAction.
+        $this->app->bind(
+            UblInvoiceBuilderInterface::class,
+            Ubl21InvoiceBuilder::class,
         );
 
         $this->app->bind(
@@ -242,6 +255,13 @@ class InvoicingServiceProvider extends ServiceProvider
         // One binding per LlmProviderDriver implementation — adding a
         // provider is a new driver class plus one line here.
         $this->app->tag([AnthropicDriver::class], 'llm.providers');
+
+        // Extraction is the one AI capability that ships in both editions,
+        // so its transparency entry (and the real model resolution behind
+        // Shared's no-op default) is registered here — see
+        // AiFeatureDescriptor / AiModelResolver.
+        $this->app->tag([InvoiceExtractionAiFeature::class], ['ai.features']);
+        $this->app->bind(AiModelResolver::class, ConfiguredAiModelResolver::class);
 
         $this->app->singleton(
             LlmProviderRegistry::class,

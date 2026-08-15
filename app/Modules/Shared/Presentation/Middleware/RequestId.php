@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Middleware;
 
+use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,9 @@ use Symfony\Component\HttpFoundation\Response;
  * when the job carries the id forward) under one request_id — a caller-
  * supplied X-Request-Id is trusted so a request that hops through a
  * gateway/frontend keeps the same id end to end; otherwise a fresh uuid.
+ *
+ * The same id is tagged onto the Sentry scope, which is what turns an event
+ * back into the log lines that led to it.
  */
 class RequestId
 {
@@ -26,6 +30,7 @@ class RequestId
 
         $request->attributes->set('request_id', $requestId);
         Log::withContext(['request_id' => $requestId]);
+        SentryContext::tagRequest($requestId);
 
         /** @var Response $response */
         $response = $next($request);

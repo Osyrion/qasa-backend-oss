@@ -1,4 +1,4 @@
-FROM php:8.4-fpm
+FROM php:8.5-fpm
 
 # Arguments
 ARG user=www
@@ -41,8 +41,10 @@ RUN docker-php-ext-install \
         zip \
         xml
 
-# Install opcache separately
-RUN docker-php-ext-enable opcache
+# No opcache step: since PHP 8.5 the extension is compiled into the binary and
+# always loaded, so there is no opcache.so left to enable — the old
+# `docker-php-ext-enable opcache` now fails the build outright. docker/php/
+# opcache.ini still applies; opcache.enable/enable_cli are honoured as before.
 
 # Install exif and pcntl separately
 RUN docker-php-ext-install exif pcntl

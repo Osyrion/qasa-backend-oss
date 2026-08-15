@@ -177,6 +177,41 @@ class ExpenseController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
+    #[OA\Patch(
+        path: '/api/v1/expenses/{expense}',
+        summary: 'Update an expense',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['description', 'category', 'amount', 'currency', 'date'],
+                properties: [
+                    new OA\Property(property: 'description', type: 'string'),
+                    new OA\Property(property: 'category', type: 'string', enum: ['office', 'travel', 'software', 'hardware', 'marketing', 'education', 'services', 'other']),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'date', type: 'string', format: 'date'),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Expenses'],
+        parameters: [
+            new OA\Parameter(name: 'expense', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Updated expense',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', ref: '#/components/schemas/Expense'),
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
     public function update(Request $request, Expense $expense): JsonResponse
     {
         $this->authorize('update', $expense);

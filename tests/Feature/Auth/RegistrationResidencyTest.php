@@ -28,6 +28,7 @@ it('registers a user via email/password with no residency and no IČO — never 
         'surname' => 'Novák',
         'email' => 'step1@example.com',
         'password' => 'super-secret-1',
+        'accepted_terms' => true,
     ])->assertCreated();
 
     // Registration is unauthenticated, so the middleware clears the binding

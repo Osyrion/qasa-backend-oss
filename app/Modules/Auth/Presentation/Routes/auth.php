@@ -45,6 +45,7 @@ Route::prefix('api/v1')->group(function (): void {
         Route::post('auth/profile/logo', [AuthController::class, 'uploadLogo'])->name('auth.profile.logo');
         Route::get('profile/export', [AuthController::class, 'exportData'])->name('auth.profile.export');
         Route::get('profile/setup-status', [SetupStatusController::class, 'index'])->name('auth.profile.setup-status');
+        Route::post('profile/accept-terms', [AuthController::class, 'acceptTerms'])->name('auth.profile.accept-terms');
         Route::delete('profile', [AuthController::class, 'deleteAccount'])->name('auth.profile.delete');
         Route::post('auth/email/verification-notification', [EmailVerificationController::class, 'resend'])
             ->middleware('throttle:6,1')

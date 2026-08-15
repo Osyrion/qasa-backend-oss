@@ -27,8 +27,13 @@ class DeleteAccountAction
 
         // Fired before the (soft) delete so the subject is still fully
         // hydrated. activity_log.user_id cascades on a hard delete, not a
-        // soft one, so this row is safe today — but a future hard-delete/
-        // purge job would take it down with the account it documents.
+        // soft one, and PurgeDeletedAccountsAction — the second half of this,
+        // once the grace period expires — anonymises the row rather than
+        // deleting it, precisely so the log documenting the account outlives
+        // the identity behind it.
+        //
+        // The premium Team module listens here to soft-delete members
+        // alongside their owner; a soft delete does not cascade on its own.
         event(new AccountDeleted($user));
 
         $user->tokens()->delete();

@@ -128,7 +128,7 @@ class InvoiceInboxController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Invoice inbox item details',
-                content: new OA\JsonContent(ref: '#/components/schemas/InvoiceInboxItem')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/InvoiceInboxItem')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Invoice inbox item not found'),
@@ -335,7 +335,7 @@ class InvoiceInboxController extends Controller
                 schema: new OA\Schema(
                     required: ['file'],
                     properties: [
-                        new OA\Property(property: 'file', description: 'PDF, JPEG, or PNG document', type: 'string', format: 'binary'),
+                        new OA\Property(property: 'file', description: 'PDF, JPEG, or PNG document, or a UBL 2.1 (EN 16931) XML e-invoice', type: 'string', format: 'binary'),
                     ]
                 )
             )

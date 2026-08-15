@@ -47,3 +47,17 @@ Schedule::command('qasa:idempotency-keys:purge')
     ->hourly()
     ->withoutOverlapping()
     ->onOneServer();
+
+// Ahead of the retention purges above, so an account that becomes eligible
+// today is anonymised before the log entry recording it would itself age out.
+Schedule::command('qasa:accounts:purge')
+    ->dailyAt('03:30')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();
+
+Schedule::command('qasa:privacy:purge-request-metadata')
+    ->dailyAt('04:00')
+    ->timezone((string) config('qasa.schedule_timezone'))
+    ->withoutOverlapping()
+    ->onOneServer();

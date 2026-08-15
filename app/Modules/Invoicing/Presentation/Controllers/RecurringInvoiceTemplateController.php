@@ -115,7 +115,7 @@ class RecurringInvoiceTemplateController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Template details',
-                content: new OA\JsonContent(ref: '#/components/schemas/RecurringInvoiceTemplate')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/RecurringInvoiceTemplate')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Template not found'),
@@ -199,6 +199,38 @@ class RecurringInvoiceTemplateController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/recurring-invoice-templates/{id}',
+        summary: 'Update recurring invoice template (replaces items)',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(ref: '#/components/schemas/RecurringInvoiceTemplate')
+        ),
+        tags: ['Recurring Invoice Templates'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'Template ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Template updated',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'data', ref: '#/components/schemas/RecurringInvoiceTemplate')],
+                    type: 'object',
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Template not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/recurring-invoice-templates/{id}',
         summary: 'Update recurring invoice template (replaces items)',
         security: [['sanctum' => []]],

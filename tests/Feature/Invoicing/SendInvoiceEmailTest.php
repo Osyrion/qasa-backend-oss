@@ -6,6 +6,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Mail\InvoiceEmail;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -139,12 +140,19 @@ it('honours recipient override, cc and a custom message', function (): void {
     );
 });
 
-it('marks the invoice when the queued email job permanently fails', function (): void {
+/*
+ * Retries are already exhausted by the time failed() runs, so nothing else is
+ * going to happen: the tenant believes the invoice went out, the flag says
+ * otherwise, and only a human closing the loop turns that into an answer.
+ */
+it('marks the invoice and reports when the queued email job permanently fails', function (): void {
+    Exceptions::fake();
     [, $invoice] = emailableInvoice(['status' => 'sent']);
 
     (new InvoiceEmail($invoice))->failed(new RuntimeException('SMTP down'));
 
     expect($invoice->refresh()->email_failed_at)->not->toBeNull();
+    Exceptions::assertReported(fn (RuntimeException $e): bool => $e->getMessage() === 'SMTP down');
 });
 
 it('clears a previous email failure on resend', function (): void {

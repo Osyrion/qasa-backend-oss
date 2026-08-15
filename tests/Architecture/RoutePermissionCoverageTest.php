@@ -133,6 +133,7 @@ function ownAccountRouteAllowlist(): array
         'auth.profile.export' => 'own user record',
         'auth.profile.setup-status' => 'own user record',
         'auth.profile.delete' => 'own user record',
+        'auth.profile.accept-terms' => 'own user record',
         'dashboard' => 'own-account aggregate, no foreign id',
         'verification.send' => 'own user record (resends own verification e-mail)',
         'auth.2fa.enable' => 'own user record',
@@ -170,6 +171,13 @@ function ownAccountRouteAllowlist(): array
         'ai-credentials.upsert' => 'own account, keyed by provider enum',
         'ai-credentials.destroy' => 'own account, keyed by provider enum',
         'ai-credentials.test' => 'own account, keyed by provider enum',
+
+        // The AI Act art. 50 transparency notice for the caller's own
+        // account: reads config plus that account's own switches, exposes no
+        // business data and no secret, and every team member is entitled to
+        // read it — gating it behind a permission would be the wrong answer
+        // to "what does this app send to a model about me".
+        'ai.transparency' => 'own account, no foreign id — config and the account\'s own AI switches',
 
         // MCP tools resolve and scope tenant data from the authenticated
         // user's own context internally — there is no route-bound foreign id.

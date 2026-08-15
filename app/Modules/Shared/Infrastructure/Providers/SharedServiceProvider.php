@@ -29,26 +29,37 @@ use App\Modules\Orders\Domain\Events\OrderCreated;
 use App\Modules\Orders\Domain\Events\OrderDeleted;
 use App\Modules\Orders\Domain\Events\OrderUpdated;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Shared\Application\Actions\PurgeRequestMetadataAction;
 use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
+use App\Modules\Shared\Application\Contracts\AiModelResolver;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
+use App\Modules\Shared\Application\Services\AiTransparencyRegister;
+use App\Modules\Shared\Application\Services\NullAiModelResolver;
 use App\Modules\Shared\Domain\Models\AccountNotification;
 use App\Modules\Shared\Infrastructure\Notifications\AccountDatabaseChannel;
 use App\Modules\Shared\Infrastructure\Repositories\EloquentActivityRecorder;
+use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
 use App\Modules\Shared\Policies\NotificationPolicy;
 use App\Modules\Shared\Presentation\Console\PurgeActivityLogCommand;
 use App\Modules\Shared\Presentation\Console\PurgeIdempotencyKeysCommand;
 use App\Modules\Shared\Presentation\Console\PurgeNotificationsCommand;
+use App\Modules\Shared\Presentation\Console\PurgeRequestMetadataCommand;
 use App\Modules\Shared\Presentation\Console\VerifyActivityChainCommand;
+use App\Modules\Shared\Presentation\Console\VerifyRowLevelSecurityCommand;
 use App\Modules\Shared\Support\OwnerConnection;
 use App\Modules\Shared\Support\TenantContext;
 use App\Modules\Shared\Support\TenantQueue;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Notifications\ChannelManager;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class SharedServiceProvider extends ServiceProvider
 {
@@ -56,15 +67,42 @@ class SharedServiceProvider extends ServiceProvider
     {
         $this->app->bind(ActivityRecorderInterface::class, EloquentActivityRecorder::class);
         $this->app->singleton(ActivityEventRegistry::class);
+
+        // Tables owned by other modules clear their own metadata — the tag is
+        // empty in the OSS edition, which is how the admin audit's entry
+        // disappears there along with the module that owns it.
+        $this->app->bind(
+            PurgeRequestMetadataAction::class,
+            fn ($app): PurgeRequestMetadataAction => new PurgeRequestMetadataAction($app->tagged('privacy.purge')),
+        );
+
+        // bindIf, not bind: this provider is registered *last* (providers.php
+        // is alphabetical), so a plain bind would overwrite Invoicing's real
+        // resolver with the no-op instead of the other way round — see
+        // AiModelResolver.
+        $this->app->bindIf(AiModelResolver::class, NullAiModelResolver::class);
+
+        // The AI capabilities each module declares for the art. 50
+        // transparency notice; an edition with fewer modules simply has
+        // fewer of them (see AiFeatureDescriptor).
+        $this->app->bind(
+            AiTransparencyRegister::class,
+            fn ($app): AiTransparencyRegister => new AiTransparencyRegister(
+                $app->tagged('ai.features'),
+                $app->make(AiModelResolver::class),
+            ),
+        );
     }
 
     public function boot(): void
     {
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/activity.php');
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/ai.php');
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/health.php');
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/notifications.php');
 
         $this->bindTenantContext();
+        $this->bindBackgroundCorrelation();
         $this->registerNotificationChannel();
 
         Gate::policy(AccountNotification::class, NotificationPolicy::class);
@@ -92,7 +130,9 @@ class SharedServiceProvider extends ServiceProvider
                 PurgeActivityLogCommand::class,
                 PurgeIdempotencyKeysCommand::class,
                 PurgeNotificationsCommand::class,
+                PurgeRequestMetadataCommand::class,
                 VerifyActivityChainCommand::class,
+                VerifyRowLevelSecurityCommand::class,
             ]);
         }
     }
@@ -196,6 +236,36 @@ class SharedServiceProvider extends ServiceProvider
      * knows authentication succeeded — see Middleware\Authenticate. Jobs
      * carry the account in their payload, because a worker has neither.
      */
+    /**
+     * A correlation id for work that has no request behind it.
+     *
+     * Log::withContext was set in exactly two places before this — the
+     * RequestId middleware and one job that carries its dispatching request's
+     * id forward — so every scheduled command and every other job wrote log
+     * lines with nothing tying them together, and would have arrived in
+     * Sentry the same way. One listener each beats repeating it in 27
+     * commands and 5 jobs, and the job's own uuid is used where there is one
+     * so the id matches what the failed_jobs row holds.
+     */
+    private function bindBackgroundCorrelation(): void
+    {
+        Event::listen(function (CommandStarting $event): void {
+            $command = $event->command ?? 'artisan';
+            $runId = (string) Str::uuid();
+
+            Log::withContext(['run_id' => $runId, 'command' => $command]);
+            SentryContext::tagBackgroundRun('command', $command, $runId);
+        });
+
+        Event::listen(function (JobProcessing $event): void {
+            $job = $event->job->resolveName();
+            $runId = $event->job->uuid() ?? (string) Str::uuid();
+
+            Log::withContext(['run_id' => $runId, 'job' => $job]);
+            SentryContext::tagBackgroundRun('job', $job, $runId);
+        });
+    }
+
     private function bindTenantContext(): void
     {
         TenantQueue::listen();

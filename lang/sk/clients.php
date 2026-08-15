@@ -6,6 +6,7 @@ return [
     'name_surname_required' => 'Meno a priezvisko sú povinné pre typ klienta :client_type.',
     'company_name_required' => 'Názov firmy je povinný pre firemného klienta.',
     'has_active_invoices' => 'Klienta nie je možné zmazať, pretože má aktívne faktúry. Najprv zrušte alebo archivujte faktúry.',
+    'anonymized' => 'Osobné údaje klienta boli vymazané. Vystavené doklady si ponechávajú údaje, s ktorými boli vystavené.',
     'contact_persons_only_for_company' => 'Kontaktné osoby je možné pridať len firemným klientom.',
     'max_contact_persons_reached' => 'Klient môže mať maximálne :max kontaktné osoby.',
     'registry_unsupported_country' => 'Vyhľadanie firmy nie je podporované pre krajinu :country.',

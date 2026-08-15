@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Infrastructure\Ubl;
 
+use App\Modules\Invoicing\Application\Contracts\UblInvoiceBuilderInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
@@ -33,7 +34,7 @@ use DOMElement;
  * and a golden test cannot catch it because it only compares the export
  * against itself.
  */
-final class Ubl21InvoiceBuilder
+final class Ubl21InvoiceBuilder implements UblInvoiceBuilderInterface
 {
     private const NS_INVOICE = 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2';
 
@@ -169,6 +170,12 @@ final class Ubl21InvoiceBuilder
             $root->appendChild($terms);
         }
 
+        // Before TaxTotal: UBL fixes this order, and the tax subtotals below
+        // are only reconcilable against these allowances.
+        foreach ($this->documentAllowances($dom, $invoice, $currency) as $allowance) {
+            $root->appendChild($allowance);
+        }
+
         $root->appendChild($this->taxTotal($dom, $invoice, $currency));
         $root->appendChild($this->legalMonetaryTotal($dom, $invoice, $currency));
 
@@ -192,12 +199,12 @@ final class Ubl21InvoiceBuilder
         $countryCode = (string) ($snapshot['country'] ?? '');
         $vatId = $this->vatIdFor($snapshot);
 
-        // BT-34/BT-49: the electronic address. Without a Peppol participant
-        // id the VAT number under scheme 9930/9944 is the conventional
-        // stand-in, so it is emitted only when there is one.
-        if ($vatId !== null) {
-            $endpoint = $this->cbc($dom, 'EndpointID', $vatId);
-            $endpoint->setAttribute('schemeID', $this->endpointSchemeFor($countryCode));
+        // BT-34/BT-49: the address the network delivers to.
+        $address = $this->electronicAddress($snapshot);
+
+        if ($address !== null) {
+            $endpoint = $this->cbc($dom, 'EndpointID', $address[1]);
+            $endpoint->setAttribute('schemeID', $address[0]);
             $party->appendChild($endpoint);
         }
 
@@ -258,13 +265,55 @@ final class Ubl21InvoiceBuilder
      * (9944 SK, 9930 CZ) fall back to 9925 elsewhere, which is the generic
      * "VAT number" identifier.
      */
-    private function endpointSchemeFor(string $countryCode): string
+    /**
+     * BT-34/BT-49 — the party's electronic address, as `[schemeID, value]`.
+     *
+     * This was wrong in every branch until 2026-08-13. It used ISO 6523 codes
+     * 9944 for SK, 9930 for CZ and 9925 as a "generic VAT number" fallback;
+     * in the Peppol EAS code list those are the **Netherlands**, **Germany**
+     * and **Belgium** VAT schemes. Every document we produced therefore
+     * declared a foreign electronic address — not a formatting slip, but the
+     * field the network routes on.
+     *
+     * The order below is deliberate:
+     *
+     * 1. An explicitly recorded participant id wins. It is what the account
+     *    hands its access point for routing, so anything else here would make
+     *    the document contradict the envelope carrying it.
+     * 2. SK derives `0245` + DIČ. That is the identifier the Slovak mandate
+     *    is built on (Financial Directorate = Peppol Authority SK), and the
+     *    DIČ is already on the document, so it needs no extra data entry.
+     * 3. CZ derives `9929` (Czech Republic VAT number).
+     * 4. Anything else yields nothing. There is no generic VAT scheme in the
+     *    code list to fall back on — 0199 is the LEI, not a VAT identifier —
+     *    and an absent address fails Peppol validation loudly (R010/R020)
+     *    where a guessed one would quietly route a legal document to a
+     *    stranger.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array{0: string, 1: string}|null
+     */
+    private function electronicAddress(array $snapshot): ?array
     {
-        return match (mb_strtoupper($countryCode)) {
-            'SK' => '9944',
-            'CZ' => '9930',
-            default => '9925',
-        };
+        $peppolId = trim((string) ($snapshot['peppol_id'] ?? ''));
+
+        if (preg_match('/^(\d{4}):(.+)$/', $peppolId, $matches) === 1) {
+            return [$matches[1], $matches[2]];
+        }
+
+        $country = mb_strtoupper((string) ($snapshot['country'] ?? ''));
+        $dic = trim((string) ($snapshot['dic'] ?? ''));
+        $vatId = $this->vatIdFor($snapshot);
+
+        if ($country === 'SK' && $dic !== '') {
+            return ['0245', $dic];
+        }
+
+        if ($country === 'CZ' && $vatId !== null) {
+            return ['9929', $vatId];
+        }
+
+        return null;
     }
 
     private function paymentMeans(DOMDocument $dom, Invoice $invoice): ?DOMElement
@@ -343,17 +392,57 @@ final class Ubl21InvoiceBuilder
         return $el;
     }
 
+    /**
+     * BT-92: the document-level discount, as one allowance per VAT rate.
+     *
+     * EN 16931 has no lump-sum discount. An allowance carries its own VAT
+     * category and rate, and BR-S-08 reconciles each rate's taxable amount
+     * against that rate's lines minus that rate's allowances — so a single
+     * header percentage has to be resolved into per-rate allowances or the
+     * document is simply invalid. It was, until 2026-08-13: AllowanceTotalAmount
+     * was written with nothing to back it, which BR-CO-11 rejects.
+     *
+     * The split comes from VatRecapCalculator, which already performs it for
+     * the recap; recomputing it here would be a second opinion on the same
+     * money.
+     *
+     * @return list<DOMElement>
+     */
+    private function documentAllowances(DOMDocument $dom, Invoice $invoice, string $currency): array
+    {
+        $allowances = [];
+
+        foreach ($this->recapCalculator->discountByRate($invoice) as $rate => $amount) {
+            $el = $dom->createElementNS(self::NS_CAC, 'cac:AllowanceCharge');
+
+            // false = allowance (a deduction). true would make it a charge,
+            // i.e. the same number added instead of subtracted.
+            $el->appendChild($this->cbc($dom, 'ChargeIndicator', 'false'));
+            $el->appendChild($this->cbc($dom, 'AllowanceChargeReason', (string) __('invoicing.ubl_document_discount')));
+            $el->appendChild($this->amount($dom, 'Amount', $amount, $currency));
+            $el->appendChild($this->taxCategory($dom, $invoice, (float) $rate));
+
+            $allowances[] = $el;
+        }
+
+        return $allowances;
+    }
+
     private function legalMonetaryTotal(DOMDocument $dom, Invoice $invoice, string $currency): DOMElement
     {
         $total = $dom->createElementNS(self::NS_CAC, 'cac:LegalMonetaryTotal');
 
-        $lineExtension = (float) $invoice->subtotal + (float) $invoice->discount_amount;
-        $taxExclusive = (float) $invoice->subtotal;
+        // `subtotal` is already the sum of the line amounts *before* the
+        // document-level discount — which is BT-106 exactly. Adding the
+        // discount back on top (as this did until 2026-08-13) overstated it
+        // by the discount and broke BR-CO-10, while BT-109 was left at the
+        // undiscounted figure and broke BR-CO-15.
+        $lineExtension = (float) $invoice->subtotal;
+        $taxExclusive = $lineExtension - (float) $invoice->discount_amount;
         $taxInclusive = (float) $invoice->total;
 
-        // BT-106 is the sum of the *line* amounts, before the document-level
-        // discount; BT-109 is after it. They differ exactly by BT-107, which
-        // is why the discount is added back rather than ignored.
+        // BT-106 is the sum of the line amounts, before the document-level
+        // discount; BT-109 is after it. They differ exactly by BT-107.
         $total->appendChild($this->amount($dom, 'LineExtensionAmount', $lineExtension, $currency));
         $total->appendChild($this->amount($dom, 'TaxExclusiveAmount', $taxExclusive, $currency));
         $total->appendChild($this->amount($dom, 'TaxInclusiveAmount', $taxInclusive, $currency));

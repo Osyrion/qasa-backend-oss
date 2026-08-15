@@ -29,6 +29,7 @@ final class RequireWebhookSecret
     {
         if ((string) config($configKey) === '') {
             Log::error('Webhook rejected: signing secret not configured', ['config_key' => $configKey]);
+            report("Webhook rejected: signing secret not configured ({$configKey})");
 
             return response('Webhook signing secret not configured', 500);
         }

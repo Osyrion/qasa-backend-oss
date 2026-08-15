@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\RegisterUserData;
+use App\Modules\Auth\Domain\Events\TermsAccepted;
 use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Support\TenantContext;
@@ -47,6 +48,10 @@ class RegisterUserAction
                 'locale' => $data->locale,
                 'is_vat_payer' => false,
                 'tax_flat_rate' => 0,
+                // Stamped from config, never from the request — accepted_terms
+                // only proves the checkbox was ticked, not which version was shown.
+                'terms_accepted_at' => now(),
+                'terms_version' => config('gdpr.terms_version'),
             ]);
 
             // The listeners below write rows that belong to the account this
@@ -57,6 +62,7 @@ class RegisterUserAction
             // Self-registered users own their account — the SaaS Team module
             // assigns the Owner role via a listener on this event.
             event(new UserRegistered($user));
+            event(new TermsAccepted($user, (string) $user->terms_version));
 
             return $user;
         });

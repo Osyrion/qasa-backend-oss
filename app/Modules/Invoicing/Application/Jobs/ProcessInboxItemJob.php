@@ -85,8 +85,8 @@ final class ProcessInboxItemJob implements ShouldQueue
 
         $owner = $this->resolveOwner($item->user_id);
 
-        [$suggestions, $source, $provider] = $owner === null
-            ? [$regexExtractor->parse($input)->suggestions, 'regex', null]
+        [$suggestions, $source, $provider, $model] = $owner === null
+            ? [$regexExtractor->parse($input)->suggestions, 'regex', null, null]
             : $this->extractFields($owner, $input, $extractorFactory, $regexExtractor);
 
         $matchedClientId = isset($suggestions['ico']) && is_string($suggestions['ico'])
@@ -99,6 +99,7 @@ final class ProcessInboxItemJob implements ShouldQueue
         $item->suggestions = $suggestions;
         $item->suggestions_source = $source;
         $item->suggestions_provider = $provider;
+        $item->suggestions_model = $model;
         $item->matched_client_id = $matchedClientId;
         $item->error = null;
         $item->save();
@@ -137,6 +138,7 @@ final class ProcessInboxItemJob implements ShouldQueue
         $item->suggestions = $suggestions;
         $item->suggestions_source = 'ubl';
         $item->suggestions_provider = null;
+        $item->suggestions_model = null;
         $item->matched_client_id = is_string($ico) ? $clients->findVendorByIco($item->user_id, $ico)?->id : null;
         $item->error = null;
         $item->save();
@@ -147,7 +149,7 @@ final class ProcessInboxItemJob implements ShouldQueue
     }
 
     /**
-     * @return array{0: array<string, mixed>, 1: string, 2: string|null}
+     * @return array{0: array<string, mixed>, 1: string, 2: string|null, 3: string|null}
      */
     private function extractFields(
         User $owner,
@@ -161,13 +163,13 @@ final class ProcessInboxItemJob implements ShouldQueue
             $suggestions = $regexExtractor->parse($input)->suggestions;
             $suggestions['quota_exhausted'] = true;
 
-            return [$suggestions, 'regex', null];
+            return [$suggestions, 'regex', null, null];
         }
 
         try {
             $result = $selection->extractor->parse($input);
 
-            return [$result->suggestions, $result->source, $result->provider];
+            return [$result->suggestions, $result->source, $result->provider, $result->model];
         } catch (LlmExtractionException $e) {
             report($e);
 
@@ -188,7 +190,7 @@ final class ProcessInboxItemJob implements ShouldQueue
                 ]);
             }
 
-            return [$suggestions, 'regex', null];
+            return [$suggestions, 'regex', null, null];
         }
     }
 

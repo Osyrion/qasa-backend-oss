@@ -59,6 +59,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'two_factor_enabled', type: 'boolean', example: false),
         new OA\Property(property: 'uses_flat_rate', type: 'boolean', example: false),
         new OA\Property(property: 'email_verified', type: 'boolean', example: true),
+        new OA\Property(property: 'terms_accepted_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'terms_acceptance_required', type: 'boolean', example: false, description: 'True when never accepted, or accepted an older version than config(\'gdpr.terms_version\') — prompt POST /profile/accept-terms'),
         new OA\Property(property: 'role', type: 'string', enum: ['owner', 'admin', 'member', 'viewer'], nullable: true),
         new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string', example: 'clients.manage')),
         new OA\Property(property: 'is_team_member', type: 'boolean', example: false),
@@ -138,6 +140,8 @@ class UserResource extends JsonResource
             'two_factor_enabled' => $this->resource->hasTwoFactorEnabled(),
             'uses_flat_rate' => $this->resource->usesFlatRate(),
             'email_verified' => $this->resource->email_verified_at !== null,
+            'terms_accepted_at' => $this->resource->terms_accepted_at?->toISOString(),
+            'terms_acceptance_required' => $this->resource->termsAcceptanceRequired(),
 
             'role' => $this->resource->roleName(),
             'permissions' => $this->resource->permissionNames(),

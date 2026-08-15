@@ -111,7 +111,7 @@ class QuoteController extends Controller
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Quote details', content: new OA\JsonContent(ref: '#/components/schemas/Quote')),
+            new OA\Response(response: 200, description: 'Quote details', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')], type: 'object')),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Quote not found'),
         ]
@@ -184,6 +184,39 @@ class QuoteController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/quotes/{id}',
+        summary: 'Update draft quote header',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'valid_until', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Quotes'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Quote updated', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Quote')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Quote not found'),
+            new OA\Response(response: 422, description: 'Validation error or quote not editable'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/quotes/{id}',
         summary: 'Update draft quote header',
         security: [['sanctum' => []]],

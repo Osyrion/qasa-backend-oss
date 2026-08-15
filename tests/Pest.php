@@ -137,6 +137,42 @@ function asAccount(User|string $user, callable $work): mixed
 }
 
 /**
+ * Whether a test guarded on an external tool should be skipped — and, in CI,
+ * whether the missing tool should fail the build instead.
+ *
+ * A skip is invisible. PeppolValidationTest guarded on `which java` alone and
+ * spent months reporting green on checkouts that could not run it: the suite
+ * said "passed", the summary said "skipped", and nobody reads the summary. The
+ * distinction that matters is who is looking. On a laptop without a JRE a skip
+ * is the right answer — the tool is genuinely optional there. In CI it never
+ * is: every dependency these tests need is installed by the workflow, so a
+ * missing one means the pipeline quietly stopped checking something, which is
+ * the failure, not a reason to pass.
+ *
+ * Read from getenv() rather than env(): phpunit.xml's <env> entries cannot
+ * override a variable the process already has, and CI is exactly that case.
+ *
+ * @param  bool  $available  result of the caller's own probe
+ * @param  string  $tooling  what is missing, in words
+ * @param  string  $install  how CI installs it — the fix, when this fails
+ */
+function skipUnlessInstalled(bool $available, string $tooling, string $install): bool
+{
+    if ($available) {
+        return false;
+    }
+
+    if (filter_var(getenv('CI'), FILTER_VALIDATE_BOOL)) {
+        throw new RuntimeException(
+            "{$tooling} is missing in CI, so this test would have been skipped and the build would have gone green "
+            ."without ever running it. CI installs this with: {$install}"
+        );
+    }
+
+    return true;
+}
+
+/**
  * Builds a concrete Socialite user (Two\User, same class GoogleProvider
  * returns) instead of a bare Contracts\User mock — LoginWithGoogleAction
  * checks `instanceof AbstractUser` to read the email_verified claim off

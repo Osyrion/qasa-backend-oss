@@ -83,5 +83,11 @@ class InvoiceEmail extends Mailable implements ShouldQueue
             'invoice_id' => $this->invoice->id,
             'exception' => $exception->getMessage(),
         ]);
+
+        // The tenant believes the invoice went out and it did not. Retries
+        // are already exhausted by the time this runs, so there is nothing
+        // left to do automatically — which is exactly when a human needs to
+        // hear about it.
+        report($exception);
     }
 }

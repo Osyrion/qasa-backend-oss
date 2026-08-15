@@ -29,6 +29,10 @@ Route::prefix('api/v1')->middleware(['auth:sanctum', 'throttle:api', SubstituteB
         Route::delete('portal-link', [ClientController::class, 'revokePortalLink'])->name('clients.portal-link.destroy');
         Route::post('archive', [ClientController::class, 'archive'])->name('clients.archive');
         Route::post('restore', [ClientController::class, 'restore'])->name('clients.restore');
+        // Irreversible, and for a client that cannot be deleted because
+        // documents reference them — hence POST next to archive rather than
+        // a flavour of DELETE.
+        Route::post('anonymize', [ClientController::class, 'anonymize'])->name('clients.anonymize');
 
         Route::get('contact-persons', [ContactPersonController::class, 'index'])->name('clients.contact-persons.index');
         Route::post('contact-persons', [ContactPersonController::class, 'store'])->name('clients.contact-persons.store');

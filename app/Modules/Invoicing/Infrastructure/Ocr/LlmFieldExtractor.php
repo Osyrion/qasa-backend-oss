@@ -46,6 +46,7 @@ final readonly class LlmFieldExtractor implements InvoiceFieldExtractor
             suggestions: array_filter($fields, static fn (mixed $value): bool => $value !== null && $value !== []),
             source: $this->source,
             provider: $this->provider->value,
+            model: $this->driver->model(),
         );
     }
 

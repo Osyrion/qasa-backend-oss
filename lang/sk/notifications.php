@@ -38,4 +38,19 @@ return [
     'email_spam_complaint_title' => 'E-mail označený ako spam',
     'email_spam_complaint_body' => 'Adresát :recipient označil vašu správu ako spam; ďalšie správy na túto adresu sa nedoručia.',
 
+    // Integrations — e-fakturácia cez Peppol
+    'peppol_dispatch_failed_title' => 'E-faktúra sa neodoslala',
+    'peppol_dispatch_failed_body' => 'Faktúra :number sa do siete Peppol nedostala: :reason',
+    'peppol_dispatch_abandoned_body' => 'Faktúra :number sa do siete Peppol nedostala ani po :attempts pokusoch a ďalej to už neskúšame: :reason',
+    'peppol_invoice_rejected_title' => 'Odberateľ odmietol e-faktúru',
+    'peppol_invoice_rejected_body' => 'Odberateľ odmietol spracovať faktúru :number a vrátil cez Peppol odmietnutie.',
+    'peppol_registration_incomplete_title' => 'Nedokončená registrácia Peppol',
+    'peppol_registration_incomplete_body' => 'Kým nedokončíte registráciu na Finančnej správe, dodávatelia vám nevedia poslať e-faktúru. Do :deadline zostáva :days dní.',
+    'peppol_credential_invalid_title' => 'Pripojenie na Peppol prestalo fungovať',
+    'peppol_credential_invalid_body' => 'Poštár :provider odmietol prístupové údaje tohto účtu (:reason). Kým ich nezadáte znova, nedá sa odoslať žiadna e-faktúra.',
+
+    'subscription_payment_failed_title' => 'Platba zlyhala',
+    'subscription_payment_failed_body' => 'Z vašej karty sa nepodarilo strhnúť :amount :currency. Aktualizujte platobnú metódu, aby vám predplatné zostalo.',
+    'subscription_suspended_title' => 'Predplatné pozastavené',
+    'subscription_suspended_body' => 'Predplatné :plan bolo pozastavené, lebo sa nepodarilo zinkasovať platbu — účet je na bezplatnej úrovni.',
 ];

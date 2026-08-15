@@ -160,7 +160,7 @@ class OrderController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Order details',
-                content: new OA\JsonContent(ref: '#/components/schemas/Order')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Order')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Order not found'),
@@ -231,6 +231,53 @@ class OrderController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/orders/{id}',
+        summary: 'Update order',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'billing_type'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'billing_type', type: 'string', enum: ['hourly', 'daily', 'monthly', 'fixed_per_item', 'mixed']),
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid', nullable: true),
+                    new OA\Property(property: 'color', type: 'string', example: '#3B82F6', nullable: true, maxLength: 7),
+                    new OA\Property(property: 'readme', type: 'string', nullable: true),
+                    new OA\Property(property: 'rate', type: 'number', nullable: true),
+                    new OA\Property(property: 'currency', type: 'string', nullable: true, enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'estimated_hours', type: 'number', nullable: true),
+                    new OA\Property(property: 'estimated_price', type: 'number', nullable: true),
+                    new OA\Property(property: 'deadline', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'status', type: 'string', enum: ['active', 'paused', 'completed', 'archived']),
+                ]
+            )
+        ),
+        tags: ['Orders'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'Order ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Order updated',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Order')],
+                    type: 'object',
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Order not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/orders/{id}',
         summary: 'Update order',
         security: [['sanctum' => []]],

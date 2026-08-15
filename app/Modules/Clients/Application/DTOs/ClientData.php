@@ -37,6 +37,10 @@ class ClientData extends Data
         #[Nullable, Max(20)]
         public readonly ?string $vat_id,
 
+        /** Peppol participant id, scheme:identifier — e.g. 0245:12345678 */
+        #[Nullable, Max(60)]
+        public readonly ?string $peppol_id,
+
         public readonly bool $is_vat_payer,
 
         #[Nullable, Max(255)]
@@ -90,6 +94,9 @@ class ClientData extends Data
             'is_customer' => ['boolean'],
             'is_vendor' => ['boolean'],
             'reverse_charge_allowed' => ['sometimes', 'boolean'],
+            // scheme:identifier — an address with no scheme routes to nobody,
+            // so a half-filled value is worse than an empty one.
+            'peppol_id' => ['nullable', 'string', 'regex:/^[0-9]{4}:[A-Za-z0-9._~\\-]{1,50}$/'],
         ];
     }
 }

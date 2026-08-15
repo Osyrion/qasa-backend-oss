@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Storage;
  * @property array<string, mixed>|null $suggestions
  * @property string|null $suggestions_source regex|ai|ai_byok — which InvoiceFieldExtractor produced "suggestions"
  * @property string|null $suggestions_provider anthropic|… — which provider produced "suggestions" when suggestions_source is ai/ai_byok
+ * @property string|null $suggestions_model claude-haiku-4-5|… — which model produced "suggestions" when suggestions_source is ai/ai_byok
  * @property string|null $matched_client_id
  * @property Carbon $scanned_at
  * @property string|null $error
@@ -81,6 +82,7 @@ class InvoiceInboxItem extends Model
         'suggestions',
         'suggestions_source',
         'suggestions_provider',
+        'suggestions_model',
         'matched_client_id',
         'scanned_at',
         'error',

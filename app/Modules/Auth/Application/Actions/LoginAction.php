@@ -67,6 +67,15 @@ class LoginAction
             throw DomainException::because(__('auth.invalid_credentials'));
         }
 
+        // Credentials check out, but the operator has suspended the account.
+        // Refused here as well as in the `auth` middleware so a suspended
+        // account cannot mint a fresh token it would only fail to use.
+        if ($user->isSuspended()) {
+            event(new LoginFailed($user, 'account_suspended'));
+
+            throw DomainException::because(__('auth.account_suspended'));
+        }
+
         // Password is correct but 2FA is on — hand back a short-lived
         // challenge instead of a token; the client completes login via
         // POST /auth/2fa/verify.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Infrastructure\Providers;
 
+use App\Modules\Clients\Application\Actions\AnonymizeClientAction;
 use App\Modules\Clients\Application\Actions\CreateClientAction;
 use App\Modules\Clients\Application\Actions\FetchCompanyDataAction;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
@@ -29,6 +30,14 @@ class ClientsServiceProvider extends ServiceProvider
         $this->app->bind(
             ClientRepositoryInterface::class,
             EloquentClientRepository::class,
+        );
+
+        // Premium modules hang their own columns off the core clients table
+        // and clear them here — the tag is empty in the OSS edition, where
+        // those columns do not exist at all.
+        $this->app->bind(
+            AnonymizeClientAction::class,
+            fn ($app): AnonymizeClientAction => new AnonymizeClientAction($app->tagged('client.anonymize')),
         );
 
         $this->app->bind(

@@ -19,6 +19,15 @@ interface LlmProviderDriver
     public function provider(): AiProvider;
 
     /**
+     * The concrete model identifier this driver calls right now
+     * ('claude-haiku-4-5', …). Recorded alongside every AI-produced payload
+     * and reported in the art. 50 transparency notice, so "which model wrote
+     * this" is answerable after the fact rather than a config lookup that
+     * has since moved on.
+     */
+    public function model(): string;
+
+    /**
      * Turns $content (message blocks built by LlmFieldExtractor) plus a
      * JSON Schema of the fields to extract into structured JSON — how that
      * schema is communicated to the provider (forced tool call, JSON mode,

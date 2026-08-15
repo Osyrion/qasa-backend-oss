@@ -82,7 +82,7 @@ return [
 
     'inbox' => [
         'duplicate_file' => 'Tento súbor už bol nahraný.',
-        'upload_invalid_file' => 'Nahraný súbor musí byť PDF, JPEG alebo PNG v rámci povoleného limitu veľkosti.',
+        'upload_invalid_file' => 'Nahraný súbor musí byť PDF, JPEG, PNG alebo XML e-faktúra v rámci povoleného limitu veľkosti.',
         'already_processed' => 'Táto položka bola už spracovaná.',
         'unsupported_file' => 'Nepodporovaný typ súboru.',
         'extraction_failed' => 'Nepodarilo sa extrahovať text z dokladu.',
@@ -128,6 +128,7 @@ return [
     'ubl_exemption_intra_community' => 'Intrakomunitárne dodanie — oslobodené podľa článku 138 smernice 2006/112/ES.',
     'ubl_exemption_not_registered' => 'Dodávateľ nie je platiteľom DPH.',
     'ubl_exemption_zero_rated' => 'Dodanie s nulovou sadzbou dane.',
+    'ubl_document_discount' => 'Zľava z celkovej sumy dokladu',
     'ubl_credit_note_terms' => 'Dobropis k pôvodnej faktúre; dátum vyrovnania :date.',
 
     // Cash documents (PPD/VPD)

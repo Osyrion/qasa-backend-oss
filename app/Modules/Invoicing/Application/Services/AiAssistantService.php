@@ -99,7 +99,7 @@ final readonly class AiAssistantService implements AiAssistantServiceInterface
         $answer = $result['answer'] ?? null;
 
         return is_string($answer) && $answer !== ''
-            ? AiCompletionResult::ok($answer)
+            ? AiCompletionResult::ok($answer, $driver->provider()->value, $driver->model())
             : AiCompletionResult::unavailable();
     }
 }

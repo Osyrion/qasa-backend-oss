@@ -59,6 +59,7 @@ it('records a user.registered entry on self-registration', function (): void {
         'surname' => 'Novák',
         'email' => 'jan.activity@example.com',
         'password' => 'super-secret-1',
+        'accepted_terms' => true,
     ])->assertCreated();
 
     // Registered through HTTP, so nothing is bound once the request has

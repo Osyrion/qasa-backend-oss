@@ -22,10 +22,11 @@
 <p>Tento návod tě provede od registrace po první vystavenou fakturu. Qasa je určena hlavně pro OSVČ a malé firmy, které si administrativu řeší samy — bez účetní po ruce.</p>
 <h2>Registrace účtu</h2>
 <ol>
-<li>Na úvodní stránce klikni na <strong>Zaregistrovat se</strong> a zadej jméno, příjmení, e-mail a heslo.</li>
+<li>Na úvodní stránce klikni na <strong>Zaregistrovat se</strong> a zadej jméno, příjmení, e-mail a heslo. Registrace vyžaduje i odsouhlasení <strong>podmínek používání a ochrany osobních údajů</strong> (zaškrtávací políčko) — bez něj registrace neprojde.</li>
 <li>Po registraci dostaneš e-mail s odkazem na ověření adresy. Bez ověření můžeš aplikaci používat naplno — zakládat klienty, vystavovat faktury, importovat — ale aplikace za tebe <strong>nepošle nic ven</strong>. Dokud adresu nepotvrdíš, jsou zamčené: odeslání faktury a upomínky e-mailem, odeslání cenové nabídky, vytvoření veřejného odkazu na fakturu či nabídku, vytvoření klientského portálu a pozvání člena týmu. Platí to i pro automatiku — šablona opakované faktury ani automatická upomínka za neověřeným účtem neodešlou.</li>
-<li>Přihlásit se dá i přes Google účet — v tom případě heslo nepotřebuješ vůbec a adresa je ověřená hned (Google ji už ověřil za tebe).</li>
+<li>Přihlásit se dá i přes Google účet — v tom případě heslo nepotřebuješ vůbec a adresa je ověřená hned (Google ji už ověřil za tebe). I tady platí, že založení nového účtu přes Google se počítá jako odsouhlasení podmínek.</li>
 </ol>
+<p>Pokud se podmínky používání nebo ochrana osobních údajů později změní, aplikace tě při dalším přihlášení požádá o jejich opětovné odsouhlasení — staré přijetí se automaticky nepřenáší na novou verzi.</p>
 <h2>Krok 2: daňová rezidence</h2>
 <p>Hned po registraci tě aplikace požádá o <strong>doplnění daňové rezidence</strong> — Slovensko nebo Česko. Tato volba je <strong>nezměnitelná</strong> po jejím potvrzení, protože se od ní odvíjí:</p>
 <ul>
@@ -88,6 +89,23 @@ zatím nepřenášejí — je třeba je nastavit znovu přímo v Qase.</p>
 <p>Pokud s tebou administrativu řeší i někdo další (účetní, kolega), můžeš ho pozvat do týmu s omezenými právy — viz kapitola <a href="07-tim.html">Tým</a>. Bezplatný plán omezuje počet členů týmu; rozšíření je součástí vyšších plánů.</p>
 <h2>Bezpečnost účtu</h2>
 <p>Doporučujeme zapnout <strong>dvoufaktorové ověření</strong> (2FA) v <strong>Nastavení → Bezpečnost</strong> — při každém přihlášení z nového zařízení bude aplikace kromě hesla vyžadovat i kód z autentifikační aplikace (např. Google Authenticator). Zapnutí 2FA vygeneruje i sadu záložních kódů pro případ ztráty telefonu — ulož si je na bezpečné místo, zobrazí se jen jednou.</p>
+<h3>Moje zařízení</h3>
+<p><strong>Nastavení → Bezpečnost → Moje zařízení</strong> zobrazuje každé zařízení/prohlížeč, ze kterého jsi momentálně přihlášený — s IP adresou a časem posledního použití. Aktuální zařízení je označené. Zařízení, které už neznáš nebo nepoužíváš, můžeš jednotlivě odhlásit; tlačítko <strong>Odhlásit všechna ostatní zařízení</strong> udělá totéž najednou pro vše kromě toho, ze kterého právě pracuješ. Aktuální zařízení tímto způsobem odhlásit nelze — na to slouží běžné tlačítko Odhlásit se.</p>
+<blockquote>
+<p>Toto je jiný seznam než <strong>API tokeny</strong> (kapitola API a integrace) — tam jsou přístupy pro vlastní integrace a automatizační nástroje, tady jsou přihlášení do samotné appky.</p>
+</blockquote>
+<p>IP adresu a údaj o prohlížeči si u zařízení držíme 90 dní od posledního použití; potom se z výpisu ztratí, samotné přihlášení ale zůstává platné. Jsou to osobní údaje a nemáme důvod je uchovávat déle, než jsou užitečné pro rozpoznání cizího přístupu.</p>
+<h2>Smazání účtu</h2>
+<p>Účet zrušíš v <strong>Nastavení → Profil → Smazat účet</strong>. Aplikace si vyžádá potvrzení heslem (u účtů přihlašovaných jen přes Google napíšeš slovo <code>DELETE</code>). Smazat účet může <strong>pouze jeho majitel</strong>, ne člen týmu.</p>
+<p>Smazání proběhne ve dvou krocích:</p>
+<ol>
+<li><strong>Ihned</strong> — odhlásí se všechna tvá zařízení a přístup do aplikace končí. Pokud máš tým, členům se zároveň zruší přístupy a jejich účty se deaktivují spolu s tvým.</li>
+<li><strong>Po 30 dnech</strong> — z účtu se nenávratně odstraní osobní údaje: jméno, e-mail, telefon, adresa, IČO/DIČ, nahrané logo i uložené přístupové klíče k propojeným službám. Prvních 30 dní je pojistka pro případ, že jsi účet smazal omylem — ozvi se nám v této lhůtě a dokážeme ho obnovit. Po ní už ne.</li>
+</ol>
+<blockquote>
+<p><strong>Vystavené faktury se nemažou.</strong> Doklad, který jsi už vystavil, musíš podle zákona archivovat (v Česku i na Slovensku typicky 10 let) a stejná povinnost platí pro tvého odběratele. Faktura si údaje dodavatele i odběratele nese v sobě tak, jak vypadaly v den vystavení, takže zůstane platným dokladem i po odstranění tvých osobních údajů z účtu. Jediné, co z ní po 30 dnech zmizí, je tvoje logo.</p>
+<p>Proto si <strong>před smazáním účtu stáhni export dat</strong> (<strong>Nastavení → Profil → Exportovat data</strong>) — dostaneš JSON se všemi klienty, fakturami, výdaji a dalšími záznamy. Po smazání účtu se k nim už nedostaneš.</p>
+</blockquote>
 <div class="chapter-nav-links"><span></span><a href="02-klienti.html">Klienti &rarr;</a></div>
     </main>
 </div>

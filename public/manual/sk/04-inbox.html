@@ -23,14 +23,17 @@
 <h2>Inbox — doklady, ktoré prídu samé</h2>
 <p>Namiesto ručného vypisovania každej prijatej faktúry vieš doklady nechať spracovať automaticky cez <strong>Prijaté faktúry → Inbox</strong>:</p>
 <ol>
-<li><strong>Nahranie súboru</strong> — PDF, obrázok (JPG/PNG) alebo ISDOC nahráš priamo cez <strong>Nahrať súbor</strong>.</li>
+<li><strong>Nahranie súboru</strong> — PDF, obrázok (JPG/PNG) alebo <strong>XML e-faktúru</strong> (UBL 2.1 podľa EN 16931) nahráš priamo cez <strong>Nahrať súbor</strong>.</li>
 <li>Aplikácia zo súboru extrahuje text (OCR pri naskenovaných dokumentoch) a rozpozná kľúčové polia — dodávateľa, IČO, sumu, DPH, variabilný symbol, dátum splatnosti.</li>
 <li>Rozpoznané údaje sa zobrazia ako <strong>návrh</strong> — skontroluješ ich a jedným kliknutím <strong>Vytvoriť prijatú faktúru</strong> návrh potvrdíš. Pole, ktoré aplikácia nerozpoznala správne, si pred potvrdením opravíš ručne.</li>
 <li>Ak dokument nie je faktúra alebo ho nechceš spracovať, polož ho tlačidlom <strong>Ignorovať</strong>.</li>
 </ol>
 <p>Pri rozpoznávaní IČO dodávateľa aplikácia zároveň skúsi nájsť zhodu s existujúcim klientom/dodávateľom v tvojej evidencii, aby si nezakladal duplicity.</p>
+<blockquote>
+<p><strong>E-faktúra namiesto skenu.</strong> Ak ti dodávateľ pošle XML e-faktúru (EN 16931 / UBL 2.1), kroky 2 a 3 sa výrazne skrátia: údaje sú v súbore <strong>priamo uvedené</strong>, nie odhadnuté z obrázku, takže návrh je presný a ty ho už len potvrdíš. Žiadne OCR sa nespúšťa. Platí to rovnako pre nahranie súboru, sledovaný priečinok aj prílohu prijatého e-mailu.</p>
+</blockquote>
 <h3>Presnosť rozpoznávania</h3>
-<p>Základné rozpoznávanie funguje bez ďalšieho nastavenia (pravidlá + OCR). Presnejšie rozpoznávanie pomocou AI (LLM) vyžaduje buď platformový kredit podľa plánu, alebo vlastný API kľúč (BYOK — bring your own key) v <strong>Nastavenia → AI kľúče</strong>. Pri vyčerpaní kreditu alebo bez kľúča sa použije základné rozpoznávanie podľa pravidiel — inbox nikdy neprestane fungovať úplne, len s nižšou presnosťou návrhu.</p>
+<p>Základné rozpoznávanie funguje bez ďalšieho nastavenia (pravidlá + OCR). Presnejšie rozpoznávanie pomocou AI (LLM) vyžaduje buď platformový kredit podľa plánu, alebo vlastný API kľúč (BYOK — bring your own key) v <strong>Nastavenia → Integrácie → AI prihlasovacie údaje (BYOK)</strong>. Pri vyčerpaní kreditu alebo bez kľúča sa použije základné rozpoznávanie podľa pravidiel — inbox nikdy neprestane fungovať úplne, len s nižšou presnosťou návrhu.</p>
 <h2>Ručné pridanie prijatej faktúry</h2>
 <p>Ak dokument nechceš prechádzať cez inbox, vytvor prijatú faktúru priamo v <strong>Prijaté faktúry → Pridať</strong> a vyplň polia ručne.</p>
 <h2>Stavy prijatej faktúry</h2>

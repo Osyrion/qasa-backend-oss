@@ -30,6 +30,7 @@ paths:
                 - surname
                 - email
                 - password
+                - accepted_terms
               properties:
                 name:
                   type: string
@@ -49,6 +50,10 @@ paths:
                   example: password123
                   maxLength: 255
                   minLength: 8
+                accepted_terms:
+                  description: 'Must be true — records terms_accepted_at against the current gdpr.terms_version'
+                  type: boolean
+                  example: true
                 title:
                   type: string
                   example: Ing.
@@ -245,6 +250,10 @@ paths:
                   nullable: true
                   maxLength: 255
                   minLength: 8
+                current_password:
+                  description: 'Required when changing `email` or `password` on an account that has one (OAuth-only accounts are exempt) — the request is rejected with 422 otherwise.'
+                  type: string
+                  nullable: true
                 ico:
                   type: string
                   example: '12345678'
@@ -259,6 +268,13 @@ paths:
                   type: boolean
                   example: true
                   nullable: true
+                vat_status:
+                  type: string
+                  example: payer
+                  enum:
+                    - non_payer
+                    - identified
+                    - payer
                 tax_flat_rate:
                   type: integer
                   example: 20
@@ -285,6 +301,17 @@ paths:
                   type: integer
                   example: 1
                   nullable: true
+                quote_number_mask:
+                  type: string
+                  example: '{YYYY}{NNNN}'
+                  nullable: true
+                  maxLength: 40
+                quote_number_start:
+                  type: integer
+                  example: 1
+                  nullable: true
+                  maximum: 99999999
+                  minimum: 1
                 locale:
                   type: string
                   example: sk
@@ -330,6 +357,9 @@ paths:
                   type: string
                   nullable: true
                   maxLength: 50
+                ai_extraction_enabled:
+                  type: boolean
+                  nullable: true
                 auto_remind_enabled:
                   type: boolean
                   nullable: true
@@ -340,6 +370,19 @@ paths:
                 auto_remind_max_count:
                   type: integer
                   example: 3
+                  nullable: true
+                overdue_digest_enabled:
+                  type: boolean
+                  nullable: true
+                vat_filing_frequency:
+                  type: string
+                  example: monthly
+                  nullable: true
+                  enum:
+                    - monthly
+                    - quarterly
+                tax_filing_reminder_enabled:
+                  type: boolean
                   nullable: true
               type: object
       responses:
@@ -398,15 +441,14 @@ paths:
     get:
       tags:
         - Authentication
-      summary: 'Export all account data as JSON (GDPR data portability)'
+      summary: 'Export personal data as JSON (GDPR data portability)'
+      description: "The account owner receives the whole account. A team member receives their own personal data only: profile, the activity they performed, and the notifications addressed to them — the account's business records belong to the owner as their controller."
       operationId: ae88e223697dcfbc20bc89722ba4cb79
       responses:
         200:
-          description: 'JSON export of the account'
+          description: 'JSON export'
         401:
           description: Unauthenticated
-        403:
-          description: 'Only the account owner can export data'
       security:
         -
           sanctum: []
@@ -440,6 +482,21 @@ paths:
           description: 'Only the account owner can delete the account'
         422:
           description: 'Invalid password or confirmation'
+      security:
+        -
+          sanctum: []
+  /api/v1/profile/accept-terms:
+    post:
+      tags:
+        - Authentication
+      summary: 'Record acceptance of the current terms of use / privacy policy version'
+      description: "For accounts that predate terms_accepted_at, and for re-accepting after the version in config('gdpr.terms_version') moves — see the terms_acceptance_required flag on the User resource."
+      operationId: 521afe950b3503db9fdc08c7656f30c6
+      responses:
+        204:
+          description: 'Terms accepted'
+        401:
+          description: Unauthenticated
       security:
         -
           sanctum: []
@@ -1349,7 +1406,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Client'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -1513,6 +1573,136 @@ paths:
       security:
         -
           sanctum: []
+    patch:
+      tags:
+        - Clients
+      summary: 'Update client'
+      operationId: d4e6837f96053a1bfc572fbc409d6975
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Client ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_type
+                - country
+                - currency
+                - locale
+              properties:
+                client_type:
+                  type: string
+                  enum:
+                    - individual
+                    - self_employed
+                    - company
+                title:
+                  type: string
+                  nullable: true
+                  maxLength: 100
+                name:
+                  type: string
+                  nullable: true
+                  maxLength: 150
+                surname:
+                  type: string
+                  nullable: true
+                  maxLength: 150
+                company_name:
+                  type: string
+                  nullable: true
+                  maxLength: 200
+                ico:
+                  type: string
+                  nullable: true
+                  maxLength: 20
+                dic:
+                  type: string
+                  nullable: true
+                  maxLength: 20
+                vat_id:
+                  type: string
+                  nullable: true
+                  maxLength: 20
+                is_vat_payer:
+                  type: boolean
+                is_customer:
+                  type: boolean
+                  default: true
+                is_vendor:
+                  type: boolean
+                  default: false
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                  maxLength: 255
+                phone:
+                  type: string
+                  nullable: true
+                  maxLength: 30
+                address:
+                  type: string
+                  nullable: true
+                  maxLength: 255
+                city:
+                  type: string
+                  nullable: true
+                  maxLength: 100
+                postal_code:
+                  type: string
+                  nullable: true
+                  maxLength: 10
+                country:
+                  type: string
+                  example: SK
+                  maxLength: 2
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                locale:
+                  type: string
+                  example: sk
+                  maxLength: 5
+                color:
+                  type: string
+                  example: '#3B82F6'
+                  nullable: true
+                  maxLength: 7
+                note:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Client updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Client not found'
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
   '/api/v1/clients/{id}/portal-link':
     post:
       tags:
@@ -1599,6 +1789,43 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/Client'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Client not found'
+      security:
+        -
+          sanctum: []
+  '/api/v1/clients/{id}/anonymize':
+    post:
+      tags:
+        - Clients
+      summary: "Erase a client's personal data (GDPR right to erasure)"
+      description: 'For a client who cannot be deleted because documents reference them. Clears every identifying column, deletes the contact persons and archives the client. Issued invoices and quotes are NOT touched: they carry the client frozen at issue and stay valid accounting records. Drafts have no snapshot yet and will read as anonymised — affected_drafts says how many.'
+      operationId: 5b26646185573f71f68dbca14c90a989
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Client anonymised'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+                  affected_drafts:
+                    type: integer
+                    example: 0
+                  message:
+                    type: string
                 type: object
         401:
           description: Unauthenticated
@@ -2157,7 +2384,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BankAccount'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -2257,6 +2487,78 @@ paths:
           description: Unauthenticated
         404:
           description: 'Not found'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - BankAccounts
+      summary: 'Update bank account'
+      operationId: 4e6eba87d6207cfae85ee539f26c31dd
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - label
+                - currency
+              properties:
+                label:
+                  type: string
+                  maxLength: 100
+                bank_name:
+                  type: string
+                  nullable: true
+                  maxLength: 100
+                account_number:
+                  type: string
+                  nullable: true
+                  maxLength: 30
+                iban:
+                  type: string
+                  nullable: true
+                  maxLength: 34
+                bic:
+                  type: string
+                  nullable: true
+                  maxLength: 11
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                is_default:
+                  type: boolean
+                is_primary:
+                  description: 'Fallback account across currencies when no account exists in the invoice currency'
+                  type: boolean
+              type: object
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/BankAccount'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Validation error'
       security:
         -
           sanctum: []
@@ -3018,6 +3320,79 @@ paths:
       security:
         -
           sanctum: []
+    patch:
+      tags:
+        - Expenses
+      summary: 'Update an expense'
+      operationId: 5a8cb1db1692e81d9aede42275ff38ed
+      parameters:
+        -
+          name: expense
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - description
+                - category
+                - amount
+                - currency
+                - date
+              properties:
+                description:
+                  type: string
+                category:
+                  type: string
+                  enum:
+                    - office
+                    - travel
+                    - software
+                    - hardware
+                    - marketing
+                    - education
+                    - services
+                    - other
+                amount:
+                  type: number
+                  format: float
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                date:
+                  type: string
+                  format: date
+                note:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Updated expense'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Expense'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Validation error'
+      security:
+        -
+          sanctum: []
   /api/v1/invoices:
     get:
       tags:
@@ -3228,11 +3603,96 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Invoice'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+                type: object
         401:
           description: Unauthenticated
         404:
           description: 'Invoice not found'
+      security:
+        -
+          sanctum: []
+    put:
+      tags:
+        - Invoices
+      summary: 'Update draft invoice header'
+      operationId: 623523f19502878f215b191fc10b3bbf
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - issued_at
+                - due_at
+                - currency
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                issued_at:
+                  type: string
+                  format: date
+                taxable_supply_at:
+                  type: string
+                  format: date
+                  nullable: true
+                due_at:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                variable_symbol:
+                  type: string
+                  nullable: true
+                  maxLength: 10
+                bank_account_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                discount_percent:
+                  type: number
+                  format: float
+                  nullable: true
+                note:
+                  type: string
+                  nullable: true
+                note_above:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Invoice updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Invoice'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Invoice not found'
+        422:
+          description: 'Validation error or invoice not editable'
       security:
         -
           sanctum: []
@@ -3924,7 +4384,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/InvoiceInboxItem'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/InvoiceInboxItem'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -4127,7 +4590,7 @@ paths:
                 - file
               properties:
                 file:
-                  description: 'PDF, JPEG, or PNG document'
+                  description: 'PDF, JPEG, or PNG document, or a UBL 2.1 (EN 16931) XML e-invoice'
                   type: string
                   format: binary
               type: object
@@ -5071,7 +5534,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Quote'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Quote'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -5168,6 +5634,75 @@ paths:
           description: Unauthenticated
         403:
           description: 'Only draft quotes can be deleted'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - Quotes
+      summary: 'Update draft quote header'
+      operationId: 1f940a0c34e70dfe19298dc60fe05c93
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - issued_at
+                - currency
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                issued_at:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                valid_until:
+                  type: string
+                  format: date
+                  nullable: true
+                discount_percent:
+                  type: number
+                  format: float
+                  nullable: true
+                note:
+                  type: string
+                  nullable: true
+                note_above:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: 'Quote updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Quote'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Quote not found'
+        422:
+          description: 'Validation error or quote not editable'
       security:
         -
           sanctum: []
@@ -5728,7 +6263,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecurringInvoiceTemplate'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RecurringInvoiceTemplate'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -5796,6 +6334,45 @@ paths:
           description: Unauthenticated
         404:
           description: 'Template not found'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - 'Recurring Invoice Templates'
+      summary: 'Update recurring invoice template (replaces items)'
+      operationId: 98bcff15a3aa4ee87930cd9d4f4eaa6c
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Template ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringInvoiceTemplate'
+      responses:
+        200:
+          description: 'Template updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RecurringInvoiceTemplate'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Template not found'
+        422:
+          description: 'Validation error'
       security:
         -
           sanctum: []
@@ -6504,7 +7081,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SupplierInvoice'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SupplierInvoice'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -6642,6 +7222,113 @@ paths:
           description: 'Only draft supplier invoices can be deleted'
         422:
           description: 'Supplier invoice not editable'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - SupplierInvoices
+      summary: 'Update draft supplier invoice'
+      operationId: 98d0ab7f7d362be86bd4cfed841167bd
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Supplier invoice ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - client_id
+                - supplier_invoice_number
+                - issued_at
+                - currency
+                - vat_lines
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                supplier_invoice_number:
+                  type: string
+                  maxLength: 60
+                issued_at:
+                  type: string
+                  format: date
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                vat_regime:
+                  type: string
+                  default: domestic
+                  enum:
+                    - domestic
+                    - eu_reverse_charge
+                    - import
+                taxable_supply_at:
+                  type: string
+                  format: date
+                  nullable: true
+                due_at:
+                  type: string
+                  format: date
+                  nullable: true
+                received_at:
+                  type: string
+                  format: date
+                  nullable: true
+                exchange_rate:
+                  type: number
+                  format: float
+                  nullable: true
+                variable_symbol:
+                  type: string
+                  nullable: true
+                  maxLength: 10
+                note:
+                  type: string
+                  nullable: true
+                vat_lines:
+                  type: array
+                  items:
+                    properties:
+                      vat_rate:
+                        type: number
+                        format: float
+                      base:
+                        type: number
+                        format: float
+                      vat_amount:
+                        type: number
+                        format: float
+                      sort_order:
+                        type: integer
+                    type: object
+              type: object
+      responses:
+        200:
+          description: 'Supplier invoice updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SupplierInvoice'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Supplier invoice not found'
+        422:
+          description: 'Validation error, client is not a vendor, or invoice not editable'
       security:
         -
           sanctum: []
@@ -6829,7 +7516,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VatRate'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VatRate'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -6921,6 +7611,70 @@ paths:
           description: Unauthenticated
         404:
           description: 'Not found'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - VatRates
+      summary: 'Update VAT rate'
+      operationId: fa938771f6e6e4fe396f581372acad45
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - code
+                - country
+                - rate
+              properties:
+                code:
+                  type: string
+                  maxLength: 10
+                country:
+                  type: string
+                rate:
+                  type: number
+                  format: float
+                label:
+                  type: string
+                  nullable: true
+                is_default:
+                  type: boolean
+                valid_from:
+                  type: string
+                  format: date
+                  nullable: true
+                valid_to:
+                  type: string
+                  format: date
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/VatRate'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Validation error'
       security:
         -
           sanctum: []
@@ -7581,7 +8335,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+                type: object
         401:
           description: Unauthenticated
         404:
@@ -7705,6 +8462,99 @@ paths:
           description: 'Order not found'
         422:
           description: 'Cannot delete order with existing invoices'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - Orders
+      summary: 'Update order'
+      operationId: 79dbecd96d4a7c63c288acaa49c6162d
+      parameters:
+        -
+          name: id
+          in: path
+          description: 'Order ID'
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - billing_type
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                billing_type:
+                  type: string
+                  enum:
+                    - hourly
+                    - daily
+                    - monthly
+                    - fixed_per_item
+                    - mixed
+                client_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                color:
+                  type: string
+                  example: '#3B82F6'
+                  nullable: true
+                  maxLength: 7
+                readme:
+                  type: string
+                  nullable: true
+                rate:
+                  type: number
+                  nullable: true
+                currency:
+                  type: string
+                  nullable: true
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                estimated_hours:
+                  type: number
+                  nullable: true
+                estimated_price:
+                  type: number
+                  nullable: true
+                deadline:
+                  type: string
+                  format: date
+                  nullable: true
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - paused
+                    - completed
+                    - archived
+              type: object
+      responses:
+        200:
+          description: 'Order updated'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Order not found'
+        422:
+          description: 'Validation error'
       security:
         -
           sanctum: []
@@ -8090,6 +8940,86 @@ paths:
           description: Unauthenticated
         403:
           description: Forbidden
+      security:
+        -
+          sanctum: []
+  /api/v1/ai/transparency:
+    get:
+      tags:
+        - AI
+      summary: "AI capabilities active for the caller's account, what they send where, and how to turn them off"
+      description: 'Transparency notice under art. 50 of Regulation (EU) 2024/1689. Every capability listed produces a suggestion or a draft a human confirms — nothing here decides anything on its own, so no automated decision-making in the sense of GDPR art. 22 takes place.'
+      operationId: bd6e71fb444e837dbea1b08ea09bbede
+      responses:
+        200:
+          description: 'Transparency register for this account'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    properties:
+                      ai_enabled:
+                        description: 'At least one AI capability can actually run for this account right now'
+                        type: boolean
+                      globally_disabled:
+                        description: 'QASA_AI_DISABLED kill switch — no outbound model call happens on this deployment at all'
+                        type: boolean
+                      provider:
+                        type: string
+                        example: anthropic
+                        nullable: true
+                      model:
+                        type: string
+                        example: claude-haiku-4-5
+                        nullable: true
+                      own_api_key:
+                        description: "True when the account uses its own (BYOK) key, so the model provider is the account's own contractual counterparty"
+                        type: boolean
+                      notice:
+                        type: string
+                      human_oversight:
+                        type: string
+                      automated_decision_making:
+                        type: boolean
+                        example: false
+                      training:
+                        type: string
+                      complaints:
+                        type: string
+                      features:
+                        type: array
+                        items:
+                          properties:
+                            key:
+                              type: string
+                              example: invoice_extraction
+                            name:
+                              type: string
+                            purpose:
+                              type: string
+                            data_sent:
+                              type: string
+                            output:
+                              type: string
+                              enum:
+                                - suggestion
+                                - generated_text
+                            opt_out:
+                              type: string
+                            enabled:
+                              type: boolean
+                            human_review_required:
+                              type: boolean
+                              example: true
+                            automated_decision_making:
+                              type: boolean
+                              example: false
+                          type: object
+                    type: object
+                type: object
+        401:
+          description: Unauthenticated
       security:
         -
           sanctum: []
@@ -8546,6 +9476,79 @@ paths:
           description: Unauthenticated
         404:
           description: 'Not found'
+      security:
+        -
+          sanctum: []
+    patch:
+      tags:
+        - Taxation
+      summary: 'Update a contribution payment'
+      operationId: f88103b1eefeffb5f8a9cea8793c18e4
+      parameters:
+        -
+          name: contribution
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - type
+                - period_year
+                - amount
+                - currency
+                - paid_at
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - social
+                    - health
+                    - income_tax_advance
+                period_year:
+                  type: integer
+                  example: 2026
+                period_month:
+                  type: integer
+                  example: 3
+                  nullable: true
+                amount:
+                  type: number
+                  format: float
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - EUR
+                    - USD
+                paid_at:
+                  type: string
+                  format: date
+                note:
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ContributionPayment'
+                type: object
+        401:
+          description: Unauthenticated
+        404:
+          description: 'Not found'
+        422:
+          description: 'Validation error'
       security:
         -
           sanctum: []
@@ -9498,6 +10501,14 @@ components:
         email_verified:
           type: boolean
           example: true
+        terms_accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        terms_acceptance_required:
+          description: "True when never accepted, or accepted an older version than config('gdpr.terms_version') — prompt POST /profile/accept-terms"
+          type: boolean
+          example: false
         role:
           type: string
           nullable: true
@@ -9594,6 +10605,10 @@ components:
         vat_id:
           type: string
           example: SK1234567890
+          nullable: true
+        peppol_id:
+          type: string
+          example: '0245:12345678'
           nullable: true
         is_vat_payer:
           type: boolean
@@ -9964,6 +10979,31 @@ components:
         suggestions_provider:
           type: string
           example: anthropic
+          nullable: true
+        suggestions_model:
+          type: string
+          example: claude-haiku-4-5
+          nullable: true
+        ai:
+          description: 'Present only when the suggestions came from a model — the art. 50 marking a client shows as "generated by AI, check it before importing".'
+          properties:
+            generated:
+              type: boolean
+              example: true
+            provider:
+              type: string
+              example: anthropic
+              nullable: true
+            model:
+              type: string
+              example: claude-haiku-4-5
+              nullable: true
+            notice:
+              type: string
+            human_review_required:
+              type: boolean
+              example: true
+          type: object
           nullable: true
         matched_client:
           oneOf:
@@ -11184,6 +12224,8 @@ tags:
     description: 'Manage internal notes on orders'
   - name: Activity
     description: 'Read-only audit trail of account activity'
+  - name: AI
+    description: 'AI transparency (Regulation (EU) 2024/1689)'
   - name: Notifications
     description: 'In-app notification centre'
   - name: Taxation

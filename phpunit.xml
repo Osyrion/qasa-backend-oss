@@ -24,6 +24,14 @@
         </include>
     </source>
     <php>
+        <!-- The architecture tests parse the whole app tree with
+             nikic/php-parser, and the parsed ASTs outlive the test that built
+             them; past ~2000 tests in one process the container's 512M ini
+             default is exhausted mid-run and PHP dies with a fatal instead of
+             a result — which reads as a pass if only the tail of the output is
+             checked. Raised here rather than in the image so a fresh checkout
+             can run `composer test` to completion. -->
+        <ini name="memory_limit" value="2G"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
@@ -47,7 +55,23 @@
              itself. The shipped default in config/admin.php is on. -->
         <env name="ADMIN_REQUIRE_TWO_FACTOR" value="false"/>
         <env name="PULSE_ENABLED" value="false"/>
+        <!--
+            Pre-send Schematron validation is on in production and off here:
+            it spawns two JVMs and costs a couple of seconds per document,
+            which every Peppol send test would otherwise pay to re-prove what
+            UblSchematronTest already proves about the builder's output.
+            PeppolValidationTest turns it back on for the cases that are
+            actually about the validator.
+        -->
+        <env name="QASA_PEPPOL_VALIDATE_BEFORE_SEND" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- An empty DSN already makes the Sentry SDK a no-op, and CI copies
+             .env.example (which ships it empty) before running. Both are
+             stated here anyway so that a developer with a real DSN in their
+             own .env cannot fill the production project with events from a
+             local test run. -->
+        <env name="SENTRY_LARAVEL_DSN" value=""/>
+        <env name="SENTRY_TRACES_SAMPLE_RATE" value="0"/>
     </php>
 </phpunit>

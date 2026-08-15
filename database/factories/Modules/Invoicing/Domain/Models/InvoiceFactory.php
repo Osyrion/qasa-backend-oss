@@ -28,8 +28,17 @@ class InvoiceFactory extends Factory
         return [
             'user_id' => fn (): string => BoundAccount::id(),
             'client_id' => fn (array $attributes) => ClientFactory::new()->create(['user_id' => $attributes['user_id']]),
-            'invoice_number' => 'FA-'.now()->format('Y').'-'.fake()->unique()->numberBetween(1, 9999),
+            // Declared before invoice_number so the closure below sees it
+            // expanded — a state or a create([...]) override lands in this
+            // same slot, keeping the number in step with the type.
             'type' => InvoiceType::Invoice->value,
+            // Each type has its own series (InvoiceType::numberMask()), so a
+            // proforma numbered FA- is a document the application cannot
+            // produce. 'FA' is the users.invoice_prefix column default, which
+            // is what the generator would read for a plain invoice; a test
+            // that changes that prefix passes its own number anyway.
+            'invoice_number' => fn (array $attributes): string => self::type($attributes['type'])->numberPrefix('FA')
+                .'-'.now()->format('Y').'-'.fake()->unique()->numberBetween(1, 9999),
             'status' => fake()->randomElement(InvoiceStatus::cases())->value,
             'issued_at' => $issuedAt,
             'due_at' => (clone $issuedAt)->modify('+14 days'),
@@ -40,6 +49,36 @@ class InvoiceFactory extends Factory
             'total' => $subtotal + $vatAmount,
             'note' => fake()->optional()->sentence(),
         ];
+    }
+
+    /**
+     * Callers write both `'type' => InvoiceType::Proforma` and
+     * `'type' => 'proforma'`; the number closure has to cope with either.
+     */
+    private static function type(InvoiceType|string $type): InvoiceType
+    {
+        return $type instanceof InvoiceType ? $type : InvoiceType::from($type);
+    }
+
+    public function proforma(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => InvoiceType::Proforma->value,
+        ]);
+    }
+
+    public function creditNote(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => InvoiceType::CreditNote->value,
+        ]);
+    }
+
+    public function storno(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => InvoiceType::Storno->value,
+        ]);
     }
 
     public function draft(): static

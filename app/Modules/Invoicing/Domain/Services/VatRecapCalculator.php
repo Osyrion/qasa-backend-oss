@@ -80,6 +80,55 @@ final class VatRecapCalculator
     }
 
     /**
+     * The document-level discount split across the VAT rates it applies to.
+     *
+     * EN 16931 does not accept a lump-sum discount: a document level allowance
+     * (BT-92) carries its own VAT category and rate, and BR-S-08 checks that
+     * each rate's taxable amount equals that rate's lines minus that rate's
+     * allowances. So a single header percentage has to be resolved into one
+     * allowance per rate before it can be written to a UBL document.
+     *
+     * Derived here rather than in the builder because it is the same
+     * proportional split bucketsFromItems() already performs — computing it a
+     * second time next to the XML is how an export starts disagreeing with
+     * the invoice it represents.
+     *
+     * Each figure is the difference between the rate's undiscounted lines and
+     * its quantised discounted base, so the allowances sum to exactly the
+     * per-bucket rounding the recap used, not to a separately rounded total.
+     *
+     * @return array<string, float> rate (2 decimals, as a string) => allowance amount
+     */
+    public function discountByRate(Invoice $invoice): array
+    {
+        if ($invoice->discount_percent === null || (float) $invoice->discount_percent <= 0.0) {
+            return [];
+        }
+
+        /** @var array<string, BigDecimal> $rawBases */
+        $rawBases = [];
+
+        foreach ($invoice->items as $item) {
+            $rate = number_format((float) $item->vat_rate, 2, '.', '');
+            $rawBases[$rate] = ($rawBases[$rate] ?? BigDecimal::zero())->plus(Decimal::of($item->total_excl_vat));
+        }
+
+        $allowances = [];
+
+        foreach ($this->bucketsFromItems($invoice->items, $invoice->discount_percent) as $bucket) {
+            $rate = (string) $bucket['rate'];
+            $raw = $rawBases[$rate] ?? BigDecimal::zero();
+            $allowance = Decimal::money($raw->minus($bucket['base']));
+
+            if ((float) $allowance > 0.0) {
+                $allowances[$rate] = (float) $allowance;
+            }
+        }
+
+        return $allowances;
+    }
+
+    /**
      * @return list<VatRecapRow> sorted by rate ascending
      */
     public function recapForQuote(Quote $quote): array

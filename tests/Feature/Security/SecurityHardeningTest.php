@@ -44,6 +44,7 @@ it('rejects registration with a password below the strength policy', function ()
         'surname' => 'Novák',
         'email' => 'weak@example.com',
         'password' => 'short',
+        'accepted_terms' => true,
     ])->assertStatus(422)->assertJsonValidationErrors('password');
 });
 
@@ -55,6 +56,7 @@ it('rejects a password with no digits', function (): void {
         'surname' => 'Novák',
         'email' => 'nodigits@example.com',
         'password' => 'onlyletters',
+        'accepted_terms' => true,
     ])->assertStatus(422)->assertJsonValidationErrors('password');
 });
 
@@ -66,6 +68,7 @@ it('accepts a policy-compliant password', function (): void {
         'surname' => 'Novák',
         'email' => 'strong@example.com',
         'password' => 'super-secret-1',
+        'accepted_terms' => true,
     ])->assertCreated();
 });
 

@@ -106,6 +106,10 @@ readonly class IssueInvoiceAction
             'ico' => $client->ico,
             'dic' => $client->dic,
             'vat_id' => $client->vat_id,
+            // Frozen with the rest: the address the document declares must
+            // stay what it was when issued, even if the client later
+            // re-registers with a different access point.
+            'peppol_id' => $client->peppol_id,
             'is_vat_payer' => $client->is_vat_payer,
             'address' => $client->address,
             'city' => $client->city,

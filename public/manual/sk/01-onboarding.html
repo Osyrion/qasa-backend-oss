@@ -22,10 +22,11 @@
 <p>Tento návod ťa prevedie od registrácie po prvú vystavenú faktúru. Qasa je určená hlavne pre SZČO a malé firmy, ktoré si administratívu riešia samy — bez účtovníčky po ruke.</p>
 <h2>Registrácia účtu</h2>
 <ol>
-<li>Na úvodnej stránke klikni na <strong>Registrovať sa</strong> a zadaj meno, priezvisko, e-mail a heslo.</li>
+<li>Na úvodnej stránke klikni na <strong>Registrovať sa</strong> a zadaj meno, priezvisko, e-mail a heslo. Registrácia vyžaduje aj odsúhlasenie <strong>podmienok používania a ochrany osobných údajov</strong> (zaškrtávacie políčko) — bez neho registrácia neprejde.</li>
 <li>Po registrácii dostaneš e-mail s odkazom na overenie adresy. Bez overenia môžeš aplikáciu používať naplno — zakladať klientov, vystavovať faktúry, importovať — ale aplikácia za teba <strong>nepošle nič von</strong>. Kým adresu nepotvrdíš, sú zamknuté: odoslanie faktúry a upomienky e-mailom, odoslanie cenovej ponuky, vytvorenie verejného odkazu na faktúru či ponuku, vytvorenie klientskeho portálu a pozvanie člena tímu. Platí to aj pre automatiku — šablóna opakovanej faktúry ani automatická upomienka za neovereným účtom neodošlú.</li>
-<li>Prihlásiť sa dá aj cez Google účet — v tom prípade heslo nepotrebuješ vôbec a adresa je overená hneď (Google ju už overil za teba).</li>
+<li>Prihlásiť sa dá aj cez Google účet — v tom prípade heslo nepotrebuješ vôbec a adresa je overená hneď (Google ju už overil za teba). Aj tu platí, že založenie nového účtu cez Google počíta ako odsúhlasenie podmienok.</li>
 </ol>
+<p>Ak sa podmienky používania alebo ochrana osobných údajov neskôr zmenia, aplikácia ťa pri ďalšom prihlásení požiada o ich opätovné odsúhlasenie — staré prijatie sa neprenáša automaticky na novú verziu.</p>
 <h2>Krok 2: daňová rezidencia</h2>
 <p>Hneď po registrácii ťa aplikácia požiada o <strong>doplnenie daňovej rezidencie</strong> — Slovensko alebo Česko. Táto voľba je <strong>nezmeniteľná</strong> po jej potvrdení, pretože od nej sa odvíja:</p>
 <ul>
@@ -89,6 +90,23 @@ sa zatiaľ neprenášajú — treba ich nastaviť nanovo priamo v Qase.</p>
 <p>Ak s tebou administratívu rieši aj niekto ďalší (účtovníčka, kolega), môžeš ho pozvať do tímu s obmedzenými právami — pozri kapitolu <a href="07-tim.html">Tím</a>. Bezplatný plán obmedzuje počet členov tímu; rozšírenie je súčasťou vyšších plánov.</p>
 <h2>Bezpečnosť účtu</h2>
 <p>Odporúčame zapnúť <strong>dvojfaktorové overenie</strong> (2FA) v <strong>Nastavenia → Bezpečnosť</strong> — pri každom prihlásení z nového zariadenia bude aplikácia okrem hesla vyžadovať aj kód z autentifikačnej aplikácie (napr. Google Authenticator). Zapnutie 2FA vygeneruje aj sadu záložných kódov pre prípad straty telefónu — ulož si ich na bezpečné miesto, zobrazia sa len raz.</p>
+<h3>Moje zariadenia</h3>
+<p><strong>Nastavenia → Bezpečnosť → Moje zariadenia</strong> zobrazuje každé zariadenie/prehliadač, z ktorého si momentálne prihlásený — s IP adresou a časom posledného použitia. Aktuálne zariadenie je označené. Zariadenie, ktoré už nepoznáš alebo nepoužívaš, môžeš jednotlivo odhlásiť; tlačidlo <strong>Odhlásiť všetky ostatné zariadenia</strong> urobí to isté naraz pre všetko okrem toho, z ktorého práve pracuješ. Aktuálne zariadenie sa takto odhlásiť nedá — na to slúži bežné tlačidlo Odhlásiť sa.</p>
+<blockquote>
+<p>Toto je iný zoznam než <strong>API tokeny</strong> (kapitola API a integrácie) — tam sú prístupy pre vlastné integrácie a automatizačné nástroje, tu sú prihlásenia do samotnej appky.</p>
+</blockquote>
+<p>IP adresu a údaj o prehliadači si pri zariadení držíme 90 dní od posledného použitia; potom sa z výpisu stratia, samotné prihlásenie ale ostáva platné. Sú to osobné údaje a nemáme dôvod ich uchovávať dlhšie, než sú užitočné na rozpoznanie cudzieho prístupu.</p>
+<h2>Zmazanie účtu</h2>
+<p>Účet zrušíš v <strong>Nastavenia → Profil → Zmazať účet</strong>. Aplikácia si vypýta potvrdenie heslom (pri účtoch prihlasovaných len cez Google napíšeš slovo <code>DELETE</code>). Zmazať účet môže <strong>iba jeho majiteľ</strong>, nie člen tímu.</p>
+<p>Zmazanie prebehne v dvoch krokoch:</p>
+<ol>
+<li><strong>Hneď</strong> — odhlásia sa všetky tvoje zariadenia a prístup do aplikácie končí. Ak máš tím, členom sa zároveň zrušia prístupy a ich účty sa deaktivujú spolu s tvojím.</li>
+<li><strong>Po 30 dňoch</strong> — z účtu sa nenávratne odstránia osobné údaje: meno, e-mail, telefón, adresa, IČO/DIČ, nahraté logo aj uložené prístupové kľúče k prepojeným službám. Prvých 30 dní je poistka pre prípad, že si účet zmazal omylom — ozvi sa nám v tejto lehote a vieme ho obnoviť. Po nej už nie.</li>
+</ol>
+<blockquote>
+<p><strong>Vystavené faktúry sa nemažú.</strong> Doklad, ktorý si už vystavil, musíš podľa zákona archivovať (na Slovensku aj v Česku typicky 10 rokov) a rovnaká povinnosť platí pre tvojho odberateľa. Faktúra si údaje dodávateľa aj odberateľa nesie v sebe tak, ako vyzerali v deň vystavenia, takže ostane platným dokladom aj po odstránení tvojich osobných údajov z účtu. Jediné, čo z nej po 30 dňoch zmizne, je tvoje logo.</p>
+<p>Preto si <strong>pred zmazaním účtu stiahni export dát</strong> (<strong>Nastavenia → Profil → Exportovať dáta</strong>) — dostaneš JSON so všetkými klientmi, faktúrami, výdavkami a ďalšími záznamami. Po zmazaní účtu sa k nim už nedostaneš.</p>
+</blockquote>
 <div class="chapter-nav-links"><span></span><a href="02-klienti.html">Klienti &rarr;</a></div>
     </main>
 </div>

@@ -1,0 +1,98 @@
+#-------------------------------------------------------------------------------#
+#               Qodana analysis is configured by qodana.yaml file               #
+#             https://www.jetbrains.com/help/qodana/qodana-yaml.html            #
+#-------------------------------------------------------------------------------#
+
+#################################################################################
+#              WARNING: Do not store sensitive information in this file,        #
+#               as its contents will be included in the Qodana report.          #
+#################################################################################
+version: "1.0"
+
+# `qodana.starter` is a narrow subset that PHPStan level 8 already subsumes almost
+# entirely. `qodana.recommended` mirrors the default PhpStorm profile, which is
+# where Qodana actually earns its keep here: dead code, regex, Laravel-specific
+# and IDE-only inspections that no other job in CI runs. It is noisier — the
+# `exclude` block below is what keeps that noise to findings worth reading.
+profile:
+  name: qodana.recommended
+
+php:
+  # The one version this project supports: docker image, all four CI jobs and
+  # composer.json's ^8.5 floor, OSS core included. It used to be pinned to 8.4 —
+  # the old minimum — precisely so 8.5-only syntax reported as incompatible; with
+  # the floor raised on 2026-08-15 there is no lower version left to protect, so
+  # this now simply matches what the code runs on.
+  version: "8.5"
+
+#Execute shell command before Qodana execution (Applied in CI/CD pipeline)
+bootstrap: bash ./prepare-qodana.sh
+
+#Enable inspections
+#include:
+#  - name: <SomeEnabledInspectionId>
+
+#Disable inspections
+exclude:
+  # Nothing generated, vendored or third-party. All of it either ships as-is or is
+  # rewritten on the next build, so a finding in here is never actionable.
+  - name: All
+    paths:
+      # Installed by prepare-qodana.sh — not our code.
+      - vendor
+      # ~1 MB of stubs, also written by prepare-qodana.sh. It exists so the models'
+      # `@mixin Eloquent` resolves, and must not be analysed itself.
+      - _ide_helper.php
+      - .phpstorm.meta.php
+      # Generated: swagger json (l5-swagger), logs, debugbar, framework caches.
+      - storage
+      - bootstrap/cache
+      # Generated from docs/manual/{sk,cs} by `php tools/generate-manual.php`.
+      - public/manual
+      # Upstream EN16931/PEPPOL Schematron, ~1.1 MB of XSLT vendored verbatim.
+      # Editing it would break conformance with the published rules.
+      - resources/schematron
+      # Published vendor view (l5-swagger).
+      - resources/views/vendor
+
+  # This repo is trilingual — en/sk/cs across lang/, docs/manual/, docs/app/ and a
+  # good share of the comments. The dictionary is English-only, so every Slovak and
+  # Czech word reports as a typo; the signal-to-noise ratio is effectively zero.
+  - name: SpellCheckingInspection
+
+  # Reads only the *static* $fillable property, so it cannot see Model::unguarded()
+  # (which Laravel wraps every Factory::make() in) or mergeFillable() calls. In app/
+  # it stays on — on 2026-08-14 it caught a real one, Trip omitting 'id' from
+  # $fillable while the offline-first mobile sync passed a client-chosen id.
+  - name: LaravelEloquentGuardedAttributeAssignmentInspection
+    paths:
+      - database/factories
+      - tests
+
+  # False positive that is a trap: the pattern is '/(?:'.$labelPattern.')…' where
+  # $labelPattern is an implode('|', …). The analyser sees the placeholder as a
+  # single atom so the group looks redundant, but it wraps a runtime alternation —
+  # dropping it changes what the regex matches.
+  - name: RegExpUnnecessaryNonCapturingGroup
+    paths:
+      - app/Modules/Invoicing/Domain/Services/SupplierInvoiceParser.php
+
+#Install IDE plugins before Qodana execution (Applied in CI/CD pipeline)
+#plugins:
+#  - id: <plugin.id> #(plugin id can be found at https://plugins.jetbrains.com)
+
+# Quality gate. Nothing runs Qodana in .github/workflows/ci.yml yet, so these
+# thresholds would gate nothing — they are left off deliberately rather than set to
+# a number nobody measured. Before turning them on, take a baseline of the current
+# run (`qodana scan --baseline qodana.sarif.json`) so the gate applies to new code
+# instead of failing on day one. Coverage thresholds need Ultimate.
+#failureConditions:
+#  severityThresholds:
+#    any: 15
+#    critical: 5
+#  testCoverageThresholds:
+#    fresh: 70
+#    total: 50
+
+#Specify Qodana linter for analysis (Applied in CI/CD pipeline)
+linter: jetbrains/qodana-php:2026.2

@@ -17,10 +17,15 @@ final readonly class FieldExtractionResult
      * @param  array<string, mixed>  $suggestions
      * @param  'regex'|'ai'|'ai_byok'  $source
      * @param  string|null  $provider  'anthropic'|… — null for the regex source
+     * @param  string|null  $model  The exact model that produced $suggestions — null for the
+     *                              regex source. Stored with the item so the AI Act art. 50
+     *                              marking on an old suggestion keeps naming the model that
+     *                              actually read the document, not whatever config says today.
      */
     public function __construct(
         public array $suggestions,
         public string $source,
         public ?string $provider = null,
+        public ?string $model = null,
     ) {}
 }

@@ -192,7 +192,7 @@ class InvoiceController extends Controller
             new OA\Response(
                 response: 200,
                 description: 'Invoice details',
-                content: new OA\JsonContent(ref: '#/components/schemas/Invoice')
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Invoice')], type: 'object')
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Invoice not found'),
@@ -271,6 +271,52 @@ class InvoiceController extends Controller
      * @throws Throwable
      */
     #[OA\Patch(
+        path: '/api/v1/invoices/{id}',
+        summary: 'Update draft invoice header',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['client_id', 'issued_at', 'due_at', 'currency'],
+                properties: [
+                    new OA\Property(property: 'client_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'issued_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'taxable_supply_at', type: 'string', format: 'date', nullable: true),
+                    new OA\Property(property: 'due_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'variable_symbol', type: 'string', nullable: true, maxLength: 10),
+                    new OA\Property(property: 'bank_account_id', type: 'string', format: 'uuid', nullable: true),
+                    new OA\Property(property: 'discount_percent', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                    new OA\Property(property: 'note_above', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Invoices'],
+        parameters: [
+            new OA\Parameter(
+                name: 'id',
+                description: 'Invoice ID',
+                in: 'path',
+                required: true,
+                schema: new OA\Schema(type: 'string', format: 'uuid')
+            ),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Invoice updated',
+                content: new OA\JsonContent(
+                    properties: [new OA\Property(property: 'data', ref: '#/components/schemas/Invoice')],
+                    type: 'object',
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Invoice not found'),
+            new OA\Response(response: 422, description: 'Validation error or invoice not editable'),
+        ]
+    )]
+    #[OA\Put(
         path: '/api/v1/invoices/{id}',
         summary: 'Update draft invoice header',
         security: [['sanctum' => []]],

@@ -12,6 +12,7 @@ use App\Modules\Auth\Application\Services\TwoFactorService;
 use App\Modules\Auth\Domain\Events\LoginFailed;
 use App\Modules\Auth\Domain\Events\LoginSucceeded;
 use App\Modules\Auth\Domain\Events\RecoveryCodesRegenerated;
+use App\Modules\Auth\Domain\Events\TermsAccepted;
 use App\Modules\Auth\Domain\Events\TwoFactorConfirmed;
 use App\Modules\Auth\Domain\Events\TwoFactorDisabled;
 use App\Modules\Auth\Domain\Events\TwoFactorEnabled;
@@ -19,6 +20,7 @@ use App\Modules\Auth\Domain\Events\UserLoggedOut;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Infrastructure\Sanctum\TenantAwarePersonalAccessToken;
 use App\Modules\Auth\Presentation\Console\CreateUserCommand;
+use App\Modules\Auth\Presentation\Console\PurgeDeletedAccountsCommand;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use Illuminate\Auth\Events\PasswordReset;
@@ -119,7 +121,7 @@ class AuthServiceProvider extends ServiceProvider
         Sanctum::usePersonalAccessTokenModel(TenantAwarePersonalAccessToken::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([CreateUserCommand::class]);
+            $this->commands([CreateUserCommand::class, PurgeDeletedAccountsCommand::class]);
         }
 
         // Single source of truth for how strong a *new* password must be —
@@ -181,5 +183,12 @@ class AuthServiceProvider extends ServiceProvider
 
             return $e->user;
         });
+
+        $registry->register(
+            TermsAccepted::class,
+            'auth.terms_accepted',
+            fn (TermsAccepted $e): User => $e->user,
+            fn (TermsAccepted $e): array => ['version' => $e->version],
+        );
     }
 }

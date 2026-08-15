@@ -28,6 +28,11 @@ final class FakeLlmProviderDriver implements LlmProviderDriver
         return AiProvider::Anthropic;
     }
 
+    public function model(): string
+    {
+        return 'fake-model-1';
+    }
+
     /**
      * @param  list<array<string, mixed>>  $content
      * @param  array<string, mixed>  $schema
@@ -54,6 +59,9 @@ it('parses driver output into suggestions, dropping null/empty values', function
 
     expect($result->source)->toBe('ai')
         ->and($result->provider)->toBe('anthropic')
+        // Recorded from the driver, not from config — the art. 50 marking on
+        // this row has to name the model that actually answered.
+        ->and($result->model)->toBe('fake-model-1')
         ->and($result->suggestions['supplier_invoice_number'])->toBe('INV-2026-001')
         ->and($result->suggestions['ico'])->toBe('12345678')
         ->and($result->suggestions)->not->toHaveKey('currency');

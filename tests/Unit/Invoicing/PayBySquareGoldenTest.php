@@ -55,7 +55,11 @@ function decodePayBySquareFrame(string $base32hex): array
         if (strlen($byteBits) < 8) {
             break; // Trailing padding bits from base32hex's 5-bit grouping.
         }
-        $bytes .= chr((int) bindec($byteBits));
+        // Eight bits can only be 0..255, but PHP 8.5 deprecated chr() outside
+        // that interval and PHPStan cannot infer the range from bindec().
+        $byte = (int) bindec($byteBits);
+        assert($byte >= 0 && $byte <= 255);
+        $bytes .= chr($byte);
     }
 
     $header = substr($bytes, 0, 2);

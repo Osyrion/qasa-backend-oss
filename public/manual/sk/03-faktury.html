@@ -72,8 +72,80 @@
 </ul>
 <p>Proforma a storno sa ako e-faktúra exportovať nedajú — nie sú to daňové doklady a norma pre ne nemá typ.</p>
 <p><strong>Keď e-faktúru dostaneš ty:</strong> stačí XML nahrať do <strong>Doručenej pošty</strong> (alebo ho nechať prísť e-mailom, ak máš e-mail-in). Appka z neho prečíta údaje priamo — žiadne OCR, žiadne hádanie. Skontroluješ a potvrdíš; čísla sedia presne tak, ako ich dodávateľ vystavil.</p>
+<h3>Povinná e-fakturácia od 1. 1. 2027</h3>
+<p>Podľa zákona 385/2025 Z. z. budú tuzemské B2B faktúry putovať sieťou <strong>Peppol</strong>. Vystavovať takto budú musieť platitelia DPH, ale <strong>prijímať e-faktúry musí vedieť každý podnikateľ</strong> — vrátane neplatiteľov a živnostníkov. Od Q2 2026 beží dobrovoľná fáza, počas ktorej si to vieš vyskúšať nanečisto.</p>
+<p>Čo to znamená prakticky: potrebuješ <strong>digitálneho poštára</strong> — certifikovaného sprostredkovateľa, ktorý faktúru odošle a doručí. Zoznam schválených poštárov vedie Finančná správa a je to platená služba nezávislá od tejto aplikácie.</p>
+<p>Náš export je na to pripravený: XML, ktoré si stiahneš, zodpovedá <strong>Peppol BIS Billing 3.0</strong> a je overené proti oficiálnym pravidlám, ktoré poštár kontroluje. Takže už dnes si ho vieš stiahnuť a nahrať vo webovom rozhraní svojho poštára — a prijatú faktúru rovnako stiahnuť od neho a nahrať do Doručenej pošty.</p>
+<h3>Odoslanie jedným klikom (platený plán)</h3>
+<p>Ak máš platený plán, medzikrok cez web poštára odpadá. Nastav si raz prístupové údaje od svojho digitálneho poštára a k faktúre potom pribudne <strong>Odoslať cez Peppol</strong>.</p>
+<p>Čo na to potrebuješ:</p>
+<ol>
+<li><strong>Účet u digitálneho poštára</strong> a jeho prístupové kľúče (podporujeme <strong>ePošťák</strong>; ďalší pribudnú).</li>
+<li><strong>Peppol ID protistrany</strong> vyplnené pri klientovi (formát <code>0245:12345678</code>). Bez neho nie je faktúru kam doručiť — nedomýšľame ho z IČ DPH, lebo odhad by vyrobil adresu, ktorá nikam nevedie.</li>
+</ol>
+<p>Pri faktúre potom vidíš <strong>históriu pokusov</strong>: čo odišlo, čo poštár odmietol a prečo. Odmietnutý pokus sa nemaže — opravíš doklad a pošleš znova, obidva záznamy zostanú.</p>
 <blockquote>
-<p>Export je postavený podľa EN 16931 a overený proti oficiálnej schéme UBL 2.1. Zapojenie do siete Peppol (automatické odosielanie protistrane) zatiaľ súčasťou nie je — faktúru posielaš e-mailom ako doteraz, len s XML prílohou navyše.</p>
+<p><strong>Čo znamená „odoslané&quot;.</strong> Že tvoj poštár doklad prijal a položil do siete Peppol. <strong>Nie</strong>, že si ho odberateľ prečítal — Peppol odosielateľovi žiadne potvrdenie o doručení neposiela. Jediná odpoveď, ktorá sa vracia, je <em>Invoice Response</em> (odberateľ faktúru prijal/odmietol) a zobrazuje sa samostatne, keď príde.</p>
+</blockquote>
+<blockquote>
+<p>Kým si účet u poštára len skúšaš, nechaj prostredie na <strong>sandbox</strong> — testovací doklad sa tak nikdy nedostane do ostrej siete pod tvojou identitou.</p>
+</blockquote>
+<h4>Dve možnosti, ako byť pripojený</h4>
+<p>V <strong>Nastavenia → Peppol</strong> si vyberáš, cez čí účet u poštára faktúry chodia:</p>
+<p>| | <strong>V správe</strong> | <strong>Vlastný poštár</strong> |
+|---|---|---|
+| Zmluvu s poštárom má | prevádzkovateľ aplikácie | ty |
+| Čo vypĺňaš | len svoje Peppol ID a číslo firmy, ktoré ti poštár pridelí | prístupové kľúče od svojho poštára |
+| Výber poštára | ePošťák | <strong>ktorýkoľvek</strong>, ktorý podporuje štandard SAPI-SK |</p>
+<p>„V správe&quot; je jednoduchšie — nezriaďuješ si nič a nemáš vlastnú zmluvu. „Vlastný poštár&quot; je pre teba, ak už zmluvu máš, chceš si vybrať sám alebo si fakturáciu za doklady riešiš priamo s poštárom.</p>
+<blockquote>
+<p>Pri režime „v správe&quot; <strong>prevádzkovateľ tvoje tajné kľúče nikdy nedostane</strong> — ani ich nemá kam uložiť. Napojenie funguje cez tvoj súhlas u poštára, nie cez odovzdanie hesiel.</p>
+</blockquote>
+<blockquote>
+<p><strong>Pozor pri vlastnom poštárovi:</strong> nie každý poskytuje rovnaké informácie. Ak tvoj poštár podporuje len základný štandard SAPI-SK, aplikácia sa nedozvie, či odberateľ faktúru prijal alebo odmietol — samotné odoslanie funguje normálne. Nevymýšľame si odpoveď, ktorú poštár nedodá.</p>
+</blockquote>
+<h4>Nastavenie má dva kroky, nie jeden</h4>
+<p>Toto je jediné miesto v celej appke, kde nestačí vyplniť formulár u nás:</p>
+<ol>
+<li><strong>U nás</strong> zadáte prístupové údaje od poštára (Nastavenia → Peppol).</li>
+<li><strong>V portáli Finančnej správy</strong> označíte toho istého poštára ako svojho.</li>
+</ol>
+<p>Kým neurobíte aj druhý krok, <strong>nie ste zaregistrovaní</strong> — a to znamená, že vám od 1. 1. 2027 nikto nedoručí faktúru. Nedozviete sa to od nás, ale od dodávateľa, ktorý sa k vám nedostane.</p>
+<p>Preto vám appka nikdy nenapíše „hotovo&quot; len preto, že ste vyplnili prvý krok. V Nastavenia → Peppol vidíte skutočný stav a sama si overuje, či ste už v sieti — keď sa tam objavíte, banner zmizne bez toho, aby ste čokoľvek klikali.</p>
+<blockquote>
+<p><strong>Nedáte to?</strong> Registráciu smie za vás vybaviť <strong>účtovník</strong> — Finančná správa to výslovne umožňuje. V Nastavenia → Peppol je tlačidlo, ktoré mu pošle presný postup e-mailom; vy už nemusíte robiť nič. Prípadne nám zavolajte a prejdeme to spolu cez zdieľanú obrazovku.</p>
+</blockquote>
+<p>Od decembra 2026 vás na to upozorníme aj priamo pri vytváraní faktúry — dovtedy by to bolo varovanie o dokumente, ktorého sa to ešte netýka.</p>
+<h4>Doklad sa kontroluje ešte pred odoslaním</h4>
+<p>Než faktúra odíde, appka ju prežene <strong>oficiálnymi pravidlami</strong> — EN 16931 aj Peppol BIS Billing 3.0, teda presne tým, čo kontroluje poštár na svojich dverách. Ak by ju odmietol, dozvieš sa to hneď na obrazovke, aj s číslom pravidla, ktoré padlo (napr. <code>PEPPOL-EN16931-R004</code>). Doklad v takom prípade do siete vôbec neodíde.</p>
+<p>Nepoužívame vlastnú napodobeninu pravidiel, ale rulebook priamo od tvorcov normy. Dôvod je praktický: vlastný odhad by skôr či neskôr zastavil faktúru, ktorá bola v poriadku — a to je horšie, než nekontrolovať nič.</p>
+<blockquote>
+<p>Prvá kontrola nového dokladu trvá pár sekúnd. Ten istý doklad druhýkrát je okamžitý.</p>
+</blockquote>
+<h4>Keď poštár neodpovedá, appka to skúša sama</h4>
+<p>Ak sa poštára nepodarí kontaktovať — býva to výpadok na jeho strane — faktúra sa neodloží nabok. Appka to <strong>skúsi znova sama</strong>, v odstupoch, ktoré sa predlžujú: o 5 minút, o 20 minút, o hodinu a pol a nakoniec o niekoľko hodín. Väčšina výpadkov skončí skôr, než sa k tomu vôbec dostaneš.</p>
+<p>Nemusíš pritom nič strážiť. Faktúru vidíš v histórii pokusov aj s časom ďalšieho pokusu.</p>
+<blockquote>
+<p><strong>Neposiela sa dvakrát.</strong> Aj keby prvá požiadavka k poštárovi dorazila a spadlo až spojenie, opakovaný pokus dostane naspäť tú istú odpoveď — nie druhý doklad v sieti. Ak faktúru pošleš ručne ty, naplánovaný pokus sa zruší; tvoje rozhodnutie má prednosť.</p>
+</blockquote>
+<p>Neopakuje sa to, čo sa opakovaním nespraví: doklad, ktorý poštár <strong>odmietol</strong> (rovnaký doklad odmietne rovnako), neplatné prístupové kľúče, ani odberateľ, ktorý v sieti Peppol nie je.</p>
+<h4>Keď sa to nepodarí ani tak, dozvieš sa to</h4>
+<p>Od roku 2027 zodpovedáš za elektronické doručenie faktúry <strong>ty</strong>, nie tvoj poštár. Preto ti aplikácia dá vedieť — v appke aj e-mailom:</p>
+<p>| Čo sa stalo | Čo s tým |
+|---|---|
+| <strong>Poštár faktúru odmietol</strong>, alebo sa ju nepodarilo odoslať ani po všetkých pokusoch | V správe je dôvod aj počet pokusov. Oprav doklad a pošli ho znova. |
+| <strong>Odberateľ faktúru odmietol</strong> | Zisti u neho, čo je zle, a vystav dobropis alebo opravnú faktúru. Odoslanie toho istého dokladu dopadne rovnako. |
+| <strong>Prístupové kľúče prestali platiť</strong> | Kým ich nezadáš znova, neodíde žiadna e-faktúra. Nájdeš to v Nastavenia → Peppol. |</p>
+<p>Kým to appka ešte skúša, <strong>nepíše ti nič</strong> — správa príde až vtedy, keď je to na teba. Porucha napojenia (tretí riadok) ti príde <strong>raz</strong>, nie pri každej ďalšej faktúre.</p>
+<p>Správy chodia <strong>vlastníkovi účtu</strong>, aj keď faktúru odosielal niekto z tímu. Ten vidí chybu hneď na obrazovke; vlastník je ten, kto za doklad zodpovedá.</p>
+<blockquote>
+<p>Odmietnutie od odberateľa je jediný prípad, ktorý sa nedá spoznať pohľadom do appky — faktúra je odoslaná, doručená, a až o pár dní príde odpoveď „nespracujem to&quot;. Bez tejto notifikácie by si sa o tom nedozvedel.</p>
+</blockquote>
+<h3>Prijímanie faktúr cez Peppol</h3>
+<p>Rovnaké nastavenie funguje aj opačným smerom. Faktúry, ktoré ti dodávatelia pošlú cez Peppol, si aplikácia <strong>sama vyzdvihne</strong> u tvojho poštára (kontroluje to každých 15 minút) a položí ich do <strong>Doručenej pošty</strong> — presne tam, kde končia nahrané PDF-ká aj doklady z e-mailu.</p>
+<p>Rozdiel je v presnosti: pri e-faktúre sa nič nerozpoznáva. Údaje sú v súbore uvedené, takže návrh je presný a ty ho len potvrdíš.</p>
+<blockquote>
+<p>Ak by ti prišla tá istá faktúra dvakrát, aplikácia ju nezaloží druhýkrát — rozpozná zhodný obsah.</p>
 </blockquote>
 <h2>Dobropis a storno</h2>
 <p>Na vystavenú faktúru (v stave odoslaná alebo uhradená) vieš vystaviť:</p>

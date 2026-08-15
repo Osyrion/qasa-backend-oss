@@ -100,6 +100,7 @@ it('seeds no VAT rate catalog on registration — only after complete-residency 
         'surname' => 'Novák',
         'email' => 'jan@example.com',
         'password' => 'super-secret-1',
+        'accepted_terms' => true,
     ])->assertCreated();
 
     // Registered through HTTP, so nothing is bound once the request has

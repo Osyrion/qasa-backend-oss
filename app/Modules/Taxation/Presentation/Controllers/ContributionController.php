@@ -234,6 +234,42 @@ class ContributionController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
+    #[OA\Patch(
+        path: '/api/v1/contributions/{contribution}',
+        summary: 'Update a contribution payment',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['type', 'period_year', 'amount', 'currency', 'paid_at'],
+                properties: [
+                    new OA\Property(property: 'type', type: 'string', enum: ['social', 'health', 'income_tax_advance']),
+                    new OA\Property(property: 'period_year', type: 'integer', example: 2026),
+                    new OA\Property(property: 'period_month', type: 'integer', nullable: true, example: 3),
+                    new OA\Property(property: 'amount', type: 'number', format: 'float'),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'paid_at', type: 'string', format: 'date'),
+                    new OA\Property(property: 'note', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        tags: ['Taxation'],
+        parameters: [
+            new OA\Parameter(name: 'contribution', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Updated',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', ref: '#/components/schemas/ContributionPayment'),
+                ])
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
     public function update(Request $request, ContributionPayment $contribution): JsonResponse
     {
         $this->authorize('update', $contribution);

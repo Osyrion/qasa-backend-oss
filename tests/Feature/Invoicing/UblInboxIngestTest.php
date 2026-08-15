@@ -7,7 +7,10 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Contracts\ProcessInboxFileActionInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+
+require_once __DIR__.'/../../Support/UblFixtures.php';
 
 /**
  * A received e-invoice joins the existing inbox flow rather than getting one
@@ -27,42 +30,6 @@ function ingestUbl(User $owner, string $xml, string $filename = 'invoice.xml'): 
     assert($item !== null);
 
     return $item;
-}
-
-function minimalUbl(string $number = 'DODA-1', string $ico = '12345678'): string
-{
-    return <<<XML
-    <?xml version="1.0" encoding="UTF-8"?>
-    <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
-             xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
-             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-      <cbc:ID>{$number}</cbc:ID>
-      <cbc:IssueDate>2026-03-01</cbc:IssueDate>
-      <cbc:DueDate>2026-03-15</cbc:DueDate>
-      <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
-      <cac:AccountingSupplierParty><cac:Party>
-        <cac:PartyLegalEntity><cbc:CompanyID>{$ico}</cbc:CompanyID></cac:PartyLegalEntity>
-      </cac:Party></cac:AccountingSupplierParty>
-      <cac:PaymentMeans>
-        <cbc:PaymentID>7788</cbc:PaymentID>
-        <cac:PayeeFinancialAccount><cbc:ID>SK3112000000198742637541</cbc:ID></cac:PayeeFinancialAccount>
-      </cac:PaymentMeans>
-      <cac:TaxTotal>
-        <cbc:TaxAmount currencyID="EUR">46.00</cbc:TaxAmount>
-        <cac:TaxSubtotal>
-          <cbc:TaxableAmount currencyID="EUR">200.00</cbc:TaxableAmount>
-          <cbc:TaxAmount currencyID="EUR">46.00</cbc:TaxAmount>
-          <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>23.00</cbc:Percent></cac:TaxCategory>
-        </cac:TaxSubtotal>
-      </cac:TaxTotal>
-      <cac:LegalMonetaryTotal><cbc:TaxInclusiveAmount currencyID="EUR">246.00</cbc:TaxInclusiveAmount></cac:LegalMonetaryTotal>
-      <cac:InvoiceLine>
-        <cbc:ID>1</cbc:ID>
-        <cbc:LineExtensionAmount currencyID="EUR">200.00</cbc:LineExtensionAmount>
-        <cac:Item><cbc:Name>Služby</cbc:Name></cac:Item>
-      </cac:InvoiceLine>
-    </Invoice>
-    XML;
 }
 
 it('settles an incoming UBL invoice without running OCR at all', function (): void {
@@ -106,5 +73,52 @@ it('still falls back to OCR for an XML attachment that is not an e-invoice', fun
     // to keep working for whatever else turns up.
     $item = ingestUbl($owner, '<?xml version="1.0"?><somethingElse/>', 'other.xml');
 
-    expect($item->suggestions_source)->not->toBe('ubl');
+    expect($item->suggestions_source)->not->toBe('ubl')
+        // There is no OCR engine for XML, so this settles as failed with a
+        // stated reason rather than as an empty pending item the reviewer
+        // would have to type in from scratch. Worth pinning now that XML is
+        // an accepted upload and not only reachable from a test.
+        ->and($item->status)->toBe(InvoiceInboxStatus::Failed->value)
+        ->and($item->error)->not->toBeNull();
+});
+
+/**
+ * The tests above reach ProcessInboxFileAction directly, which is how the
+ * UBL path stayed unreachable in production for a while: every real entry
+ * point gates on ALLOWED_MIMES first, and XML was not on the list. So each
+ * of those doors gets its own test — the parser working proves nothing if
+ * no file can get to it.
+ */
+it('accepts an e-invoice uploaded straight into the inbox', function (): void {
+    Storage::fake('local');
+    $owner = createUser();
+
+    $file = UploadedFile::fake()->createWithContent('faktura.xml', minimalUbl('UPLOAD-1'));
+
+    $response = $this->actingAs($owner)->postJson('/api/v1/invoice-inbox/upload', ['file' => $file]);
+
+    $response->assertStatus(202);
+
+    $item = InvoiceInboxItem::withoutGlobalScope('user')->firstOrFail();
+
+    expect($item->suggestions_source)->toBe('ubl')
+        ->and($item->suggestions['supplier_invoice_number'] ?? null)->toBe('UPLOAD-1')
+        // Nothing was OCR'd — the fields were stated, not read off a page.
+        ->and($item->ocr_engine)->toBeNull();
+});
+
+it('picks an e-invoice up from the watched folder', function (): void {
+    Storage::fake('local');
+    $owner = createUser(['invoice_inbox_enabled' => true]);
+
+    Storage::disk('local')->put("inbox/{$owner->id}/faktura.xml", minimalUbl('SCAN-1'));
+
+    $this->artisan('qasa:invoices:scan-inbox')->assertSuccessful();
+
+    $item = InvoiceInboxItem::withoutGlobalScope('user')->firstOrFail();
+
+    expect($item->suggestions_source)->toBe('ubl')
+        ->and($item->suggestions['supplier_invoice_number'] ?? null)->toBe('SCAN-1');
+
+    Storage::disk('local')->assertExists("inbox/{$owner->id}/processed/faktura.xml");
 });

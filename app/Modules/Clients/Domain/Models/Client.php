@@ -6,6 +6,7 @@ namespace App\Modules\Clients\Domain\Models;
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -34,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $ico
  * @property string|null $dic
  * @property string|null $vat_id IČ DPH / VAT ID
+ * @property string|null $peppol_id Peppol participant id (scheme:identifier), used by the premium transport
  * @property string|null $bank_iban Counterparty account learned from a confirmed payment match (Banking, premium)
  * @property bool $auto_send_invoices N3 rule 3 per-client opt-out (Automation, premium); default true
  * @property bool $is_vat_payer
@@ -61,6 +63,7 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $contact_persons_count
  * @property-read string $display_name
  * @property-read Collection<int, Invoice> $invoices
+ * @property-read Collection<int, Quote> $quotes
  * @property-read int|null $invoices_count
  * @property-read Collection<int, Order> $orders
  * @property-read int|null $orders_count
@@ -116,6 +119,16 @@ class Client extends Model
     use HasUuids;
     use SoftDeletes;
 
+    /**
+     * What an anonymised client's name reads as
+     * (docs/plans/GDPR_COMPLIANCE_PLAN.md, phase 5).
+     *
+     * Deliberately not translated, for the same reason User::ANONYMISED is
+     * not: it is written to the database once and would otherwise be frozen
+     * in whatever locale the request that erased the client happened to use.
+     */
+    public const ANONYMISED = '[anonymised]';
+
     protected $fillable = [
         'user_id',
         'client_type',
@@ -128,6 +141,10 @@ class Client extends Model
         'ico',
         'dic',
         'vat_id',
+        // Peppol participant id ("0245:12345678"). Master data like the ids
+        // above; only the premium transport acts on it, but the column ships
+        // in both editions so a client row has one shape.
+        'peppol_id',
         'bank_iban',
         'auto_send_invoices',
         'is_vat_payer',
@@ -162,6 +179,7 @@ class Client extends Model
             'reverse_charge_allowed' => 'boolean',
             'vat_verified_at' => 'datetime',
             'archived_at' => 'datetime',
+            'anonymized_at' => 'datetime',
             'currency' => Currency::class,
         ];
     }
@@ -279,5 +297,13 @@ class Client extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<Quote, $this>
+     */
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(Quote::class);
     }
 }

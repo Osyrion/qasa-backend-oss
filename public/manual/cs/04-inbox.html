@@ -23,14 +23,17 @@
 <h2>Inbox — doklady, které přijdou samy</h2>
 <p>Místo ručního vypisování každé přijaté faktury můžeš doklady nechat zpracovat automaticky přes <strong>Přijaté faktury → Inbox</strong>:</p>
 <ol>
-<li><strong>Nahrání souboru</strong> — PDF, obrázek (JPG/PNG) nebo ISDOC nahraješ přímo přes <strong>Nahrát soubor</strong>.</li>
+<li><strong>Nahrání souboru</strong> — PDF, obrázek (JPG/PNG) nebo <strong>XML e-fakturu</strong> (UBL 2.1 podle EN 16931) nahraješ přímo přes <strong>Nahrát soubor</strong>.</li>
 <li>Aplikace ze souboru extrahuje text (OCR u naskenovaných dokumentů) a rozpozná klíčová pole — dodavatele, IČO, částku, DPH, variabilní symbol, datum splatnosti.</li>
 <li>Rozpoznané údaje se zobrazí jako <strong>návrh</strong> — zkontroluješ je a jedním kliknutím <strong>Vytvořit přijatou fakturu</strong> návrh potvrdíš. Pole, které aplikace nerozpoznala správně, si před potvrzením opravíš ručně.</li>
 <li>Pokud dokument není faktura nebo ho nechceš zpracovat, odlož ho tlačítkem <strong>Ignorovat</strong>.</li>
 </ol>
 <p>Při rozpoznávání IČO dodavatele se aplikace zároveň pokusí najít shodu s existujícím klientem/dodavatelem v tvé evidenci, aby sis nezakládal duplicity.</p>
+<blockquote>
+<p><strong>E-faktura místo skenu.</strong> Pokud ti dodavatel pošle XML e-fakturu (EN 16931 / UBL 2.1), kroky 2 a 3 se výrazně zkrátí: údaje jsou v souboru <strong>přímo uvedené</strong>, ne odhadnuté z obrázku, takže návrh je přesný a ty ho už jen potvrdíš. Žádné OCR se nespouští. Platí to stejně pro nahrání souboru, sledovanou složku i přílohu přijatého e-mailu.</p>
+</blockquote>
 <h3>Přesnost rozpoznávání</h3>
-<p>Základní rozpoznávání funguje bez dalšího nastavení (pravidla + OCR). Přesnější rozpoznávání pomocí AI (LLM) vyžaduje buď platformový kredit podle plánu, nebo vlastní API klíč (BYOK — bring your own key) v <strong>Nastavení → AI klíče</strong>. Při vyčerpání kreditu nebo bez klíče se použije základní rozpoznávání podle pravidel — inbox nikdy nepřestane fungovat úplně, jen s nižší přesností návrhu.</p>
+<p>Základní rozpoznávání funguje bez dalšího nastavení (pravidla + OCR). Přesnější rozpoznávání pomocí AI (LLM) vyžaduje buď platformový kredit podle plánu, nebo vlastní API klíč (BYOK — bring your own key) v <strong>Nastavení → Integrace → AI přihlašovací údaje (BYOK)</strong>. Při vyčerpání kreditu nebo bez klíče se použije základní rozpoznávání podle pravidel — inbox nikdy nepřestane fungovat úplně, jen s nižší přesností návrhu.</p>
 <h2>Ruční přidání přijaté faktury</h2>
 <p>Pokud dokument nechceš procházet přes inbox, vytvoř přijatou fakturu přímo v <strong>Přijaté faktury → Přidat</strong> a vyplň pole ručně.</p>
 <h2>Stavy přijaté faktury</h2>

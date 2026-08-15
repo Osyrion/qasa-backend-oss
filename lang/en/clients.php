@@ -6,6 +6,7 @@ return [
     'name_surname_required' => 'Name and surname are required for the :client_type client type.',
     'company_name_required' => 'Company name is required for a company client.',
     'has_active_invoices' => 'The client cannot be deleted because it has active invoices. Cancel or archive those invoices first.',
+    'anonymized' => 'The client\'s personal data has been erased. Issued documents keep the details they were issued with.',
     'contact_persons_only_for_company' => 'Contact persons can only be added to company clients.',
     'max_contact_persons_reached' => 'A client can have at most :max contact persons.',
     'registry_unsupported_country' => 'Company lookup is not supported for country :country.',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Presentation\Controllers;
 
+use App\Modules\Auth\Application\Actions\AcceptTermsAction;
 use App\Modules\Auth\Application\Actions\DeleteAccountAction;
 use App\Modules\Auth\Application\Actions\LoginAction;
 use App\Modules\Auth\Application\Actions\RegisterUserAction;
@@ -34,6 +35,7 @@ class AuthController extends Controller
         private readonly UpdateProfileAction $updateProfileAction,
         private readonly AccountExportService $exportService,
         private readonly DeleteAccountAction $deleteAccountAction,
+        private readonly AcceptTermsAction $acceptTermsAction,
     ) {}
 
     /**
@@ -45,12 +47,13 @@ class AuthController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['name', 'surname', 'email', 'password'],
+                required: ['name', 'surname', 'email', 'password', 'accepted_terms'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', example: 'Ján', maxLength: 100),
                     new OA\Property(property: 'surname', type: 'string', example: 'Novák', maxLength: 100),
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jan@example.com', maxLength: 255),
                     new OA\Property(property: 'password', type: 'string', example: 'password123', maxLength: 255, minLength: 8),
+                    new OA\Property(property: 'accepted_terms', type: 'boolean', example: true, description: 'Must be true — records terms_accepted_at against the current gdpr.terms_version'),
                     new OA\Property(property: 'title', type: 'string', example: 'Ing.', nullable: true, maxLength: 100),
                     new OA\Property(property: 'default_currency', type: 'string', example: 'EUR', enum: ['CZK', 'EUR', 'USD']),
                     new OA\Property(property: 'locale', type: 'string', example: 'sk'),
@@ -84,7 +87,9 @@ class AuthController extends Controller
         // users via `php artisan qasa:user`.
         abort_unless((bool) config('qasa.features.registration'), 404);
 
-        $request->validate(RegisterUserData::rules());
+        $request->validate(RegisterUserData::rules(), [
+            'accepted_terms.accepted' => __('auth.terms_must_be_accepted'),
+        ]);
 
         $data = RegisterUserData::fromRequest($request);
         $user = $this->registerAction->execute($data);
@@ -234,14 +239,18 @@ class AuthController extends Controller
                 new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jan@example.com', nullable: true, maxLength: 255),
                 new OA\Property(property: 'phone', type: 'string', example: '+421 900 123 456', nullable: true, maxLength: 30),
                 new OA\Property(property: 'password', type: 'string', example: 'newpassword123', nullable: true, maxLength: 255, minLength: 8),
+                new OA\Property(property: 'current_password', description: 'Required when changing `email` or `password` on an account that has one (OAuth-only accounts are exempt) — the request is rejected with 422 otherwise.', type: 'string', nullable: true),
                 new OA\Property(property: 'ico', type: 'string', example: '12345678', nullable: true, maxLength: 20),
                 new OA\Property(property: 'dic', type: 'string', example: '1234567890', nullable: true, maxLength: 20),
                 new OA\Property(property: 'is_vat_payer', type: 'boolean', example: true, nullable: true),
+                new OA\Property(property: 'vat_status', type: 'string', example: 'payer', enum: ['non_payer', 'identified', 'payer']),
                 new OA\Property(property: 'tax_flat_rate', type: 'integer', example: 20, nullable: true),
                 new OA\Property(property: 'default_currency', type: 'string', example: 'EUR', nullable: true, enum: ['CZK', 'EUR', 'USD']),
                 new OA\Property(property: 'invoice_prefix', type: 'string', example: 'FA', nullable: true, maxLength: 10),
                 new OA\Property(property: 'invoice_number_mask', type: 'string', example: '{YYYY}{NNNN}', nullable: true, maxLength: 40),
                 new OA\Property(property: 'invoice_number_start', type: 'integer', example: 1, nullable: true),
+                new OA\Property(property: 'quote_number_mask', type: 'string', example: '{YYYY}{NNNN}', nullable: true, maxLength: 40),
+                new OA\Property(property: 'quote_number_start', type: 'integer', example: 1, nullable: true, maximum: 99999999, minimum: 1),
                 new OA\Property(property: 'locale', type: 'string', example: 'sk', nullable: true, maxLength: 5),
                 new OA\Property(property: 'company_name', type: 'string', example: 'Ján Novák — JN Services', nullable: true, maxLength: 255),
                 new OA\Property(property: 'address', type: 'string', example: 'Hlavná 1', nullable: true),
@@ -252,9 +261,18 @@ class AuthController extends Controller
                 new OA\Property(property: 'invoice_footer_text', type: 'string', nullable: true, maxLength: 1000),
                 new OA\Property(property: 'clockify_api_key', type: 'string', nullable: true, maxLength: 100),
                 new OA\Property(property: 'clockify_workspace_id', type: 'string', nullable: true, maxLength: 50),
+                // The AI Act art. 50 opt-out: the transparency notice promises
+                // the account can switch extraction off, so the switch has to
+                // be reachable through the documented API, not just accepted
+                // by UpdateProfileData (the generated clients only know what
+                // this body declares).
+                new OA\Property(property: 'ai_extraction_enabled', type: 'boolean', nullable: true),
                 new OA\Property(property: 'auto_remind_enabled', type: 'boolean', nullable: true),
                 new OA\Property(property: 'auto_remind_after_days', type: 'integer', example: 3, nullable: true),
                 new OA\Property(property: 'auto_remind_max_count', type: 'integer', example: 3, nullable: true),
+                new OA\Property(property: 'overdue_digest_enabled', type: 'boolean', nullable: true),
+                new OA\Property(property: 'vat_filing_frequency', type: 'string', example: 'monthly', nullable: true, enum: ['monthly', 'quarterly']),
+                new OA\Property(property: 'tax_filing_reminder_enabled', type: 'boolean', nullable: true),
             ])
         ),
         tags: ['Authentication'],
@@ -336,13 +354,16 @@ class AuthController extends Controller
 
     #[OA\Get(
         path: '/api/v1/profile/export',
-        summary: 'Export all account data as JSON (GDPR data portability)',
+        summary: 'Export personal data as JSON (GDPR data portability)',
+        description: 'The account owner receives the whole account. A team member receives '
+            .'their own personal data only: profile, the activity they performed, and the '
+            .'notifications addressed to them — the account\'s business records belong to '
+            .'the owner as their controller.',
         security: [['sanctum' => []]],
         tags: ['Authentication'],
         responses: [
-            new OA\Response(response: 200, description: 'JSON export of the account'),
+            new OA\Response(response: 200, description: 'JSON export'),
             new OA\Response(response: 401, description: 'Unauthenticated'),
-            new OA\Response(response: 403, description: 'Only the account owner can export data'),
         ]
     )]
     public function exportData(Request $request): StreamedResponse|JsonResponse
@@ -350,11 +371,13 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if ($user->accountOwnerId() !== $user->id) {
-            return response()->json(['message' => __('auth.export_owner_only')], 403);
-        }
+        // A member is a data subject too — Art. 20 is about the person, not
+        // about who owns the account. In the OSS edition accountOwnerId() is
+        // always the user's own id, so this branch simply never fires there.
+        $data = $user->accountOwnerId() === $user->id
+            ? $this->exportService->build($user)
+            : $this->exportService->buildForMember($user);
 
-        $data = $this->exportService->build($user);
         $filename = 'qasa-export-'.now()->toDateString().'.json';
 
         return response()->streamDownload(function () use ($data): void {
@@ -390,7 +413,7 @@ class AuthController extends Controller
         $user = $request->user();
 
         if ($user->accountOwnerId() !== $user->id) {
-            return response()->json(['message' => __('auth.export_owner_only')], 403);
+            return response()->json(['message' => __('auth.delete_owner_only')], 403);
         }
 
         $request->validate(DeleteAccountData::rules());
@@ -401,6 +424,29 @@ class AuthController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        return response()->json(null, 204);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/profile/accept-terms',
+        summary: 'Record acceptance of the current terms of use / privacy policy version',
+        description: 'For accounts that predate terms_accepted_at, and for re-accepting after '
+            .'the version in config(\'gdpr.terms_version\') moves — see the terms_acceptance_required '
+            .'flag on the User resource.',
+        security: [['sanctum' => []]],
+        tags: ['Authentication'],
+        responses: [
+            new OA\Response(response: 204, description: 'Terms accepted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ]
+    )]
+    public function acceptTerms(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $this->acceptTermsAction->execute($user);
 
         return response()->json(null, 204);
     }

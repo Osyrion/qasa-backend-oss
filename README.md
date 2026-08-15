@@ -32,7 +32,7 @@ invoice-reminder and recurring-invoice cron jobs.
 
 ## Requirements
 
-- PHP 8.4+
+- PHP 8.5+
 - PostgreSQL 13+
 - Composer, Docker (optional, for the local stack)
 

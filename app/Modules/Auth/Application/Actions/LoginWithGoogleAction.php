@@ -6,6 +6,7 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\Results\LoginResult;
 use App\Modules\Auth\Application\Services\TwoFactorChallengeStore;
+use App\Modules\Auth\Domain\Events\TermsAccepted;
 use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Enums\Currency;
@@ -93,10 +94,17 @@ class LoginWithGoogleAction
                 'locale' => $this->preferredLocale($request),
                 'is_vat_payer' => false,
                 'tax_flat_rate' => 0,
+                // Registering via Google is registering — same as the
+                // password path. Linking google_id to an existing account
+                // (the branch above) never touches this: that user already
+                // consented, or is about to via their own separate accept.
+                'terms_accepted_at' => now(),
+                'terms_version' => config('gdpr.terms_version'),
             ]);
 
             // The SaaS Team module assigns the Owner role via a listener.
             event(new UserRegistered($user));
+            event(new TermsAccepted($user, (string) $user->terms_version));
 
             return $user;
         });

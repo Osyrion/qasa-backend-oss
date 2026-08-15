@@ -24,7 +24,9 @@ return [
     'invalid_2fa_code' => 'Invalid authentication code.',
     'challenge_expired' => 'This login challenge has expired or was already used. Please log in again.',
     'legacy_vat_payer_conflicts_with_identified' => 'This account is registered as an identified person; use "vat_status" to change its VAT status instead of the legacy "is_vat_payer" flag.',
-    'export_owner_only' => 'Only the account owner can perform this action.',
+    'delete_owner_only' => 'Only the account owner can perform this action.',
     'invalid_delete_confirmation' => 'Type "DELETE" to confirm deleting a Google-only account.',
     'email_already_taken' => 'This email is already registered.',
+    'terms_must_be_accepted' => 'You must accept the terms of use and privacy policy to register.',
+    'account_suspended' => 'This account has been suspended. Contact support for details.',
 ];

@@ -30,6 +30,12 @@ final class RequireBasicAuthWebhook
                 'password_config_key' => $passwordConfigKey,
             ]);
 
+            // Fail-closed is only half the protection: every webhook the
+            // provider sends is being rejected with a 500 until someone
+            // notices, and the provider gives up retrying long before a log
+            // file gets read.
+            report("Webhook rejected: basic auth credentials not configured ({$usernameConfigKey})");
+
             return response('Webhook credentials not configured', 500);
         }
 

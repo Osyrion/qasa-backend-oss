@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Exceptions\ExpectedIntegrationFailure;
 use App\Modules\Shared\Presentation\Middleware\AllowAllFeatures;
 use App\Modules\Shared\Presentation\Middleware\Authenticate;
 use App\Modules\Shared\Presentation\Middleware\BindAuthenticatedTenant;
@@ -16,6 +17,7 @@ use App\Providers\TelescopeServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Sentry\Laravel\Integration as SentryIntegration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
@@ -64,6 +66,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias($aliases);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Everything that survives the dontReport rules below goes to Sentry
+        // as well as to the log. Inert without SENTRY_LARAVEL_DSN, which is
+        // how the OSS build and the test suite get away with never thinking
+        // about it — see docs/plans/SENTRY_OBSERVABILITY_PLAN.md.
+        SentryIntegration::handles($exceptions);
+
         // A rule saying no is an answer, not a fault. Reporting these filled
         // the log with "the client has no e-mail address" and "SEPA export
         // requires an IBAN", each with a stack trace — 28 MB of them in
@@ -71,6 +79,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // production. The 422 below is what tells the caller; nobody is
         // paged for it.
         $exceptions->dontReport(DomainException::class);
+
+        // The same judgement one level out. An integration failure can be our
+        // bug or it can be a fact about the tenant's account — a revoked bank
+        // token, a BYOK key the provider stopped accepting, an access point
+        // that does not do inbound at all. Those classes carry both kinds in
+        // one type, so the instance is asked rather than the class name; see
+        // ExpectedIntegrationFailure. Still logged, just never paged for.
+        $exceptions->dontReportWhen(
+            fn (Throwable $e): bool => $e instanceof ExpectedIntegrationFailure && $e->isExpected()
+        );
 
         // Business-rule violations always surface as 422 JSON — the single
         // error convention across all modules. Controllers may still catch

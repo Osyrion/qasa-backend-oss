@@ -25,6 +25,7 @@ it('registers a user when the feature is enabled', function (): void {
         'surname' => 'Novák',
         'email' => 'jan@example.com',
         'password' => 'super-secret-1',
+        'accepted_terms' => true,
     ])->assertCreated();
 });
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Shared\Presentation\Middleware;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Auth\Middleware\Authenticate as BaseAuthenticate;
 use Illuminate\Http\Request;
@@ -30,10 +31,44 @@ class Authenticate extends BaseAuthenticate
     {
         parent::authenticate($request, $guards);
 
-        $user = $this->auth->user();
+        // Via the default guard explicitly: $this->auth is an Auth\Factory,
+        // which has no user() of its own — it only works by AuthManager
+        // forwarding unknown calls to guard().
+        $user = $this->auth->guard()->user();
 
         if ($user instanceof User) {
             TenantContext::set($user->accountOwnerId());
+
+            // Same reason the tenant bind lives here: this is where the
+            // identity is first known. An event without it cannot answer
+            // whether one account is affected or every account is.
+            SentryContext::identify($user->id, $user->accountOwnerId());
+
+            // After the bind, never before: accountOwner() reads the owner's
+            // row, which the users policy hides until the connection knows
+            // which account it is acting as.
+            //
+            // Checked here rather than only at login because a suspension has
+            // to take effect on the tokens already issued — otherwise an
+            // abusive account keeps working until its bearer token expires.
+            $this->denyIfSuspended($user);
         }
+    }
+
+    /**
+     * A suspended account is told why, so support has something to point at.
+     * 403 rather than 401: the credentials are fine, the account is not.
+     */
+    private function denyIfSuspended(User $user): void
+    {
+        if (! $user->isSuspended()) {
+            return;
+        }
+
+        abort(response()->json([
+            'message' => __('auth.account_suspended'),
+            'code' => 'account_suspended',
+            'reason' => $user->suspensionReason(),
+        ], 403));
     }
 }

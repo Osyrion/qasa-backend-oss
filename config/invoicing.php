@@ -115,13 +115,32 @@ return [
     |
     | The specification identifiers stamped on every exported e-invoice
     | (EN 16931 BT-24 and BT-23). Configurable rather than hard-coded so a
-    | national CIUS — or Peppol BIS Billing, once an access point is in the
-    | picture — is a deployment setting instead of a code change.
+    | national CIUS is a deployment setting instead of a code change.
+    |
+    | These two are a matched pair, not independent knobs. The profile said
+    | Peppol BIS Billing 3.0 from day one while the customization said plain
+    | EN 16931 — a document contradicting itself, which the Peppol Schematron
+    | rejects outright (and with it every access point, from 2027 the only way
+    | to deliver an invoice in Slovakia at all). Change one, change the other.
+    |
+    | Peppol BIS 3.0 is the right default rather than bare EN 16931 because
+    | Slovakia has declared no national CIUS: the mandate runs on Peppol
+    | directly.
+    |
+    | Overriding the customization from .env requires quoting it: the value
+    | contains "#", and phpdotenv reads an unquoted "#" as a comment, so
+    | QASA_UBL_CUSTOMIZATION_ID=urn:…#compliant#urn:… arrives as bare
+    | "urn:cen.eu:en16931:2017" — the contradiction above, restored in silence.
+    | The default here is a PHP literal and has no such problem, which is why
+    | .env.example ships these commented out rather than duplicating them.
     |
     */
 
     'ubl' => [
-        'customization_id' => env('QASA_UBL_CUSTOMIZATION_ID', 'urn:cen.eu:en16931:2017'),
+        'customization_id' => env(
+            'QASA_UBL_CUSTOMIZATION_ID',
+            'urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0',
+        ),
         'profile_id' => env('QASA_UBL_PROFILE_ID', 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0'),
     ],
 

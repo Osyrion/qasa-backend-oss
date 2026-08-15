@@ -69,7 +69,7 @@ class BankAccountController extends Controller
             new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Bank account', content: new OA\JsonContent(ref: '#/components/schemas/BankAccount')),
+            new OA\Response(response: 200, description: 'Bank account', content: new OA\JsonContent(properties: [new OA\Property(property: 'data', ref: '#/components/schemas/BankAccount')], type: 'object')),
             new OA\Response(response: 401, description: 'Unauthenticated'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
@@ -133,6 +133,40 @@ class BankAccountController extends Controller
      * @throws Throwable
      */
     #[OA\Put(
+        path: '/api/v1/bank-accounts/{id}',
+        summary: 'Update bank account',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['label', 'currency'],
+                properties: [
+                    new OA\Property(property: 'label', type: 'string', maxLength: 100),
+                    new OA\Property(property: 'bank_name', type: 'string', nullable: true, maxLength: 100),
+                    new OA\Property(property: 'account_number', type: 'string', nullable: true, maxLength: 30),
+                    new OA\Property(property: 'iban', type: 'string', nullable: true, maxLength: 34),
+                    new OA\Property(property: 'bic', type: 'string', nullable: true, maxLength: 11),
+                    new OA\Property(property: 'currency', type: 'string', enum: ['CZK', 'EUR', 'USD']),
+                    new OA\Property(property: 'is_default', type: 'boolean'),
+                    new OA\Property(property: 'is_primary', type: 'boolean', description: 'Fallback account across currencies when no account exists in the invoice currency'),
+                ]
+            )
+        ),
+        tags: ['BankAccounts'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(
+                properties: [new OA\Property(property: 'data', ref: '#/components/schemas/BankAccount')],
+                type: 'object',
+            )),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Not found'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    #[OA\Patch(
         path: '/api/v1/bank-accounts/{id}',
         summary: 'Update bank account',
         security: [['sanctum' => []]],

@@ -143,7 +143,7 @@ final class AnthropicDriver implements LlmProviderDriver
         ];
     }
 
-    private function model(): string
+    public function model(): string
     {
         return (string) config('invoicing.inbox.extraction.providers.anthropic.model', 'claude-haiku-4-5');
     }

@@ -27,6 +27,10 @@ function fakeJob(array $payload): Job
     $job = Mockery::mock(Job::class);
     $job->allows('payload')->andReturns($payload);
     $job->allows('uuid')->andReturns((string) Str::uuid());
+    // Not used by TenantQueue, but JobProcessing now also reaches the
+    // correlation listener in SharedServiceProvider, and a Mockery mock
+    // throws on anything it was not told about.
+    $job->allows('resolveName')->andReturns('Tests\\FakeJob');
 
     /** @var Job $job */
     return $job;

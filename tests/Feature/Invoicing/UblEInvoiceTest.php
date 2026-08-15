@@ -64,6 +64,14 @@ function ublValue(string $xml, string $expression): ?string
     return $nodes !== false && $nodes->length > 0 ? trim((string) $nodes->item(0)?->textContent) : null;
 }
 
+function ublAttribute(string $xml, string $expression, string $attribute): ?string
+{
+    $nodes = ublXpath($xml)->query($expression);
+    $node = $nodes === false ? null : $nodes->item(0);
+
+    return $node instanceof DOMElement ? $node->getAttribute($attribute) : null;
+}
+
 it('exports an invoice that validates against the official UBL 2.1 schema', function (): void {
     assertValidUbl(buildUbl(ublInvoice()));
 });
@@ -93,7 +101,13 @@ it('exports a credit note as a UBL CreditNote document', function (): void {
 it('carries the EN 16931 business terms a recipient needs', function (): void {
     $xml = buildUbl(ublInvoice());
 
-    expect(ublValue($xml, '/*/cbc:CustomizationID'))->toBe('urn:cen.eu:en16931:2017')   // BT-24
+    // BT-24. The Peppol-qualified form, not bare EN 16931: it has to agree
+    // with the ProfileID below, and PEPPOL-EN16931-R004 fails the document
+    // when it does not. Pinned literally rather than read back from config,
+    // so changing the default has to be a deliberate edit here too.
+    expect(ublValue($xml, '/*/cbc:CustomizationID'))
+        ->toBe('urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0')
+        ->and(ublValue($xml, '/*/cbc:ProfileID'))->toBe('urn:fdc:peppol.eu:2017:poacc:billing:01:1.0') // BT-23
         ->and(ublValue($xml, '/*/cbc:ID'))->toBe('FA-2026-001')                          // BT-1
         ->and(ublValue($xml, '/*/cbc:IssueDate'))->not->toBeNull()                       // BT-2
         ->and(ublValue($xml, '/*/cbc:DueDate'))->not->toBeNull()                         // BT-9
@@ -246,4 +260,79 @@ it('never resolves an external entity in an incoming invoice', function (): void
     $number = $parsed['supplier_invoice_number'] ?? '';
 
     expect($number)->not->toContain('root:');
+});
+
+it('does not expand an entity bomb into the worker', function (): void {
+    // Nested internal entities need no network and no filesystem, so the
+    // external-entity loader does not stop them — this one expands to 100 MB
+    // of text. Relevant since an e-invoice can now arrive by e-mail from
+    // anyone on the account's allowlist, and the parse runs in a queue worker.
+    $entities = "<!ENTITY a0 \"aaaaaaaaaa\">\n";
+
+    for ($i = 1; $i <= 7; $i++) {
+        $previous = $i - 1;
+        $entities .= "<!ENTITY a{$i} \"".str_repeat("&a{$previous};", 10)."\">\n";
+    }
+
+    $xml = <<<XML
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE Invoice [
+    {$entities}]>
+    <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+             xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+      <cbc:ID>&a7;</cbc:ID>
+    </Invoice>
+    XML;
+
+    $before = memory_get_usage(true);
+
+    // libxml's own amplification limit refuses the document outright, so the
+    // parser reports "not a UBL invoice" rather than allocating the payload.
+    expect(app(Ubl21InvoiceParser::class)->parse($xml))->toBeNull()
+        ->and(memory_get_usage(true) - $before)->toBeLessThan(10 * 1024 * 1024);
+});
+
+it('addresses Slovak parties by 0245 and their DIČ', function (): void {
+    $xml = buildUbl(ublInvoice());
+
+    // Until 2026-08-13 this said schemeID="9944" with the IČ DPH — 9944 is
+    // the *Netherlands* VAT scheme in the Peppol EAS code list, so every
+    // document declared a foreign electronic address on the field the network
+    // routes on. SK's mandate is built on 0245 + the 10-digit DIČ.
+    expect(ublAttribute($xml, '/*/cac:AccountingSupplierParty/cac:Party/cbc:EndpointID', 'schemeID'))->toBe('0245')
+        ->and(ublValue($xml, '/*/cac:AccountingSupplierParty/cac:Party/cbc:EndpointID'))->toBe('1020304050')
+        ->and(ublAttribute($xml, '/*/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID', 'schemeID'))->toBe('0245')
+        ->and(ublValue($xml, '/*/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID'))->toBe('9080706050');
+});
+
+it('prefers the recorded participant id over anything derived', function (): void {
+    $owner = createUser(['country' => 'SK']);
+    $invoice = ublInvoice(owner: $owner);
+
+    // What the account hands its access point for routing has to be what the
+    // document declares; deriving over the top would make the two disagree.
+    $snapshot = $invoice->client_snapshot;
+    $snapshot['peppol_id'] = '0088:1234567890128';
+    $invoice->client_snapshot = $snapshot;
+    $invoice->save();
+
+    $xml = buildUbl($invoice);
+
+    expect(ublAttribute($xml, '/*/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID', 'schemeID'))->toBe('0088')
+        ->and(ublValue($xml, '/*/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID'))->toBe('1234567890128');
+});
+
+it('omits an electronic address it cannot know rather than guessing one', function (): void {
+    $owner = createUser(['country' => 'SK']);
+    $invoice = ublInvoice(owner: $owner);
+
+    // A party outside SK/CZ with no recorded participant id: the code list has
+    // no generic VAT scheme, and a guess would route a legal document to a
+    // stranger. Absent fails Peppol validation loudly instead.
+    $invoice->client_snapshot = ['name' => 'Foreign GmbH', 'country' => 'AT', 'vat_id' => 'ATU12345678'];
+    $invoice->save();
+
+    $xml = buildUbl($invoice);
+
+    expect(ublValue($xml, '/*/cac:AccountingCustomerParty/cac:Party/cbc:EndpointID'))->toBeNull();
 });

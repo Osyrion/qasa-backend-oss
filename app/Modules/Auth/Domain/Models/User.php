@@ -94,6 +94,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property bool $notify_billing_enabled Gates the in-app (database channel) copy only
  * @property bool $notify_banking_enabled Gates the in-app (database channel) copy only
  * @property bool $notify_system_enabled Gates the in-app (database channel) copy only
+ * @property Carbon|null $terms_accepted_at Null for accounts that predate this column — never backfilled, since that would fabricate a consent that never happened
+ * @property string|null $terms_version Semver of the terms/privacy doc accepted, e.g. matched against config('gdpr.terms_version')
  * @property Carbon|null $email_verified_at
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -166,6 +168,17 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     use Notifiable;
     use SoftDeletes;
 
+    /**
+     * What a purged account's name reads as (PurgeDeletedAccountsAction).
+     *
+     * Deliberately not translated: it is written to the database once, by a
+     * scheduled command running under no locale in particular, and would
+     * otherwise be frozen in whatever locale that run happened to have. The
+     * surname is emptied rather than repeated, so full_name — which filters
+     * blanks — reads as this alone.
+     */
+    public const ANONYMISED = '[anonymised]';
+
     protected $fillable = [
         'title', 'name', 'surname', 'email', 'phone',
         'password', 'google_id', 'avatar_path', 'color',
@@ -181,6 +194,7 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         'clockify_api_key', 'clockify_workspace_id', 'ai_extraction_enabled',
         'notify_invoice_enabled', 'notify_quote_enabled', 'notify_tax_enabled',
         'notify_billing_enabled', 'notify_banking_enabled', 'notify_system_enabled',
+        'terms_accepted_at', 'terms_version',
     ];
 
     protected $hidden = [
@@ -226,6 +240,7 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     {
         return [
             'email_verified_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
             'vat_status' => VatStatus::class,
@@ -253,7 +268,26 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
+    }
+
+    // ── Suspension ────────────────────────────────────────────────────────────
+
+    /**
+     * Suspension applies to the whole account, not one login: a team member
+     * of a suspended account is locked out with the owner. Only the SaaS
+     * back office ever sets the column — see the migration for why it is
+     * still core.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->accountOwner()->suspended_at !== null;
+    }
+
+    public function suspensionReason(): ?string
+    {
+        return $this->accountOwner()->suspended_reason;
     }
 
     // ── Computed ──────────────────────────────────────────────────────────────
@@ -279,6 +313,16 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     public function hasTaxResidency(): bool
     {
         return $this->country !== null;
+    }
+
+    /**
+     * Whether the front end should surface the terms/privacy re-acceptance
+     * prompt — true both for an account that never accepted and for one
+     * whose accepted version fell behind config('gdpr.terms_version').
+     */
+    public function termsAcceptanceRequired(): bool
+    {
+        return $this->terms_version !== config('gdpr.terms_version');
     }
 
     public function usesRealExpenses(): bool

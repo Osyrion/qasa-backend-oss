@@ -39,7 +39,13 @@ final class RecordActivity
             return;
         }
 
-        $actorId = auth()->id();
+        // The authenticated *tenant*, never merely whoever the default guard
+        // happens to point at. actor_id is a foreign key into users, and an
+        // AdminUser id is not in that table — resolving it by id alone turns
+        // any request where the admin guard is the default into a foreign-key
+        // violation at the moment something is logged.
+        $actor = auth()->user();
+        $actorId = $actor instanceof User ? $actor->getKey() : null;
 
         $this->recorder->record(
             $userId,

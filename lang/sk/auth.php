@@ -24,7 +24,9 @@ return [
     'invalid_2fa_code' => 'Neplatný overovací kód.',
     'challenge_expired' => 'Táto prihlasovacia výzva vypršala alebo už bola použitá. Prihláste sa znova.',
     'legacy_vat_payer_conflicts_with_identified' => 'Tento účet je vedený ako identifikovaná osoba; na zmenu daňového statusu použite pole "vat_status" namiesto zastaraného príznaku "is_vat_payer".',
-    'export_owner_only' => 'Túto akciu môže vykonať len vlastník účtu.',
+    'delete_owner_only' => 'Túto akciu môže vykonať len vlastník účtu.',
     'invalid_delete_confirmation' => 'Pre zmazanie účtu prihláseného cez Google napíšte "DELETE".',
     'email_already_taken' => 'Tento e-mail je už zaregistrovaný.',
+    'terms_must_be_accepted' => 'Pre registráciu musíte súhlasiť s podmienkami používania a ochranou osobných údajov.',
+    'account_suspended' => 'Tento účet bol pozastavený. Pre podrobnosti kontaktujte podporu.',
 ];

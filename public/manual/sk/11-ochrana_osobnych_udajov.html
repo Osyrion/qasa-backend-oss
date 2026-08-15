@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ochrana osobných údajov — Qasa</title>
+<link rel="stylesheet" href="/manual/assets/manual.css">
+</head>
+<body>
+<div class="manual-shell">
+    <aside class="manual-nav">
+        <a class="manual-brand" href="/manual/sk/index.html">Qasa — návod</a>
+        <nav id="chapter-nav"></nav>
+        <a class="lang-switch" href="/manual/cs/index.html">Česky</a>
+    </aside>
+    <main class="manual-content">
+        <div class="search-box">
+            <input id="search-input" type="search" placeholder="Hľadať v návode…" autocomplete="off">
+            <div id="search-results"></div>
+        </div>
+        <h1>Ochrana osobných údajov</h1>
+<p>Táto kapitola zhŕňa všetko, čo v Qasa súvisí s GDPR, na jednom mieste. Jednotlivé kroky sú popísané aj v kapitolách, kde sa priamo používajú — tu nájdeš prehľad a odkazy.</p>
+<h2>Súhlas s podmienkami pri registrácii</h2>
+<p>Pri registrácii (kapitola Prvé kroky s Qasa) zaškrtneš súhlas s podmienkami používania a ochranou osobných údajov — bez neho registrácia neprejde. Ak sa podmienky neskôr zmenia, aplikácia ťa pri ďalšom prihlásení požiada o ich opätovné odsúhlasenie; staré prijatie sa na novú verziu neprenáša automaticky.</p>
+<h2>Stiahnutie vlastných dát</h2>
+<p><strong>Nastavenia → Profil → Exportovať dáta</strong> ti stiahne JSON so všetkým, čo o tvojom účte vedieme — klienti, faktúry, výdavky, aktivita na účte a ďalšie záznamy. Ak si <strong>člen tímu</strong>, nie majiteľ účtu, dostaneš len svoje vlastné dáta (profil, tvoju aktivitu, tvoje záznamy) — faktúry a klienti účtu patria majiteľovi ako prevádzkovateľovi, nie tebe.</p>
+<h2>Zmazanie účtu — kedy presne čo zmizne</h2>
+<p>Podrobný popis je v kapitole Prvé kroky s Qasa → Zmazanie účtu. V skratke:</p>
+<ol>
+<li><strong>Hneď po zrušení</strong> — odhlásenie zo všetkých zariadení, koniec prístupu, deaktivácia členov tímu.</li>
+<li><strong>30 dní po zrušení</strong> — nenávratné odstránenie osobných údajov (meno, e-mail, telefón, adresa, IČO/DIČ, logo, uložené prístupové kľúče).</li>
+</ol>
+<p><strong>Vystavené faktúry sa nemažú nikdy</strong> — zákon vyžaduje ich archiváciu (typicky 10 rokov) a faktúra si nesie údaje dodávateľa aj odberateľa zmrazené v deň vystavenia, takže ostáva čitateľná aj po zmazaní tvojho účtu. Preto si dáta stiahni <strong>pred</strong> zmazaním účtu, nie po ňom.</p>
+<h2>Anonymizácia klienta</h2>
+<p>Ak ťa tvoj klient (fyzická osoba) požiada o vymazanie svojich osobných údajov, použi <strong>Klienti → detail klienta → Vymazať osobné údaje</strong> — podrobne v kapitole Klienti. Rovnako ako pri účte: vystavené faktúry si zachovajú pôvodné údaje klienta, pretože sú to samostatné právne doklady s vlastnou archivačnou povinnosťou.</p>
+<h2>Ktoré služby tretích strán vidia tvoje dáta</h2>
+<p>Qasa nepredáva ani nezdieľa tvoje dáta na marketingové účely. Na samotný chod appky používame niekoľko externých služieb, každá len na svoj konkrétny účel:</p>
+<p>| Služba | Na čo ju používame | Vidí |
+|---|---|---|
+| Stripe | platby za predplatné, prípadne prijímanie platieb od tvojich klientov (Stripe Connect) | platobné a fakturačné údaje súvisiace s platbou |
+| Google | prihlásenie cez Google účet, voliteľná synchronizácia kalendára | e-mail a meno pri prihlásení; udalosti kalendára, ak si sync zapneš |
+| Anthropic (Claude) | voliteľné AI vyťaženie údajov z nahranej prijatej faktúry | obsah nahranej faktúry, len ak si túto funkciu zapneš |
+| Fio banka | voliteľné napojenie na bankový účet, sťahovanie výpisov | bankové transakcie, ak si napojenie vytvoríš |
+| Poskytovateľ e-mailu | odosielanie faktúr, upomienok, pozvánok a systémových e-mailov | adresát a obsah odoslaných e-mailov |
+| Sentry | hlásenie chýb aplikácie, aby sme sa o poruche dozvedeli skôr, než ju nahlásiš ty | technický popis chyby a identifikátor tvojho účtu — <strong>nie</strong> tvoj e-mail ani obsah dokladov. Pri chybe v prehliadači sa Sentry pri spojení dozvie aj tvoju IP adresu; máme nastavené, aby si ju neukladalo |</p>
+<p>Plný technický zoznam vrátane právneho základu a doby uchovávania je v
+<code>docs/legal/SUBPROCESSORS.md</code> a <code>docs/legal/PROCESSING_ACTIVITIES.md</code> (interná
+dokumentácia, nie súčasť tejto príručky).</p>
+<h2>Tvoje práva</h2>
+<ul>
+<li><strong>Prístup a prenositeľnosť</strong> — export dát vyššie.</li>
+<li><strong>Výmaz</strong> — zmazanie účtu / anonymizácia klienta vyššie.</li>
+<li><strong>Oprava</strong> — priamo v profile alebo v karte klienta.</li>
+<li><strong>Námietka / obmedzenie spracúvania</strong> a <strong>sťažnosť dozornému orgánu</strong> — kontaktuj podporu; na Slovensku je dozorným orgánom Úrad na ochranu osobných údajov SR, v Česku Úřad pro ochranu osobních údajů.</li>
+</ul>
+<div class="chapter-nav-links"><a href="10-notifikacie.html">&larr; Notifikácie</a><a href="12-umela_inteligencia.html">Umelá inteligencia v Qasa &rarr;</a></div>
+    </main>
+</div>
+<script src="/manual/assets/manual.js" data-locale="sk" data-active="ochrana_osobnych_udajov"></script>
+</body>
+</html>

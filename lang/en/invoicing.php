@@ -82,7 +82,7 @@ return [
 
     'inbox' => [
         'duplicate_file' => 'This file has already been uploaded.',
-        'upload_invalid_file' => 'The uploaded file must be a PDF, JPEG, or PNG within the allowed size limit.',
+        'upload_invalid_file' => 'The uploaded file must be a PDF, JPEG, PNG, or an XML e-invoice within the allowed size limit.',
         'already_processed' => 'This item has already been processed.',
         'unsupported_file' => 'Unsupported file type.',
         'extraction_failed' => 'Could not extract text from the document.',
@@ -128,6 +128,7 @@ return [
     'ubl_exemption_intra_community' => 'Intra-Community supply — exempt under Article 138 of Directive 2006/112/EC.',
     'ubl_exemption_not_registered' => 'The supplier is not registered for VAT.',
     'ubl_exemption_zero_rated' => 'Zero-rated supply.',
+    'ubl_document_discount' => 'Document level discount',
     'ubl_credit_note_terms' => 'Credit note relating to the original invoice; settlement date :date.',
 
     // Cash documents (PPD/VPD)
