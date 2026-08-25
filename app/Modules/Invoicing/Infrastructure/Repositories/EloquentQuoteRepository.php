@@ -6,7 +6,7 @@ namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\Quote;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use Carbon\CarbonImmutable;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;

@@ -20,6 +20,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'ip_address', type: 'string', nullable: true, example: '203.0.113.7'),
         new OA\Property(property: 'user_agent', type: 'string', nullable: true),
         new OA\Property(property: 'is_current', type: 'boolean'),
+        new OA\Property(property: 'has_push_token', type: 'boolean'),
         new OA\Property(property: 'last_used_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
     ]
@@ -44,6 +45,7 @@ class SessionResource extends JsonResource
             'ip_address' => $this->ip_address,
             'user_agent' => $this->user_agent,
             'is_current' => $this->currentTokenId !== null && (string) $this->id === (string) $this->currentTokenId,
+            'has_push_token' => $this->push_token !== null,
             'last_used_at' => $this->last_used_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
         ];

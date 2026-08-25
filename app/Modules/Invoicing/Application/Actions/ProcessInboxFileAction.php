@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\ProcessInboxFileActionInterface;
 use App\Modules\Invoicing\Application\Jobs\ProcessInboxItemJob;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -29,7 +29,7 @@ readonly class ProcessInboxFileAction implements ProcessInboxFileActionInterface
         private InvoiceInboxRepositoryInterface $repository,
     ) {}
 
-    public function execute(User $owner, string $disk, string $path, ?string $originalFilename = null): ?InvoiceInboxItem
+    public function execute(Account $owner, string $disk, string $path, ?string $originalFilename = null): ?InvoiceInboxItem
     {
         $userId = $owner->accountOwnerId();
         $mime = (string) Storage::disk($disk)->mimeType($path);

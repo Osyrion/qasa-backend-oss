@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Traits\HasUserScope;
 use Carbon\CarbonImmutable;
 use Database\Factories\Modules\Invoicing\Domain\Models\VatRateFactory;
@@ -13,7 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -32,7 +30,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $valid_to
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User|null $user
  *
  * @method static VatRateFactory factory($count = null, $state = [])
  * @method static Builder<static>|VatRate forUser($userId = null)
@@ -86,15 +83,5 @@ class VatRate extends Model
         }
 
         return true;
-    }
-
-    // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

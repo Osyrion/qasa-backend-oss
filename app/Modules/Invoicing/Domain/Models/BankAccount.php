@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\BankAccountFactory;
@@ -13,7 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
@@ -29,7 +27,6 @@ use Illuminate\Support\Carbon;
  * @property bool $is_primary Fallback account across currencies when no account exists in the invoice currency
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User|null $user
  *
  * @method static BankAccountFactory factory($count = null, $state = [])
  * @method static Builder<static>|BankAccount forUser($userId = null)
@@ -84,15 +81,5 @@ class BankAccount extends Model
             'bic' => $this->bic,
             'currency' => $this->currency->value,
         ];
-    }
-
-    // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

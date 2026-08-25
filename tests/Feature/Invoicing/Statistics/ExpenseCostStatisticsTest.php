@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use Illuminate\Support\Carbon;
@@ -35,12 +34,7 @@ it('includes expenses in monthly costs alongside supplier invoices', function ()
 it('converts a foreign-currency expense using the stored exchange rate fallback', function (): void {
     $user = createUser(['is_vat_payer' => false, 'vat_status' => 'non_payer', 'default_currency' => 'CZK']);
 
-    ExchangeRate::factory()->system()->create([
-        'base_currency' => 'EUR',
-        'target_currency' => 'CZK',
-        'rate' => 25.0,
-        'date' => '2026-07-01',
-    ]);
+    systemExchangeRate('EUR', 'CZK', '2026-07-01', '25.000000');
 
     Expense::factory()->create([
         'user_id' => $user->id, 'currency' => 'EUR', 'date' => '2026-07-10', 'amount' => 100,

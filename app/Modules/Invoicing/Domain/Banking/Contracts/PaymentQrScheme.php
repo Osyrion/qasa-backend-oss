@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Banking\Contracts;
 
-use App\Modules\Invoicing\Domain\Banking\BankAccountIdentity;
 use App\Modules\Invoicing\Domain\Banking\PaymentQrRequest;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use App\Modules\Shared\Enums\Currency;
 
 /**

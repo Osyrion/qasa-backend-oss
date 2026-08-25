@@ -6,9 +6,8 @@ namespace App\Modules\Auth\Application\Services;
 
 use App\Modules\Auth\Application\Contracts\SetupStepContributor;
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Domain\Models\BankAccount;
-use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
+use App\Modules\Invoicing\Application\Contracts\AccountInvoicingState;
 
 /**
  * Onboarding checklist for a fresh account — lets the frontend build a
@@ -26,7 +25,11 @@ class SetupStatusService
     /**
      * @param  iterable<SetupStepContributor>  $contributors  Steps owned by other modules.
      */
-    public function __construct(private readonly iterable $contributors = []) {}
+    public function __construct(
+        private readonly ClientDirectory $clients,
+        private readonly AccountInvoicingState $invoicing,
+        private readonly iterable $contributors = [],
+    ) {}
 
     /**
      * @return array{items: array<int, array{key: string, done: bool, optional: bool}>, completed: bool}
@@ -75,16 +78,16 @@ class SetupStatusService
 
     private function hasBankAccount(string $ownerId): bool
     {
-        return BankAccount::withoutGlobalScope('user')->where('user_id', $ownerId)->exists();
+        return $this->invoicing->hasBankAccount($ownerId);
     }
 
     private function hasClient(string $ownerId): bool
     {
-        return Client::withoutGlobalScope('user')->where('user_id', $ownerId)->exists();
+        return $this->clients->accountHasAny($ownerId);
     }
 
     private function hasInvoice(string $ownerId): bool
     {
-        return Invoice::withoutGlobalScope('user')->where('user_id', $ownerId)->exists();
+        return $this->invoicing->hasInvoice($ownerId);
     }
 }

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 use App\Modules\Shared\Exceptions\DomainException;
 
 readonly class RestoreClientAction
@@ -22,7 +23,7 @@ readonly class RestoreClientAction
      *
      * @throws DomainException
      */
-    public function execute(Client $client, User $owner): Client
+    public function execute(Client $client, Account&ProvidesPlanEntitlements $owner): Client
     {
         if (! $client->isArchived()) {
             return $client;
@@ -36,7 +37,7 @@ readonly class RestoreClientAction
     /**
      * @throws DomainException
      */
-    private function validateLimit(Client $client, User $owner): void
+    private function validateLimit(Client $client, Account&ProvidesPlanEntitlements $owner): void
     {
         $count = Client::forUser($owner->accountOwnerId())->active()->count();
 

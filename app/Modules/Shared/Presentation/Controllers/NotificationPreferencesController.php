@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\DTOs\NotificationPreferencesData;
+use App\Modules\Shared\Domain\Contracts\ManagesNotificationPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesNotificationPreferences;
+use App\Modules\Shared\Enums\NotificationCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -43,7 +45,7 @@ class NotificationPreferencesController extends Controller
     )]
     public function show(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var ProvidesNotificationPreferences $user */
         $user = $request->user();
 
         return response()->json($this->status($user));
@@ -75,25 +77,20 @@ class NotificationPreferencesController extends Controller
     {
         $request->validate(NotificationPreferencesData::rules());
 
-        /** @var User $user */
+        /** @var ManagesNotificationPreferences $user */
         $user = $request->user();
 
         $changes = [];
 
-        foreach ([
-            'notify_invoice_enabled',
-            'notify_quote_enabled',
-            'notify_tax_enabled',
-            'notify_billing_enabled',
-            'notify_banking_enabled',
-            'notify_system_enabled',
-        ] as $field) {
+        foreach (NotificationCategory::cases() as $category) {
+            $field = self::field($category);
+
             if ($request->has($field)) {
-                $changes[$field] = $request->boolean($field);
+                $changes[$category->value] = $request->boolean($field);
             }
         }
 
-        $user->forceFill($changes)->save();
+        $user->updateNotificationPreferences($changes);
 
         return response()->json($this->status($user));
     }
@@ -101,15 +98,25 @@ class NotificationPreferencesController extends Controller
     /**
      * @return array{notify_invoice_enabled: bool, notify_quote_enabled: bool, notify_tax_enabled: bool, notify_billing_enabled: bool, notify_banking_enabled: bool, notify_system_enabled: bool}
      */
-    private function status(User $user): array
+    private function status(ProvidesNotificationPreferences $user): array
     {
-        return [
-            'notify_invoice_enabled' => $user->notify_invoice_enabled,
-            'notify_quote_enabled' => $user->notify_quote_enabled,
-            'notify_tax_enabled' => $user->notify_tax_enabled,
-            'notify_billing_enabled' => $user->notify_billing_enabled,
-            'notify_banking_enabled' => $user->notify_banking_enabled,
-            'notify_system_enabled' => $user->notify_system_enabled,
-        ];
+        $status = [];
+
+        foreach (NotificationCategory::cases() as $category) {
+            $status[self::field($category)] = $user->wantsNotificationCategory($category);
+        }
+
+        /** @var array{notify_invoice_enabled: bool, notify_quote_enabled: bool, notify_tax_enabled: bool, notify_billing_enabled: bool, notify_banking_enabled: bool, notify_system_enabled: bool} $status */
+        return $status;
+    }
+
+    /**
+     * The request/response field for a category. The wire shape predates the
+     * enum and is what the front end sends, so it is derived here rather than
+     * the six column names being retyped.
+     */
+    private static function field(NotificationCategory $category): string
+    {
+        return "notify_{$category->value}_enabled";
     }
 }

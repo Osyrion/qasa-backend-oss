@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -45,7 +44,6 @@ use Illuminate\Support\Facades\Storage;
  * @property-read Client|null $matchedClient
  * @property-read SupplierInvoice|null $supplierInvoice
  * @property-read string|null $url
- * @property-read User|null $user
  *
  * @method static InvoiceInboxItemFactory factory($count = null, $state = [])
  * @method static Builder<static>|InvoiceInboxItem forUser($userId = null)
@@ -131,14 +129,6 @@ class InvoiceInboxItem extends Model
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * @return BelongsTo<SupplierInvoice, $this>

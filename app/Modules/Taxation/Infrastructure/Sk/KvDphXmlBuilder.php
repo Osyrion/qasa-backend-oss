@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use DOMDocument;
 use DOMElement;
 use LogicException;
@@ -29,7 +29,7 @@ final class KvDphXmlBuilder
 
     private const SUBMISSION_TYPE_RIADNY = 'R';
 
-    public function build(VatControlStatementReportData $report, User $user): string
+    public function build(VatControlStatementReportData $report, SupplierProfile $supplier): string
     {
         if ($report->month === null && $report->quarter === null) {
             throw new LogicException('KV DPH requires either a month or a quarter — an annual-scope report cannot be filed.');
@@ -39,7 +39,7 @@ final class KvDphXmlBuilder
         $dom->formatOutput = true;
 
         $root = $dom->createElementNS(self::NS, 'KVDPH_2025');
-        $root->appendChild($this->buildIdentifikacia($dom, $report, $user));
+        $root->appendChild($this->buildIdentifikacia($dom, $report, $supplier));
         $root->appendChild($this->buildTransakcie($dom, $report));
 
         $dom->appendChild($root);
@@ -61,30 +61,30 @@ final class KvDphXmlBuilder
         ];
     }
 
-    private function buildIdentifikacia(DOMDocument $dom, VatControlStatementReportData $report, User $user): DOMElement
+    private function buildIdentifikacia(DOMDocument $dom, VatControlStatementReportData $report, SupplierProfile $supplier): DOMElement
     {
         $el = $dom->createElementNS(self::NS, 'Identifikacia');
 
-        $el->appendChild($this->textEl($dom, 'IcDphPlatitela', $this->filerVatId($user)));
+        $el->appendChild($this->textEl($dom, 'IcDphPlatitela', $this->filerVatId($supplier)));
         $el->appendChild($this->textEl($dom, 'Druh', self::SUBMISSION_TYPE_RIADNY));
         $el->appendChild($this->buildObdobie($dom, $report));
-        $el->appendChild($this->textEl($dom, 'Nazov', $user->supplierName()));
-        $el->appendChild($this->textEl($dom, 'Stat', (string) ($user->country ?? 'SK')));
-        $el->appendChild($this->textEl($dom, 'Obec', (string) ($user->city ?? '')));
+        $el->appendChild($this->textEl($dom, 'Nazov', $supplier->name));
+        $el->appendChild($this->textEl($dom, 'Stat', (string) ($supplier->country ?? 'SK')));
+        $el->appendChild($this->textEl($dom, 'Obec', (string) ($supplier->city ?? '')));
 
-        if ($user->postal_code !== null) {
-            $el->appendChild($this->textEl($dom, 'PSC', $user->postal_code));
+        if ($supplier->postalCode !== null) {
+            $el->appendChild($this->textEl($dom, 'PSC', $supplier->postalCode));
         }
 
-        if ($user->address !== null) {
-            $el->appendChild($this->textEl($dom, 'Ulica', $user->address));
+        if ($supplier->address !== null) {
+            $el->appendChild($this->textEl($dom, 'Ulica', $supplier->address));
         }
 
-        if ($user->phone !== null) {
-            $el->appendChild($this->textEl($dom, 'Tel', $user->phone));
+        if ($supplier->phone !== null) {
+            $el->appendChild($this->textEl($dom, 'Tel', $supplier->phone));
         }
 
-        $el->appendChild($this->textEl($dom, 'Email', $user->email));
+        $el->appendChild($this->textEl($dom, 'Email', $supplier->email));
 
         return $el;
     }
@@ -198,15 +198,15 @@ final class KvDphXmlBuilder
         return $el;
     }
 
-    private function filerVatId(User $user): string
+    private function filerVatId(SupplierProfile $supplier): string
     {
-        $vatId = strtoupper((string) ($user->vat_id ?? ''));
+        $vatId = strtoupper((string) ($supplier->vatId ?? ''));
 
         if (preg_match('/^SK\d{10}$/', $vatId) === 1) {
             return $vatId;
         }
 
-        $digits = preg_replace('/\D/', '', $user->dic ?? '') ?? '';
+        $digits = preg_replace('/\D/', '', $supplier->dic ?? '') ?? '';
 
         return 'SK'.str_pad($digits, 10, '0', STR_PAD_LEFT);
     }

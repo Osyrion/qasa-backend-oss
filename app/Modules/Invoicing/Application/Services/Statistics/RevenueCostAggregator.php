@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
@@ -59,7 +60,7 @@ final readonly class RevenueCostAggregator
      * @return array<string, float> keyed by 'YYYY-MM', zero-filled for every
      *                              calendar month between $from and $to
      */
-    public function monthlyRevenue(User $user, string $from, string $to): array
+    public function monthlyRevenue(Account&ProvidesSupplierProfile $user, string $from, string $to): array
     {
         return $this->monthlySeries($user, $from, $to, revenue: true);
     }
@@ -68,17 +69,17 @@ final readonly class RevenueCostAggregator
      * @return array<string, float> keyed by 'YYYY-MM', zero-filled for every
      *                              calendar month between $from and $to
      */
-    public function monthlyCosts(User $user, string $from, string $to): array
+    public function monthlyCosts(Account&ProvidesSupplierProfile $user, string $from, string $to): array
     {
         return $this->monthlySeries($user, $from, $to, revenue: false);
     }
 
-    public function revenueBetween(User $user, string $from, string $to): float
+    public function revenueBetween(Account&ProvidesSupplierProfile $user, string $from, string $to): float
     {
         return array_sum($this->monthlyRevenue($user, $from, $to));
     }
 
-    public function costsBetween(User $user, string $from, string $to): float
+    public function costsBetween(Account&ProvidesSupplierProfile $user, string $from, string $to): float
     {
         return array_sum($this->monthlyCosts($user, $from, $to));
     }
@@ -89,7 +90,7 @@ final readonly class RevenueCostAggregator
      *
      * @return list<int>
      */
-    public function activityYears(User $user): array
+    public function activityYears(Account&ProvidesSupplierProfile $user): array
     {
         $userId = $user->accountOwnerId();
 
@@ -122,10 +123,10 @@ final readonly class RevenueCostAggregator
     /**
      * @return array<string, float>
      */
-    private function monthlySeries(User $user, string $from, string $to, bool $revenue): array
+    private function monthlySeries(Account&ProvidesSupplierProfile $user, string $from, string $to, bool $revenue): array
     {
         $userId = $user->accountOwnerId();
-        $amountColumn = $user->is_vat_payer ? 'subtotal' : 'total';
+        $amountColumn = $user->supplierProfile()->vatStatus->isVatPayer() ? 'subtotal' : 'total';
 
         if ($revenue) {
             $czkByMonth = $this->czkByMonth(

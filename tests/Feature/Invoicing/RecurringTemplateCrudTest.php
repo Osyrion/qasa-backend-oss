@@ -10,7 +10,12 @@ use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 /** @return array{0: User, 1: Client} */
 function templateScope(): array
 {
-    $user = createUser(['invoice_prefix' => 'FA', 'country' => 'CZ', 'vat_status' => 'payer']);
+    // default_currency matches the CZK templates below on purpose: these are a
+    // Czech account's own invoices, not multi-currency billing. Without it the
+    // plan gate in CreateInvoiceAction rejects every generated document — which
+    // is what it is there for, and what it silently failed to do while
+    // $template->user handed back a *core* User whose hasFeature() is always true.
+    $user = createUser(['invoice_prefix' => 'FA', 'country' => 'CZ', 'vat_status' => 'payer', 'default_currency' => 'CZK']);
     app(VatRateSeederService::class)->seedFor($user);
     $client = Client::factory()->create(['user_id' => $user->id]);
 

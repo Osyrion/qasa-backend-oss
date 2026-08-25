@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -32,7 +32,7 @@ readonly class CreateCorrectiveInvoiceAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Invoice $original, InvoiceType $type, User $user): Invoice
+    public function execute(Invoice $original, InvoiceType $type, Account $user): Invoice
     {
         if ($original->client !== null) {
             $this->usageGuard->ensureUsable($original->client);

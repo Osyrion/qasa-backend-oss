@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Domain\Banking;
 
 use App\Modules\Invoicing\Domain\Banking\Contracts\PaymentQrScheme;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use App\Modules\Shared\Enums\Currency;
 
 /**

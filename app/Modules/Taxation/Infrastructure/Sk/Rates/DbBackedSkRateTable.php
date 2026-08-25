@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk\Rates;
 
+use App\Modules\Taxation\Domain\Contracts\SkRateTable;
 use App\Modules\Taxation\Domain\Models\SkTaxRateParameterSet;
 
 /**

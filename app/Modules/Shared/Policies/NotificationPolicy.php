@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Policies;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Domain\Models\AccountNotification;
 
 /**
@@ -24,28 +24,28 @@ use App\Modules\Shared\Domain\Models\AccountNotification;
  */
 class NotificationPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(Actor $user): bool
     {
         return true;
     }
 
-    public function view(User $user, AccountNotification $notification): bool
+    public function view(Actor $user, AccountNotification $notification): bool
     {
         return $this->isRecipient($user, $notification);
     }
 
-    public function update(User $user, AccountNotification $notification): bool
+    public function update(Actor $user, AccountNotification $notification): bool
     {
         return $this->isRecipient($user, $notification);
     }
 
-    public function delete(User $user, AccountNotification $notification): bool
+    public function delete(Actor $user, AccountNotification $notification): bool
     {
         return $this->isRecipient($user, $notification);
     }
 
-    private function isRecipient(User $user, AccountNotification $notification): bool
+    private function isRecipient(Actor $user, AccountNotification $notification): bool
     {
-        return $notification->notifiable_id === $user->id;
+        return $notification->notifiable_id === $user->actorId();
     }
 }

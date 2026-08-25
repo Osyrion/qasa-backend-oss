@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
+use App\Modules\Invoicing\Application\Contracts\UblInvoiceBuilderInterface;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceBuilder;
 use App\Modules\Shared\Support\ContentDisposition;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Response;
@@ -25,7 +25,7 @@ class InvoiceUblController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private readonly Ubl21InvoiceBuilder $builder,
+        private readonly UblInvoiceBuilderInterface $builder,
     ) {}
 
     #[OA\Get(
@@ -53,9 +53,7 @@ class InvoiceUblController extends Controller
     {
         $this->authorize('view', $invoice);
 
-        $invoice->loadMissing(['items', 'relatedInvoice']);
-
-        $xml = $this->builder->build($invoice);
+        $xml = $this->builder->build($invoice->id);
         $filename = ($invoice->invoice_number ?? $invoice->id).'.xml';
 
         return response($xml, 200, [

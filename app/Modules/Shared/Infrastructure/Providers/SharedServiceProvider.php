@@ -32,14 +32,22 @@ use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Application\Actions\PurgeRequestMetadataAction;
 use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
 use App\Modules\Shared\Application\Contracts\AiModelResolver;
+use App\Modules\Shared\Application\Contracts\CaptchaVerifierInterface;
+use App\Modules\Shared\Application\Contracts\ErrorReportingContext;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
 use App\Modules\Shared\Application\Services\AiTransparencyRegister;
 use App\Modules\Shared\Application\Services\NullAiModelResolver;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
+use App\Modules\Shared\Domain\Contracts\AccountMemberDirectory;
 use App\Modules\Shared\Domain\Models\AccountNotification;
+use App\Modules\Shared\Infrastructure\Clients\TurnstileVerifier;
 use App\Modules\Shared\Infrastructure\Notifications\AccountDatabaseChannel;
+use App\Modules\Shared\Infrastructure\Persistence\ConfiguredAccountLocator;
+use App\Modules\Shared\Infrastructure\Persistence\OwnerOnlyMemberDirectory;
 use App\Modules\Shared\Infrastructure\Repositories\EloquentActivityRecorder;
 use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
 use App\Modules\Shared\Policies\NotificationPolicy;
+use App\Modules\Shared\Presentation\Console\ExportOperationalMetricsCommand;
 use App\Modules\Shared\Presentation\Console\PurgeActivityLogCommand;
 use App\Modules\Shared\Presentation\Console\PurgeIdempotencyKeysCommand;
 use App\Modules\Shared\Presentation\Console\PurgeNotificationsCommand;
@@ -49,15 +57,19 @@ use App\Modules\Shared\Presentation\Console\VerifyRowLevelSecurityCommand;
 use App\Modules\Shared\Support\OwnerConnection;
 use App\Modules\Shared\Support\TenantContext;
 use App\Modules\Shared\Support\TenantQueue;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\CommandStarting;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Events\ConnectionEstablished;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\ChannelManager;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -65,7 +77,15 @@ class SharedServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(AccountLocator::class, ConfiguredAccountLocator::class);
+        // bindIf for the same reason as AiModelResolver below: this provider
+        // is registered last, and Saas binds the team-aware directory.
+        $this->app->bindIf(AccountMemberDirectory::class, OwnerOnlyMemberDirectory::class);
         $this->app->bind(ActivityRecorderInterface::class, EloquentActivityRecorder::class);
+        // Singleton: the scope it configures is global to the process, so two
+        // instances would be two names for the same thing.
+        $this->app->singleton(ErrorReportingContext::class, SentryContext::class);
+        $this->app->bind(CaptchaVerifierInterface::class, TurnstileVerifier::class);
         $this->app->singleton(ActivityEventRegistry::class);
 
         // Tables owned by other modules clear their own metadata — the tag is
@@ -100,6 +120,9 @@ class SharedServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/ai.php');
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/health.php');
         $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/notifications.php');
+        $this->loadRoutesFrom(__DIR__.'/../../Presentation/Routes/waitlist.php');
+
+        RateLimiter::for('waitlist', fn (Request $request): Limit => Limit::perHour(20)->by($request->ip()));
 
         $this->bindTenantContext();
         $this->bindBackgroundCorrelation();
@@ -115,18 +138,29 @@ class SharedServiceProvider extends ServiceProvider
         // values. enforceMorphMap() would require every polymorphic relation
         // app-wide (Sanctum's tokenable, notifications' notifiable, ...) to
         // be registered here too.
+        //
+        // The account model is read from the auth config, never named: the
+        // SaaS edition swaps in its own subclass, and a hardcoded core User
+        // aliases a class that edition never instantiates — getMorphClass()
+        // then finds no entry for the real class and writes the FQCN, so the
+        // column ends up holding both spellings. Safe in boot(): every
+        // register() (SaasServiceProvider's included) has already run.
+        /** @var class-string<Model> $account */
+        $account = config('auth.providers.users.model');
+
         Relation::morphMap([
             'client' => Client::class,
             'order' => Order::class,
             'invoice' => Invoice::class,
             'quote' => Quote::class,
-            'user' => User::class,
+            'user' => $account,
         ]);
 
         $this->registerActivityEvents();
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                ExportOperationalMetricsCommand::class,
                 PurgeActivityLogCommand::class,
                 PurgeIdempotencyKeysCommand::class,
                 PurgeNotificationsCommand::class,
@@ -221,7 +255,7 @@ class SharedServiceProvider extends ServiceProvider
         $registry->register(
             UserIcoChanged::class,
             'user.ico_changed',
-            fn (UserIcoChanged $e): User => $e->user,
+            fn (UserIcoChanged $e): Model => $e->user,
             fn (UserIcoChanged $e): array => [
                 'old_ico' => $e->oldIco,
                 'new_ico' => $e->newIco,
@@ -249,20 +283,22 @@ class SharedServiceProvider extends ServiceProvider
      */
     private function bindBackgroundCorrelation(): void
     {
-        Event::listen(function (CommandStarting $event): void {
+        $errorContext = $this->app->make(ErrorReportingContext::class);
+
+        Event::listen(function (CommandStarting $event) use ($errorContext): void {
             $command = $event->command ?? 'artisan';
             $runId = (string) Str::uuid();
 
             Log::withContext(['run_id' => $runId, 'command' => $command]);
-            SentryContext::tagBackgroundRun('command', $command, $runId);
+            $errorContext->tagBackgroundRun('command', $command, $runId);
         });
 
-        Event::listen(function (JobProcessing $event): void {
+        Event::listen(function (JobProcessing $event) use ($errorContext): void {
             $job = $event->job->resolveName();
             $runId = $event->job->uuid() ?? (string) Str::uuid();
 
             Log::withContext(['run_id' => $runId, 'job' => $job]);
-            SentryContext::tagBackgroundRun('job', $job, $runId);
+            $errorContext->tagBackgroundRun('job', $job, $runId);
         });
     }
 

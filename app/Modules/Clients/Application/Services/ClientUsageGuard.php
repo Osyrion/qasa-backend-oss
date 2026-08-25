@@ -20,7 +20,7 @@ readonly class ClientUsageGuard implements ClientUsageGuardInterface
      */
     public function ensureUsable(Client $client): void
     {
-        if (! $this->policy->isUsable($client)) {
+        if (! $this->policy->isUsable($client->usageSubject())) {
             throw DomainException::because(__('clients.locked_readonly'));
         }
     }

@@ -11,7 +11,7 @@ use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use App\Modules\Shared\Support\Search;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,7 +58,12 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
                 $items->where(function (Builder $item) use ($orderId): void {
                     /** @var Builder<InvoiceItem> $item */
                     $item->whereHas('orderItem', fn ($q) => $q->where('order_id', $orderId));
-                    $this->trackedWork->orWhereLinkedToOrder($item, $orderId);
+
+                    $trackedWorkIds = $this->trackedWork->workIdsForOrder($orderId);
+
+                    if ($trackedWorkIds !== null) {
+                        $item->orWhereIn('time_entry_id', $trackedWorkIds);
+                    }
                 });
             });
         }

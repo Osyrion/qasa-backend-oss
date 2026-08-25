@@ -23,7 +23,7 @@ class ExchangeRateData extends Data
     public static function rules(): array
     {
         return [
-            'rate' => ['numeric', 'min:0.000001'],
+            'rate' => ['numeric', 'min:0.000001', 'decimal:0,6'],
             'date' => ['date'],
         ];
     }

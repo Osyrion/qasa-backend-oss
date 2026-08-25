@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Carbon;
 
@@ -150,12 +149,7 @@ it('converts a foreign-currency invoice using its frozen exchange rate snapshot'
 it('falls back to a stored exchange rate when no snapshot was frozen', function (): void {
     $user = createUser(['is_vat_payer' => true, 'vat_status' => 'payer', 'default_currency' => 'CZK']);
 
-    ExchangeRate::factory()->system()->create([
-        'base_currency' => 'EUR',
-        'target_currency' => 'CZK',
-        'rate' => 24.5,
-        'date' => '2026-07-01',
-    ]);
+    systemExchangeRate('EUR', 'CZK', '2026-07-01', '24.500000');
 
     Invoice::factory()->create([
         'user_id' => $user->id, 'type' => 'invoice', 'status' => 'issued',
@@ -172,12 +166,7 @@ it('falls back to a stored exchange rate when no snapshot was frozen', function 
 it('converts totals into a non-CZK default currency', function (): void {
     $user = createUser(['is_vat_payer' => true, 'vat_status' => 'payer', 'default_currency' => 'EUR']);
 
-    ExchangeRate::factory()->system()->create([
-        'base_currency' => 'EUR',
-        'target_currency' => 'CZK',
-        'rate' => 25.0,
-        'date' => '2026-07-01',
-    ]);
+    systemExchangeRate('EUR', 'CZK', '2026-07-01', '25.000000');
 
     Invoice::factory()->create([
         'user_id' => $user->id, 'type' => 'invoice', 'status' => 'issued',

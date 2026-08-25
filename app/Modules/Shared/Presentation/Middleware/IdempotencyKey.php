@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Middleware;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Domain\Models\IdempotencyKey as IdempotencyKeyModel;
 use Closure;
 use Illuminate\Http\Request;
@@ -39,14 +39,21 @@ class IdempotencyKey
             return $next($request);
         }
 
-        /** @var User|null $user */
+        /** @var Actor|null $user */
         $user = $request->user();
 
         if ($user === null) {
             return $next($request);
         }
 
-        $keyHash = hash('sha256', implode('|', [$key, $user->id, $request->method(), $request->path()]));
+        // Two different ids on purpose. The key namespace is per person: a
+        // stored response can carry data specific to whoever made the call,
+        // so two team members picking the same key string must not replay
+        // each other. The *row* belongs to the account, because
+        // idempotency_keys is an account-owned table and its RLS policy
+        // compares user_id against the bound account — writing the person's
+        // id there is rejected outright for anyone but the owner.
+        $keyHash = hash('sha256', implode('|', [$key, $user->actorId(), $request->method(), $request->path()]));
         $bodyHash = hash('sha256', $request->getContent());
 
         // A row past its TTL is no longer replayable, but it still occupies
@@ -57,7 +64,7 @@ class IdempotencyKey
             ->where('created_at', '<', now()->subHours(self::TTL_HOURS))
             ->delete();
 
-        if (! $this->claim($user->id, $keyHash, $bodyHash)) {
+        if (! $this->claim($user->accountOwnerId(), $keyHash, $bodyHash)) {
             return $this->replay($keyHash, $bodyHash);
         }
 
@@ -86,7 +93,8 @@ class IdempotencyKey
     }
 
     /**
-     * Take ownership of this key. False when somebody else already holds it.
+     * Take ownership of this key for $accountId. False when somebody else
+     * already holds it.
      *
      * ON CONFLICT DO NOTHING rather than catching the unique violation:
      * Postgres aborts the entire surrounding transaction on a failed
@@ -95,11 +103,11 @@ class IdempotencyKey
      * transaction being the obvious one, but any future outer transaction
      * just as much.
      */
-    private function claim(string $userId, string $keyHash, string $bodyHash): bool
+    private function claim(string $accountId, string $keyHash, string $bodyHash): bool
     {
         return IdempotencyKeyModel::query()->insertOrIgnore([
             'id' => (string) Str::uuid(),
-            'user_id' => $userId,
+            'user_id' => $accountId,
             'key_hash' => $keyHash,
             'body_hash' => $bodyHash,
             'response_status' => null,

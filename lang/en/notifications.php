@@ -29,6 +29,8 @@ return [
 
     'trial_ending_title' => 'Trial is running out',
     'trial_ending_body' => 'Your free trial ends in :days day(s). Pick a plan to keep everything you have set up.',
+    'trial_pending_title' => 'Trial waiting for phone verification',
+    'trial_pending_body' => 'Verify your phone number within :days day(s) to start your free trial.',
     'trial_expired_title' => 'Trial has ended',
     'trial_expired_body' => 'The account is back on the free tier. Nothing was deleted — clients above the free limit are read-only until you subscribe.',
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use Carbon\CarbonImmutable;
 
 it('formats a sequence using date and width placeholders', function (string $mask, int $sequence, string $date, string $expected): void {

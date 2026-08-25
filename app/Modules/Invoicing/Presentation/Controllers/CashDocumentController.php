@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\CreateCashDocumentAction;
 use App\Modules\Invoicing\Application\Actions\ReverseCashDocumentAction;
 use App\Modules\Invoicing\Application\DTOs\CashDocumentData;
@@ -13,6 +12,7 @@ use App\Modules\Invoicing\Application\Services\CashDocumentPdfService;
 use App\Modules\Invoicing\Domain\Enums\CashDocumentType;
 use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Invoicing\Presentation\Resources\CashDocumentResource;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Shared\Support\Pagination;
@@ -98,7 +98,7 @@ class CashDocumentController extends Controller
     {
         $this->authorize('create', CashDocument::class);
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $data = CashDocumentData::validateAndCreate($request->all());
@@ -194,7 +194,7 @@ class CashDocumentController extends Controller
     {
         $this->authorize('viewAny', CashDocument::class);
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         return response()->json([

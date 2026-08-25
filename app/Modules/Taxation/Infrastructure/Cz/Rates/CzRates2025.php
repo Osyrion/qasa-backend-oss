@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz\Rates;
 
+use App\Modules\Taxation\Domain\Contracts\CzRateTable;
+
 /**
  * CZ personal income tax + OSVČ contribution parameters for 2025.
  *

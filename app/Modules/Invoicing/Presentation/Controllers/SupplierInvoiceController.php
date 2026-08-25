@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\CreateSupplierInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\DeleteSupplierInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\UpdateSupplierInvoiceAction;
@@ -15,6 +14,10 @@ use App\Modules\Invoicing\Application\Services\SupplierPaymentQrService;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Presentation\Resources\SupplierInvoiceResource;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -218,11 +221,11 @@ class SupplierInvoiceController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->supplierProfile()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')
@@ -366,11 +369,11 @@ class SupplierInvoiceController extends Controller
     )]
     public function update(Request $request, SupplierInvoice $supplierInvoice): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->supplierProfile()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')

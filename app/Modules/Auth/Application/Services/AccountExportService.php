@@ -6,14 +6,6 @@ namespace App\Modules\Auth\Application\Services;
 
 use App\Modules\Auth\Application\Contracts\AccountExportContributor;
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Domain\Models\BankAccount;
-use App\Modules\Invoicing\Domain\Models\ExchangeRate;
-use App\Modules\Invoicing\Domain\Models\Expense;
-use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
-use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
-use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Shared\Domain\Models\AccountNotification;
 use App\Modules\Shared\Domain\Models\ActivityLog;
 
@@ -68,32 +60,15 @@ class AccountExportService
         $ownerId = $user->accountOwnerId();
         $owner = $user->accountOwner();
 
+        // Only what Auth and Shared own. Everything else — clients, orders,
+        // the six invoicing sections, and the premium modules' — arrives
+        // through contributors, so the module that owns a table is the one
+        // that decides what an export of it contains.
         $export = [
             'exported_at' => now()->toISOString(),
             'profile' => $owner->toArray(),
-            'clients' => Client::forUser($ownerId)->with('contactPersons')->get()->toArray(),
-            'orders' => Order::forUser($ownerId)->with(['items', 'notes', 'attachments'])->get()
-                ->map(fn (Order $order): array => [
-                    ...$order->toArray(),
-                    'attachments' => $order->attachments->map(fn ($attachment): array => [
-                        'id' => $attachment->id,
-                        'filename' => $attachment->filename,
-                        'label' => $attachment->label,
-                        'mime_type' => $attachment->mime_type,
-                        'size_bytes' => $attachment->size_bytes,
-                        'created_at' => $attachment->created_at?->toISOString(),
-                    ])->toArray(),
-                ])->toArray(),
-            'expenses' => Expense::forUser($ownerId)->get()->toArray(),
-            'exchange_rates' => ExchangeRate::query()->where('user_id', $ownerId)->get()->toArray(),
-            'bank_accounts' => BankAccount::forUser($ownerId)->get()->toArray(),
-            'invoices' => Invoice::forUser($ownerId)->with(['items', 'payments'])->get()->toArray(),
-            'recurring_invoice_templates' => RecurringInvoiceTemplate::forUser($ownerId)->with('items')->get()->toArray(),
-            'supplier_invoices' => SupplierInvoice::forUser($ownerId)->with('vatLines')->get()->toArray(),
-            // Shared owns these two, and Shared is core — no contributor
-            // needed, unlike the premium sections appended below. Both are
-            // the user's own record of what happened on the account, which is
-            // squarely what Art. 20 is about.
+            // Shared owns these two. Both are the user's own record of what
+            // happened on the account, which is squarely what Art. 20 is about.
             'activity_log' => ActivityLog::forUser($ownerId)->get()->toArray(),
             'notifications' => AccountNotification::forUser($ownerId)->get()->toArray(),
         ];

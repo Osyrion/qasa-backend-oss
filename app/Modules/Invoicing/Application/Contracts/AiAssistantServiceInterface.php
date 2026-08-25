@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\DTOs\AiCompletionResult;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Cross-module boundary for AiAssistantService — premium modules (Reports,
@@ -15,5 +16,5 @@ use App\Modules\Invoicing\Application\DTOs\AiCompletionResult;
  */
 interface AiAssistantServiceInterface
 {
-    public function complete(User $owner, string $prompt): AiCompletionResult;
+    public function complete(Account&ProvidesPlanEntitlements $owner, string $prompt): AiCompletionResult;
 }

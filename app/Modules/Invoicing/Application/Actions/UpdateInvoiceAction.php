@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -17,6 +17,7 @@ use Throwable;
 readonly class UpdateInvoiceAction
 {
     public function __construct(
+        private ClientDirectory $clients,
         private InvoiceRepositoryInterface $repository,
         private TaxSystemResolverInterface $taxSystemResolver,
         private ClientUsageGuardInterface $usageGuard,
@@ -40,21 +41,19 @@ readonly class UpdateInvoiceAction
         }
 
         if ($data->client_id !== $invoice->client_id) {
-            $client = Client::query()->find($data->client_id);
-
-            if ($client !== null) {
-                $this->usageGuard->ensureUsable($client);
-            }
+            $this->clients->assertWithinPlanLimits($data->client_id);
         }
 
         return DB::transaction(function () use ($invoice, $data): Invoice {
             $user = $invoice->user;
             assert($user !== null);
-            $owner = $user->accountOwner();
-            $client = Client::forUser($owner->id)->findOrFail($data->client_id);
+            // The relation is the account itself — every tenant-scoped row is
+            // keyed by accountOwnerId(), so there is no member row to resolve.
+            $supplier = $user->supplierProfile();
+            $client = $this->clients->requireOwnedProfile($data->client_id, $user->accountOwnerId());
 
-            $decision = $this->taxSystemResolver->forUser($owner)->vatRegimeResolver()->resolve(
-                $owner->vat_status,
+            $decision = $this->taxSystemResolver->forSupplier($supplier)->vatRegimeResolver()->resolve(
+                $supplier->vatStatus,
                 $client,
                 $data->reverse_charge,
             );

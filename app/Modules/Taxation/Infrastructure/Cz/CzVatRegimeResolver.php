@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
-use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
-use App\Modules\Invoicing\Domain\Services\InvoiceVatRegimeDecision;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceVatRegimeDecision;
+use App\Modules\Shared\Domain\ValueObjects\PartyProfile;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Domain\Contracts\VatRegimeResolver;
@@ -30,7 +30,7 @@ final class CzVatRegimeResolver implements VatRegimeResolver
      */
     public function resolve(
         VatStatus $supplierStatus,
-        Client $client,
+        PartyProfile $client,
         bool $requestReverseCharge,
     ): InvoiceVatRegimeDecision {
         if ($supplierStatus === VatStatus::NonPayer) {
@@ -54,7 +54,7 @@ final class CzVatRegimeResolver implements VatRegimeResolver
         if ($requestReverseCharge) {
             $isDomestic = strtoupper($client->country) === self::COUNTRY;
 
-            if ($isDomestic && $client->reverse_charge_allowed) {
+            if ($isDomestic && $client->reverseChargeAllowed) {
                 return new InvoiceVatRegimeDecision(true, ReverseChargeMode::Domestic);
             }
 
@@ -64,9 +64,9 @@ final class CzVatRegimeResolver implements VatRegimeResolver
         return new InvoiceVatRegimeDecision(false, null);
     }
 
-    private function isEuClientWithVatId(Client $client): bool
+    private function isEuClientWithVatId(PartyProfile $client): bool
     {
-        if ($client->vat_id === null || $client->vat_id === '') {
+        if ($client->vatId === null || $client->vatId === '') {
             return false;
         }
 

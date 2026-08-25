@@ -26,6 +26,9 @@ final class TenantPolicy
 {
     public const NAME = 'tenant_isolation';
 
+    /** Companion policy on the mixed tables — see ownOrShared(). */
+    public const SHARED_READ_NAME = 'tenant_shared_read';
+
     private const ACCOUNT = "nullif(current_setting('app.account_owner_id', true), '')::uuid";
 
     /**
@@ -65,21 +68,44 @@ final class TenantPolicy
     }
 
     /**
-     * A table mixing per-account rows with shared ones (user_id IS NULL).
+     * A table mixing per-account rows with shared ones (user_id IS NULL):
+     * everyone reads the shared rows, nobody writes them.
      *
-     * The shared rows are readable and writable by anyone, which is what they
-     * already were: exchange rates are public reference data, and whichever
-     * account needs a given day's rate first is the one that fetches and
-     * stores it.
+     * The first version let any account write them too, on the grounds that
+     * whichever account needs a given day's rate first is the one that
+     * fetches and stores it. That made the *global* ČNB rate — the number
+     * every other account's foreign-currency invoice is converted with —
+     * writable, and deletable, from any tenant request: far more permission
+     * than that one cache-fill needs. The fill now goes through
+     * upsert_system_exchange_rate(), a SECURITY DEFINER function that writes
+     * exactly that one row shape and nothing else
+     * (2026_08_19_000002_restrict_system_exchange_rate_writes).
+     *
+     * Two policies rather than one asymmetric policy, because Postgres
+     * filters each command differently. A single FOR ALL policy with a wide
+     * USING and a narrow WITH CHECK would stop an UPDATE — checked against
+     * both — but not a DELETE, which only consults USING. Splitting it so
+     * that everything except SELECT is own-rows-only leaves a shared row
+     * visible and unreachable by any write: the UPDATE and the DELETE both
+     * match nothing instead of one of them going through. Permissive
+     * policies are OR'd, so the account's own rows stay fully writable.
      */
     public static function ownOrShared(string $table): void
     {
-        self::create($table, 'user_id IS NULL OR user_id = '.self::ACCOUNT);
+        self::create($table, 'user_id = '.self::ACCOUNT);
+
+        DB::statement(sprintf(
+            'CREATE POLICY %s ON %s FOR SELECT TO %s USING (user_id IS NULL)',
+            self::SHARED_READ_NAME,
+            self::identifier($table),
+            self::role(),
+        ));
     }
 
     public static function drop(string $table): void
     {
         DB::statement('DROP POLICY IF EXISTS '.self::NAME.' ON '.self::identifier($table));
+        DB::statement('DROP POLICY IF EXISTS '.self::SHARED_READ_NAME.' ON '.self::identifier($table));
         DB::statement('ALTER TABLE '.self::identifier($table).' DISABLE ROW LEVEL SECURITY');
     }
 

@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -37,7 +38,7 @@ final readonly class HealthStatisticsService
     /**
      * @return array<string, mixed>
      */
-    public function getStatistics(User $user): array
+    public function getStatistics(Account&ProvidesSupplierProfile $user): array
     {
         $range = (new StatisticsPeriods)->rolling12();
 
@@ -47,7 +48,7 @@ final readonly class HealthStatisticsService
         $supplierConcentration = $this->concentration($user, $range, revenue: false);
 
         return [
-            'currency' => $user->default_currency->value,
+            'currency' => $user->supplierProfile()->defaultCurrency->value,
             'dso' => ['days' => $dso['dso'], 'sample_size' => $dso['sample_size']],
             'payment_morale' => [
                 'on_time_percent' => $dso['on_time_percent'],
@@ -68,7 +69,7 @@ final readonly class HealthStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array{dso: ?float, on_time_percent: ?float, late_percent: ?float, avg_days_late: ?float, sample_size: int}
      */
-    private function dsoAndMorale(User $user, array $range): array
+    private function dsoAndMorale(Account&ProvidesSupplierProfile $user, array $range): array
     {
         // withMax rather than with('payments'): only the last payment date
         // matters, so a correlated subquery replaces loading every payment
@@ -131,7 +132,7 @@ final readonly class HealthStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array{days: ?float, sample_size: int}
      */
-    private function dpo(User $user, array $range): array
+    private function dpo(Account&ProvidesSupplierProfile $user, array $range): array
     {
         // Both columns are plain dates, so date - date gives whole days —
         // the same integer the Carbon diff produced.
@@ -159,7 +160,7 @@ final readonly class HealthStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array{top1_share_percent: ?float, risk_level: ?string, pareto_count: ?int}
      */
-    private function concentration(User $user, array $range, bool $revenue): array
+    private function concentration(Account&ProvidesSupplierProfile $user, array $range, bool $revenue): array
     {
         $amounts = $this->partnerAmountsInDefaultCurrency($user, $range, $revenue);
 
@@ -205,10 +206,10 @@ final readonly class HealthStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array<string, float>
      */
-    private function partnerAmountsInDefaultCurrency(User $user, array $range, bool $revenue): array
+    private function partnerAmountsInDefaultCurrency(Account&ProvidesSupplierProfile $user, array $range, bool $revenue): array
     {
         $userId = $user->accountOwnerId();
-        $amountColumn = $user->is_vat_payer ? 'subtotal' : 'total';
+        $amountColumn = $user->supplierProfile()->vatStatus->isVatPayer() ? 'subtotal' : 'total';
 
         $query = $revenue
             ? Invoice::withoutGlobalScope('user')

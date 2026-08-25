@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Domain\Events;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -19,6 +21,6 @@ class TaxResidencyCompleted
     use SerializesModels;
 
     public function __construct(
-        public readonly User $user,
+        public readonly Account&Model&ProvidesSupplierProfile $user,
     ) {}
 }

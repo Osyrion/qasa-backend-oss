@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Actions\AnonymizeClientAction;
 use App\Modules\Clients\Application\Actions\ArchiveClientAction;
 use App\Modules\Clients\Application\Actions\CreateClientAction;
@@ -17,6 +16,8 @@ use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Clients\Presentation\Resources\ClientResource;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -219,9 +220,9 @@ class ClientController extends Controller
     {
         try {
             $data = ClientData::validateAndCreate($request->all());
-            /** @var User $user */
+            /** @var Account&ProvidesPlanEntitlements $user */
             $user = $request->user();
-            $client = $this->createAction->execute($data, $user->accountOwner());
+            $client = $this->createAction->execute($data, $user);
 
             return ClientResource::make($client)->response()->setStatusCode(201);
         } catch (DomainException $e) {
@@ -350,9 +351,9 @@ class ClientController extends Controller
     {
         try {
             $data = ClientData::validateAndCreate($request->all());
-            /** @var User $user */
+            /** @var Account&ProvidesPlanEntitlements $user */
             $user = $request->user();
-            $updated = $this->updateAction->execute($client, $data, $user->accountOwner());
+            $updated = $this->updateAction->execute($client, $data, $user);
 
             return ClientResource::make($updated)->response();
         } catch (DomainException $e) {
@@ -548,11 +549,11 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
-        /** @var User $user */
+        /** @var Account&ProvidesPlanEntitlements $user */
         $user = $request->user();
 
         try {
-            return ClientResource::make($this->restoreAction->execute($client, $user->accountOwner()))->response();
+            return ClientResource::make($this->restoreAction->execute($client, $user))->response();
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

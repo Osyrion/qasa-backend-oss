@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Enums\RecurringPeriod;
@@ -55,7 +54,6 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $items_count
  * @property-read Collection<int, Invoice> $invoices
  * @property-read int|null $invoices_count
- * @property-read User|null $user
  *
  * @method static Builder<static>|RecurringInvoiceTemplate dueForGeneration(CarbonImmutable $today)
  * @method static RecurringInvoiceTemplateFactory factory($count = null, $state = [])
@@ -175,14 +173,6 @@ class RecurringInvoiceTemplate extends Model
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * @return BelongsTo<Client, $this>

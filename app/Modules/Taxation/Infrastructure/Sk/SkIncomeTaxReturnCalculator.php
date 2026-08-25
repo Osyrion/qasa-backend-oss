@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Taxation\Infrastructure\Sk;
 
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Taxation\Application\Contracts\EffectiveRateTables;
 use App\Modules\Taxation\Domain\Contracts\IncomeTaxReturnCalculator;
+use App\Modules\Taxation\Domain\Contracts\SkRateTable;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnInput;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnResult;
-use App\Modules\Taxation\Infrastructure\Sk\Rates\DbBackedSkRateTable;
-use App\Modules\Taxation\Infrastructure\Sk\Rates\SkRates2025;
-use App\Modules\Taxation\Infrastructure\Sk\Rates\SkRates2026;
-use App\Modules\Taxation\Infrastructure\Sk\Rates\SkRateTable;
 
 /**
  * §6 (príjem z podnikania) worksheet — 60% flat-rate expenses (capped, plus
@@ -22,20 +20,11 @@ use App\Modules\Taxation\Infrastructure\Sk\Rates\SkRateTable;
  */
 final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalculator
 {
-    /** @var array<int, SkRateTable> */
-    private array $rateTables;
-
-    public function __construct()
-    {
-        $this->rateTables = [
-            2025 => new SkRates2025,
-            2026 => new SkRates2026,
-        ];
-    }
+    public function __construct(private EffectiveRateTables $rates) {}
 
     public function supportsYear(int $year): bool
     {
-        return isset($this->rateTables[$year]) || DbBackedSkRateTable::hasYear($year);
+        return $this->rates->sk($year) !== null;
     }
 
     public function calculate(TaxReturnInput $input): TaxReturnResult
@@ -118,8 +107,7 @@ final readonly class SkIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
      */
     private function ratesFor(int $year): SkRateTable
     {
-        return DbBackedSkRateTable::forYear($year)
-            ?? $this->rateTables[$year]
+        return $this->rates->sk($year)
             ?? throw DomainException::because(__('taxation.unsupported_tax_year', ['year' => $year]));
     }
 

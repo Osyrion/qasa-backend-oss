@@ -2,8 +2,6 @@ includes:
     - ./vendor/larastan/larastan/extension.neon
 
 parameters:
-    parallel:
-        maximumNumberOfProcesses: 1
     level: 8
     paths:
         - app
@@ -13,8 +11,6 @@ parameters:
         - tests
     excludePaths:
         analyseAndScan:
-            - app/Console/Kernel.php (?)
-            - app/Exceptions/Handler.php (?)
             - bootstrap/*
             # Core stand-ins loaded only when tests/Pest.edition.php is absent.
             # Analysing both would make PHPStan resolve createSaasUser() to the
@@ -23,13 +19,90 @@ parameters:
             - storage/*
             - vendor/*
             - node_modules/*
+    # Bounded so the whole Docker stack fits the 2 GB cap in
+    # docker-compose.yml. PHPStan forks one worker per core, and each may
+    # reach --memory-limit; measured cold on this tree (4 cores, 2026-08-25):
+    #
+    #   4 workers @1G (the default)  2455 MiB  — and the *slowest* of the
+    #                                             three: four workers on four
+    #                                             cores thrash
+    #   2 workers @512M              OOM-killed against the 1168M container
+    #   1 worker  @768M              1016 MiB  — what `composer phpstan` runs
+    #
+    # Under half the memory of the default. Both numbers matter together and
+    # neither may be lowered on its own: a second worker blows the container
+    # cap, and a single worker under 768M runs out of PHP memory mid-analysis
+    # (512M crashes it, 288M crashes it faster). Measured with the kernel's
+    # own high-water mark — polling `docker stats` under-reports the peak by
+    # a factor of four and will tell you a broken config is fine.
+    parallel:
+        maximumNumberOfProcesses: 1
+
     checkFunctionNameCase: true
     checkInternalClassCaseSensitivity: true
+    # Every ignore below has to still match something, or the run fails. That
+    # is the point: an ignore that has outlived its bug is an ignore nobody can
+    # tell from a live one.
+    #
+    # There is no baseline any more. phpstan-baseline.neon carried 184 errors
+    # when level 8 was turned on (2026-08-18) and was emptied over the two days
+    # after — the last four entries moved here on 2026-08-19, which is what
+    # this file is for: exceptions somebody decided on, each naming a class and
+    # a reason. scripts/phpstan-ratchet.py compares this list against
+    # origin/main and rejects additions, so a new one is a deliberate act, not
+    # a regenerated file. If a toolchain upgrade ever surfaces a hundred errors
+    # at once, `--generate-baseline` plus an include line brings a baseline
+    # back for as long as it takes to triage them; the ratchet counts both
+    # files, so nothing is lost by doing it.
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:
-        - '#Call to an undefined method.*#'
-        - '#Access to an undefined property.*#'
-        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder.*#'
+        # --- Pest's runtime $this binding ---------------------------------
+        # Pest rebinds $this in every test closure to the TestCase built by
+        # uses() in tests/Pest.php; PHPStan only sees the closure's declared
+        # scope, so every actingAs()/travel()/mock()/$this->fixture reads as
+        # undefined. Scoped to tests/ deliberately — the same message in app/
+        # is a real bug, which is how the ForeignKeyDefinition::comment() and
+        # Account-contract gaps below stayed invisible for months.
+        -
+            message: '#Call to an undefined method PHPUnit\\Framework\\TestCase::#'
+            path: tests/*
+        -
+            message: '#Access to an undefined property PHPUnit\\Framework\\TestCase::#'
+            path: tests/*
+        -
+            # Pest's own fluent surface: TestCall/HigherOrderTapProxy forward
+            # every unknown call to the bound TestCase, and Expectation's ->not
+            # is a property-style mixin. Both are __call/__get by design.
+            message: '#Call to an undefined method Pest\\(PendingCalls\\TestCall|Support\\HigherOrderTapProxy)#'
+            path: tests/*
+        -
+            message: '#Access to an undefined property Pest\\(Mixins\\)?Expectation<#'
+            path: tests/*
+        -
+            # The expectation object shouldReceive() hands back — typed as the
+            # union ExpectationInterface|HigherOrderMessage[|MockInterface] —
+            # answers every call through __call, so naming its methods here
+            # would just be a list of Mockery's API. The receiver is pinned on
+            # purpose: a call straight to the *mock* (`$mock->typoedMethod()`)
+            # reports Mockery\MockInterface alone, does not match this, and
+            # stays an error.
+            message: '#Call to an undefined method Mockery\\ExpectationInterface\|#'
+            path: tests/*
+        -
+            # Model::factory() is typed Factory<Model>, so the factory's own
+            # state methods (withTwoFactor(), …) are invisible. Fixing this
+            # properly means a @method-annotated newFactory() per model.
+            message: '#Call to an undefined method Illuminate\\Database\\Eloquent\\Factories\\Factory<#'
+            path: tests/*
+        -
+            # Factory::create() is declared Model|Collection because count()
+            # may have been called; in a test it never was.
+            message: '#(Access to an undefined property|Call to an undefined method) App\\Modules\\[A-Za-z]+\\Domain\\Models\\[A-Za-z]+\|Illuminate\\Database\\Eloquent\\Collection<#'
+            path: tests/*
+
+        # --- Genuinely dynamic third-party objects -------------------------
+
+        # --- Existing, verified framework gaps -----------------------------
         -
             # Sanctum's HasApiTokens::currentAccessToken() docblock claims a
             # non-nullable TToken, but at runtime it's null whenever the user
@@ -51,17 +124,6 @@ parameters:
             message: '#will always evaluate to true#'
             path: app/Modules/Auth/Presentation/Controllers/AuthController.php
         -
-            # Same Sanctum currentAccessToken() gap, admin guard.
-            message: '#will always evaluate to true#'
-            path: app/Modules/Admin/Presentation/Controllers/AdminAuthController.php
-        -
-            # Auth::guard('admin')->user() is declared non-nullable by
-            # Laravel's own facade stub but is genuinely null whenever no
-            # admin is authenticated yet (e.g. logging a failed login
-            # attempt) — the nullsafe here is real, not redundant.
-            message: '#nullsafe property access .* is unnecessary#'
-            path: app/Modules/Admin/Domain/Models/ActivityLog.php
-        -
             # Pest applies this trait at runtime through uses() in Pest.php,
             # which PHPStan cannot see, so it reads as unused. The trait is
             # what makes RefreshDatabase migrate as the schema owner while
@@ -75,5 +137,16 @@ parameters:
             # here. See docs/plans/BYOK_MULTI_PROVIDER_EXTRACTION_PLAN.md.
             message: '#will always evaluate to true#'
             path: app/Modules/Invoicing/Application/Services/LlmProviderRegistry.php
-    bootstrapFiles:
-        - vendor/autoload.php
+        -
+            # DOMDocument::getElementsByTagName()->item() is declared
+            # DOMNode|DOMNameSpaceNode, and only the latter lacks textContent —
+            # it is the namespace-declaration pseudo-node, which an element
+            # lookup never returns. Reading the text of a UBL element is safe.
+            message: '#Access to an undefined property DOMNameSpaceNode\|DOMNode::\$textContent#'
+            path: tests/Feature/Invoicing/UblEInvoiceTest.php
+        -
+            # explode() on a CSV line PHPStan reads as possibly empty. The
+            # fixture is written two columns wide three lines earlier; a real
+            # export with a one-column row would fail the assertion either way.
+            message: '#Offset 1 might not exist on array#'
+            path: tests/Feature/Shared/ExportOperationalMetricsTest.php

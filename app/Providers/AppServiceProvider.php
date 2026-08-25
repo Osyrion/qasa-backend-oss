@@ -47,5 +47,42 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(20)->by('email:'.($email !== '' ? $email : $request->ip())),
             ];
         });
+
+        // Registration. Tighter than the surrounding group because each call
+        // that succeeds creates an account and, on the SaaS edition, a trial
+        // entitlement — the thing throwaway signups are after.
+        RateLimiter::for('register', function (Request $request): Limit {
+            return Limit::perMinute(5)->by('ip:'.$request->ip());
+        });
+
+        // Asking for an SMS code costs real money on every call, so this one
+        // is about spend as much as security. The per-number hourly cap is
+        // the half that survives an attacker rotating IPs — it bounds what
+        // can be spent flooding any single handset.
+        RateLimiter::for('phone-send', function (Request $request): array {
+            $phone = Str::lower((string) $request->input('phone'));
+            $user = $request->user()?->getAuthIdentifier();
+
+            return [
+                Limit::perMinute(3)->by('ip:'.$request->ip()),
+                Limit::perHour(5)->by('phone:'.($phone !== '' ? $phone : $request->ip())),
+                // Per account, because the per-number cap above resets with
+                // every new number typed — one caller walking a list of
+                // handsets would otherwise never hit a wall. This is the
+                // limit that actually bounds what a single account can spend
+                // in a day.
+                Limit::perDay(10)->by('user:'.($user ?? $request->ip())),
+            ];
+        });
+
+        // Keyed on the user, not the number: this request carries a code and
+        // no phone at all, so a phone-keyed limit would collapse onto the IP
+        // fallback and cap nothing per account.
+        RateLimiter::for('phone-verify', function (Request $request): array {
+            return [
+                Limit::perMinute(5)->by('ip:'.$request->ip()),
+                Limit::perMinute(5)->by('user:'.($request->user()?->getAuthIdentifier() ?? $request->ip())),
+            ];
+        });
     }
 }

@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Shared\Support\Pagination;
+use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Application\DTOs\GenerateTaxFilingData;
 use App\Modules\Taxation\Application\Services\TaxFilingRecapPdfService;
 use App\Modules\Taxation\Application\Services\TaxFilingService;
-use App\Modules\Taxation\Application\Services\TaxSystemResolver;
 use App\Modules\Taxation\Domain\Enums\TaxFilingStatus;
 use App\Modules\Taxation\Domain\Enums\TaxFilingType;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
@@ -38,7 +39,7 @@ class TaxFilingController extends Controller
     public function __construct(
         private readonly TaxFilingService $taxFilingService,
         private readonly TaxFilingRecapPdfService $recapPdf,
-        private readonly TaxSystemResolver $taxSystems,
+        private readonly TaxSystemResolverInterface $taxSystems,
     ) {}
 
     #[OA\Get(
@@ -199,7 +200,7 @@ class TaxFilingController extends Controller
 
         $data = GenerateTaxFilingData::validateAndCreate($request->all());
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         try {

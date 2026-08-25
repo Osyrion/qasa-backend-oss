@@ -9,7 +9,7 @@ use App\Modules\Invoicing\Application\Services\QuotePdfService;
 use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
-use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Invoicing\Domain\ValueObjects\VatRecapRow;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\ContentDisposition;
 use Illuminate\Http\JsonResponse;

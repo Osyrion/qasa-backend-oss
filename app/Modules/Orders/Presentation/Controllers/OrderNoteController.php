@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Application\DTOs\OrderNoteData;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Orders\Presentation\Resources\OrderNoteResource;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -86,14 +86,16 @@ class OrderNoteController extends Controller
     {
         $this->authorize('update', $order);
 
+        $request->validate(OrderNoteData::getValidationRules($request->all()));
+
         $data = OrderNoteData::fromRequest($request);
 
-        /** @var User $user */
+        /** @var Actor $user */
         $user = $request->user();
 
         /** @var OrderNote $note */
         $note = $order->notes()->create([
-            'user_id' => $user->id,
+            'user_id' => $user->actorId(),
             'content' => $data->content,
         ]);
 
@@ -119,11 +121,11 @@ class OrderNoteController extends Controller
     {
         $this->authorize('update', $order);
 
-        /** @var User $user */
+        /** @var Actor $user */
         $user = request()->user();
 
         // Author may always delete their own note; orders.manage covers the rest.
-        if ((string) $note->user_id !== (string) $user->id
+        if ((string) $note->user_id !== $user->actorId()
             && ! $user->can('orders.manage')
         ) {
             return response()->json(['message' => __('orders.notes_delete_own_only')], 403);

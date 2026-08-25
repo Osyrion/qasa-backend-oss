@@ -68,7 +68,7 @@ readonly class AnonymizeClientAction
             ])->save();
 
             foreach ($this->contributors as $contributor) {
-                $contributor->anonymize($client);
+                $contributor->anonymize($client->id);
             }
         });
 

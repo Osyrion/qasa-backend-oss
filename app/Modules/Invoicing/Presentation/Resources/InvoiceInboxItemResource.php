@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Resources;
 
-use App\Modules\Clients\Presentation\Resources\ClientResource;
+use App\Modules\Clients\Application\Contracts\ClientRepresentation;
 use App\Modules\Shared\Application\Services\AiOutputMarker;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -85,7 +85,9 @@ class InvoiceInboxItemResource extends JsonResource
 
             'matched_client' => $this->when(
                 $this->resource->relationLoaded('matchedClient') && $this->resource->matchedClient !== null,
-                fn (): ClientResource => ClientResource::make($this->resource->matchedClient),
+                fn (): ?array => $this->resource->matchedClient === null
+                    ? null
+                    : app(ClientRepresentation::class)->forClient($this->resource->matchedClient),
             ),
         ];
     }

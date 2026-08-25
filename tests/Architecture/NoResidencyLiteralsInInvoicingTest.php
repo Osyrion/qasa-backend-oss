@@ -17,21 +17,10 @@ use Symfony\Component\Finder\Finder;
 function residencyLiteralAllowlist(): array
 {
     return [
-        // The plan's explicit exception: a CLIENT can be from any country
-        // (including SK/CZ, among DE/AT/PL/HU/...) — this is not tenant
-        // residency branching, see App\Modules\Taxation's Sk/CzTaxLabels
-        // for the actual supplier/residency-driven labels.
-        'Domain/Services/ClientTaxLabelMap.php' => 'client country can be anything, not tenant residency',
-
-        // 'CZ' here is the ISO 3166-1 country prefix being written into the
-        // IBAN string being constructed — intrinsic to the IBAN format
-        // itself, not a residency check.
-        'Domain/Banking/CzechIbanConverter.php' => 'ISO country prefix of the IBAN being built, not tenant residency',
-
         // Classifies a bank account's own country (SK IBAN / CZ IBAN or
         // domestic / other) — Phase 3's banking layer decides by account +
         // currency, deliberately never by tenant residency.
-        'Domain/Banking/BankAccountIdentity.php' => "classifies a bank account's own country, not tenant residency",
+        'Domain/ValueObjects/BankAccountIdentity.php' => "classifies a bank account's own country, not tenant residency",
     ];
 }
 

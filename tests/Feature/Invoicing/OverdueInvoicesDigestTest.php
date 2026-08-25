@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Application\Mail\OverdueInvoicesDigestMail;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Presentation\Mail\OverdueInvoicesDigestMail;
 use Illuminate\Support\Facades\Mail;
 
 it('sends one digest listing every invoice newly detected overdue in the run', function (): void {

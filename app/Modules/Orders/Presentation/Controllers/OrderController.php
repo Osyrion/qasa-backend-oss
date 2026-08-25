@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Application\Actions\CreateOrderAction;
 use App\Modules\Orders\Application\Actions\DeleteOrderAction;
 use App\Modules\Orders\Application\Actions\UpdateOrderAction;
@@ -12,6 +11,9 @@ use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Application\DTOs\OrderData;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Presentation\Resources\OrderResource;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -215,11 +217,13 @@ class OrderController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
+        $request->validate(OrderData::getValidationRules($request->all()));
+
         try {
             $data = OrderData::fromRequest($request);
-            /** @var User $user */
+            /** @var Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
             $user = $request->user();
-            $order = $this->createAction->execute($data, $user->accountOwner());
+            $order = $this->createAction->execute($data, $user);
 
             return OrderResource::make($order)->response()->setStatusCode(201);
         } catch (DomainException $e) {
@@ -326,6 +330,8 @@ class OrderController extends Controller
     )]
     public function update(Request $request, Order $order): JsonResponse
     {
+        $request->validate(OrderData::getValidationRules($request->all()));
+
         try {
             $data = OrderData::fromRequest($request);
             $updated = $this->updateAction->execute($order, $data);

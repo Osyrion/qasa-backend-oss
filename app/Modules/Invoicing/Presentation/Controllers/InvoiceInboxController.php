@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\ConvertInboxItemAction;
 use App\Modules\Invoicing\Application\Actions\IgnoreInboxItemAction;
 use App\Modules\Invoicing\Application\Actions\ProcessInboxFileAction;
@@ -13,6 +12,10 @@ use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceInboxItemResource;
 use App\Modules\Invoicing\Presentation\Resources\SupplierInvoiceResource;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -232,11 +235,11 @@ class InvoiceInboxController extends Controller
     {
         $this->authorize('convert', $inboxItem);
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
-            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->accountOwner()->country, $request->input('issued_at'), $request->input('vat_regime')),
+            ...SupplierInvoiceData::rules($user->accountOwnerId(), $user->supplierProfile()->country, $request->input('issued_at'), $request->input('vat_regime')),
             'client_id' => [
                 'required', 'uuid',
                 Rule::exists('clients', 'id')
@@ -369,7 +372,7 @@ class InvoiceInboxController extends Controller
             return response()->json(['message' => __('invoicing.inbox.upload_invalid_file')], 422);
         }
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
         $disk = (string) config('invoicing.inbox.disk', 'local');
         $basePath = (string) config('invoicing.inbox.path', 'inbox');

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('invoice_inbox_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('supplier_invoice_id')->nullable()->constrained('supplier_invoices')->nullOnDelete()->comment('Set once converted');
+            $table->foreignUuid('supplier_invoice_id')->nullable()->comment('Set once converted')->constrained('supplier_invoices')->nullOnDelete();
 
             $table->string('status', 20)->default('pending');
 
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->text('ocr_text')->nullable()->comment('Raw extracted text');
             $table->string('ocr_engine', 20)->nullable()->comment('pdfparser|tesseract');
             $table->json('suggestions')->nullable()->comment('Parsed field suggestions for prefilling the review form');
-            $table->foreignUuid('matched_client_id')->nullable()->constrained('clients')->nullOnDelete()->comment('Auto-matched vendor by ICO');
+            $table->foreignUuid('matched_client_id')->nullable()->comment('Auto-matched vendor by ICO')->constrained('clients')->nullOnDelete();
 
             $table->timestamp('scanned_at');
             $table->text('error')->nullable();

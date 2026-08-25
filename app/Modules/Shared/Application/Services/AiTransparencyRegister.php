@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Contracts\AiFeatureDescriptor;
 use App\Modules\Shared\Application\Contracts\AiModelResolver;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Assembles the account-level AI transparency notice served by
@@ -35,7 +37,7 @@ final readonly class AiTransparencyRegister
     /**
      * @return array<string, mixed>
      */
-    public function forOwner(User $owner): array
+    public function forOwner(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): array
     {
         $globallyDisabled = (bool) config('qasa.ai.disabled', false);
 

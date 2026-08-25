@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Shared\Domain\Models\ActivityLogFactory;
 use Eloquent;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,8 +34,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $prev_hash SHA-256 of the account's previous entry, null for the chain's first row
  * @property string|null $row_hash SHA-256 of this entry's own canonical fields + prev_hash
  * @property Carbon|null $created_at
- * @property-read User|null $user
- * @property-read User|null $actor
+ * @property-read Account|null $actor
  * @property-read Model|null $subject
  *
  * @method static ActivityLogFactory factory($count = null, $state = [])
@@ -123,19 +126,14 @@ class ActivityLog extends Model
     }
 
     /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile, $this>
      */
     public function actor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'actor_id');
+        /** @var class-string<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile> $account */
+        $account = config('auth.providers.users.model');
+
+        return $this->belongsTo($account, 'actor_id');
     }
 
     /**

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Contracts\ByokCredentialResolverInterface;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
-use App\Modules\Invoicing\Infrastructure\Ocr\ByokCredentialResolver;
 use App\Modules\Shared\Application\Contracts\AiModelResolver;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Real implementation of Shared's AiModelResolver: mirrors the BYOK-before-
@@ -23,13 +25,13 @@ use App\Modules\Shared\Application\Contracts\AiModelResolver;
 final readonly class ConfiguredAiModelResolver implements AiModelResolver
 {
     public function __construct(
-        private ByokCredentialResolver $byokCredentials,
+        private ByokCredentialResolverInterface $byokCredentials,
         private LlmProviderRegistry $providers,
     ) {}
 
-    public function resolveFor(User $owner): array
+    public function resolveFor(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): array
     {
-        $credential = $owner->accountOwner()->hasFeature('ai_byok')
+        $credential = $owner->hasFeature('ai_byok')
             ? $this->byokCredentials->forOwner($owner)
             : null;
 

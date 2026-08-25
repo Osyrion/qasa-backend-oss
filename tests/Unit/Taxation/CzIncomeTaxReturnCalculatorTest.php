@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Exceptions\DomainException;
-use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
+use App\Modules\Taxation\Domain\ValueObjects\SystemIncomeData;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnInput;
 use App\Modules\Taxation\Infrastructure\Cz\CzIncomeTaxReturnCalculator;
+use App\Modules\Taxation\Infrastructure\Rates\ConfiguredRateTables;
 
 function czSystemIncome(float $businessIncome, float $actualExpenses = 0.0): SystemIncomeData
 {
@@ -47,7 +48,7 @@ function czInput(array $overrides = []): TaxReturnInput
 }
 
 it('rejects an unsupported year', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     expect($calculator->supportsYear(2025))->toBeTrue()
         ->and($calculator->supportsYear(2026))->toBeTrue()
@@ -60,7 +61,7 @@ it('rejects an unsupported year', function (): void {
 })->throws(DomainException::class);
 
 it('computes flat-rate expenses at 60%, capped by the income cap', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(500_000),
@@ -74,7 +75,7 @@ it('computes flat-rate expenses at 60%, capped by the income cap', function (): 
 });
 
 it('zeroes out tax owed when the basic taxpayer credit exceeds the computed tax', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(100_000),
@@ -88,7 +89,7 @@ it('zeroes out tax owed when the basic taxpayer credit exceeds the computed tax'
 });
 
 it('applies the 23% bracket only to the portion of the base above the threshold', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $belowThreshold = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(2_000_000, 1_000_000),
@@ -107,7 +108,7 @@ it('applies the 23% bracket only to the portion of the base above the threshold'
 });
 
 it('has no social contribution obligation for a secondary activity under the threshold', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(80_000),
@@ -120,7 +121,7 @@ it('has no social contribution obligation for a secondary activity under the thr
 });
 
 it('applies the minimum assessment base for a main activity regardless of low income', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(50_000),
@@ -133,7 +134,7 @@ it('applies the minimum assessment base for a main activity regardless of low in
 });
 
 it('reduces final tax by the per-child credit, ordered by birth order', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $noChildren = $calculator->calculate(czInput(['systemIncome' => czSystemIncome(1_000_000, 200_000), 'useActualExpenses' => true]));
     $twoChildren = $calculator->calculate(czInput([
@@ -147,7 +148,7 @@ it('reduces final tax by the per-child credit, ordered by birth order', function
 });
 
 it('prorates contributions by months active', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $fullYear = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(2_000_000, 500_000),
@@ -166,7 +167,7 @@ it('prorates contributions by months active', function (): void {
 });
 
 it('surfaces a foreign income note without including it in the tax base', function (): void {
-    $calculator = new CzIncomeTaxReturnCalculator;
+    $calculator = new CzIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(czInput([
         'systemIncome' => czSystemIncome(500_000, 300_000),

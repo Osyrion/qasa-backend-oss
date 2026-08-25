@@ -11,6 +11,7 @@ use App\Modules\Invoicing\Domain\Contracts\InvoiceTextExtractor;
 use App\Modules\Invoicing\Domain\Events\InboxItemCreated;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceParser;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 
@@ -45,6 +46,7 @@ it('settles a processing item into pending with suggestions on successful OCR', 
         app(InvoiceFieldExtractor::class),
         app(ClientRepositoryInterface::class),
         app(Ubl21InvoiceParser::class),
+        app(AccountLocator::class),
     );
 
     $item->refresh();
@@ -79,6 +81,7 @@ it('settles a processing item into failed when OCR yields no text', function ():
         app(InvoiceFieldExtractor::class),
         app(ClientRepositoryInterface::class),
         app(Ubl21InvoiceParser::class),
+        app(AccountLocator::class),
     );
 
     $item->refresh();

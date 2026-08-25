@@ -30,6 +30,15 @@
 <li><strong>Potvrdenie (apply)</strong> — po skontrolovaní návrhu potvrdíš import; spárované platby sa zapíšu k príslušným faktúram a faktúry s plnou úhradou sa označia ako uhradené.</li>
 </ol>
 <p>Riadok výpisu, ktorý nechceš spárovať so žiadnou faktúrou (napr. bankový poplatok), jednoducho preskoč — do evidencie faktúr sa nepremietne.</p>
+<h2>Automatické sťahovanie výpisov (Fio banka)</h2>
+<p>Pre Fio banku nemusíš výpis sťahovať a nahrávať ručne — účet sa dá napojiť priamo cez API.</p>
+<ol>
+<li>V internetbankingu Fio si vygeneruj <strong>API token</strong> (Fio ho vydáva vo svojej vlastnej administrácii, nie v aplikácii flok).</li>
+<li>V aplikácii v <strong>Banka → Pripojenia</strong> zadaj tento token. Aplikácia ho hneď overí reálnym sťahovaním — ak je token nesprávne skopírovaný alebo neplatný, upozorní ťa na to okamžite, nie až o deň.</li>
+<li>Odvtedy aplikácia raz denne sama stiahne nové transakcie a spáruje ich s faktúrami rovnako ako pri ručnom importe: presné zhody (variabilný symbol, suma, mena) sa priradia a faktúra sa označí ako uhradená automaticky, neisté zhody čakajú na tvoje potvrdenie alebo zamietnutie v prehľade návrhov spárovania k danému pripojeniu.</li>
+</ol>
+<p>Fio banka pôsobí na Slovensku aj v Česku pod jedným API, takže pripojenie nerozlišuje trh ani menu — pripojiť si vieš slovenský (EUR) aj český (CZK) Fio účet rovnakým postupom, mena sa berie priamo z výpisu pri každej transakcii.
+4. Pripojenie vieš kedykoľvek odpojiť. Ak Fio token prestane platiť (napr. po jeho zrušení alebo zmene v internetbankingu), pripojenie sa označí ako vyžadujúce opätovné pripojenie — token sa v existujúcom pripojení nedá len vymeniť, treba pripojenie zrušiť a založiť nové s novým tokenom.</p>
 <h2>Platobné príkazy pre prijaté faktúry</h2>
 <p><strong>Banka → Platobné príkazy → Kandidáti</strong> ti ukáže prehľad prijatých faktúr, ktoré čakajú na úhradu a blížia sa (alebo už prešli) splatnosťou. Vyber, ktoré chceš zaplatiť, a vytvor z nich <strong>platobný príkaz</strong>.</p>
 <p>Hotový príkaz vieš exportovať vo formáte:</p>
@@ -40,7 +49,7 @@
 <li><strong>PDF</strong> — na ručné zadanie platby, ak import do internetbankingu nevyužívaš.</li>
 </ul>
 <h2>Čo modul (zatiaľ) nerobí automaticky</h2>
-<p>Import výpisu aj dnes vyžaduje ručné stiahnutie súboru z internetbankingu a jeho nahratie — priame prepojenie na banku (open banking) je pripravovaná funkcia, nie súčasť aktuálnej verzie. Rovnako platba dodávateľovi sa neodosiela z aplikácie priamo — pripravený export sa importuje alebo zadáva v tvojom internetbankingu.</p>
+<p>Automatické sťahovanie výpisov cez API funguje zatiaľ len pre <strong>Fio banku</strong>. Pre ostatné banky je stále potrebný ručný import výpisu (CSV/GPC) z internetbankingu — priame prepojenie cez open banking pre ďalšie banky je pripravovaná funkcia, nie súčasť aktuálnej verzie. Rovnako platba dodávateľovi sa neodosiela z aplikácie priamo — pripravený export sa importuje alebo zadáva v tvojom internetbankingu.</p>
 <div class="chapter-nav-links"><a href="04-inbox.html">&larr; Prijaté faktúry a inbox</a><a href="06-dane.html">Dane pre SZČO &rarr;</a></div>
     </main>
 </div>

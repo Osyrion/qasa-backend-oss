@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Policies;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\ExchangeRate;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Policies\InteractsWithAccount;
 
 /**
@@ -27,17 +27,17 @@ class ExchangeRatePolicy
 {
     use InteractsWithAccount;
 
-    public function viewAny(User $user): bool
+    public function viewAny(Actor $user): bool
     {
         return $user->can('invoices.view');
     }
 
-    public function create(User $user): bool
+    public function create(Actor $user): bool
     {
         return $user->can('invoices.manage');
     }
 
-    public function delete(User $user, ExchangeRate $rate): bool
+    public function delete(Actor $user, ExchangeRate $rate): bool
     {
         if (! $user->can('invoices.manage')) {
             return false;

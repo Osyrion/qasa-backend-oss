@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Contracts\AiModelResolver;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Default binding: "no model is configured for this account". Invoicing
@@ -14,7 +16,7 @@ use App\Modules\Shared\Application\Contracts\AiModelResolver;
  */
 final readonly class NullAiModelResolver implements AiModelResolver
 {
-    public function resolveFor(User $owner): array
+    public function resolveFor(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): array
     {
         return ['provider' => null, 'model' => null, 'byok' => false];
     }

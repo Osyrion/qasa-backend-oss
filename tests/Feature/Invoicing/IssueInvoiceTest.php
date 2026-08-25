@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -47,7 +48,7 @@ function draftInvoice(string $currency = 'EUR', array $userAttributes = []): arr
 }
 
 /** @return TestResponse<Response> */
-function issue(object $test, User $user, Invoice $invoice): TestResponse
+function issue(TestCase $test, User $user, Invoice $invoice): TestResponse
 {
     return $test->actingAs($user)->postJson("/api/v1/invoices/{$invoice->id}/status", [
         'status' => 'sent',

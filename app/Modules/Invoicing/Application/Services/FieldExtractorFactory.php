@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Contracts\ByokCredentialResolverInterface;
+use App\Modules\Invoicing\Application\Contracts\LlmFieldExtractorFactoryInterface;
 use App\Modules\Invoicing\Application\Contracts\UsageQuotaInterface;
 use App\Modules\Invoicing\Application\DTOs\FieldExtractorSelection;
+use App\Modules\Invoicing\Domain\Contracts\InvoiceFieldExtractor;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
-use App\Modules\Invoicing\Infrastructure\Ocr\ByokCredentialResolver;
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmFieldExtractor;
-use App\Modules\Invoicing\Infrastructure\Ocr\PdfRasterizer;
-use App\Modules\Invoicing\Infrastructure\Ocr\RegexFieldExtractor;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Decides, per inbox item owner, whether extraction runs on the regex
@@ -33,14 +34,15 @@ use App\Modules\Invoicing\Infrastructure\Ocr\RegexFieldExtractor;
 final readonly class FieldExtractorFactory
 {
     public function __construct(
-        private ByokCredentialResolver $byokCredentials,
-        private LlmProviderRegistry $providers,
+        private ByokCredentialResolverInterface $byokCredentials,
+        private LlmFieldExtractorFactoryInterface $llmExtractors,
         private UsageQuotaInterface $usageQuota,
-        private RegexFieldExtractor $regexExtractor,
-        private PdfRasterizer $rasterizer,
+        // Bound to RegexFieldExtractor — it is the fallback every branch below
+        // returns to, and the only extractor the container can build alone.
+        private InvoiceFieldExtractor $regexExtractor,
     ) {}
 
-    public function forOwner(User $owner): FieldExtractorSelection
+    public function forOwner(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): FieldExtractorSelection
     {
         if ((bool) config('qasa.ai.disabled', false)) {
             return new FieldExtractorSelection($this->regexExtractor);
@@ -50,23 +52,19 @@ final readonly class FieldExtractorFactory
             return new FieldExtractorSelection($this->regexExtractor);
         }
 
-        $account = $owner->accountOwner();
-
-        if (! $account->ai_extraction_enabled) {
+        if (! $owner->aiExtractionEnabled()) {
             return new FieldExtractorSelection($this->regexExtractor);
         }
 
-        if (! $account->hasFeature('ai_byok')) {
+        if (! $owner->hasFeature('ai_byok')) {
             return new FieldExtractorSelection($this->regexExtractor);
         }
 
         $credential = $this->byokCredentials->forOwner($owner);
 
         if ($credential !== null) {
-            $driver = $this->providers->driverFor($credential->provider);
-
             return new FieldExtractorSelection(
-                new LlmFieldExtractor($driver, $credential->api_key, $this->rasterizer, 'ai_byok', $credential->provider),
+                $this->llmExtractors->make($credential->provider, $credential->api_key, 'ai_byok'),
                 credential: $credential,
             );
         }
@@ -82,10 +80,8 @@ final readonly class FieldExtractorFactory
         }
 
         if ($this->usageQuota->consume($owner, 'ai_extraction_monthly')) {
-            $driver = $this->providers->driverFor(AiProvider::Anthropic);
-
             return new FieldExtractorSelection(
-                new LlmFieldExtractor($driver, $platformKey, $this->rasterizer, 'ai', AiProvider::Anthropic),
+                $this->llmExtractors->make(AiProvider::Anthropic, $platformKey, 'ai'),
                 quotaConsumed: true,
             );
         }
@@ -97,7 +93,7 @@ final readonly class FieldExtractorFactory
      * Called by the job when a consumed-quota LLM call itself fails —
      * the owner shouldn't be charged for a suggestion they never got.
      */
-    public function refund(User $owner): void
+    public function refund(Account&ProvidesPlanEntitlements $owner): void
     {
         $this->usageQuota->refund($owner, 'ai_extraction_monthly');
     }

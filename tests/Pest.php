@@ -5,11 +5,13 @@ declare(strict_types=1);
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
+use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use Laravel\Socialite\Two\User as SocialiteTwoUser;
 use Tests\RefreshDatabaseAsOwner;
@@ -202,7 +204,7 @@ function mockGoogleUser(string $email, ?string $id = null, bool $emailVerified =
  * @param  array<string, mixed>  $payload
  * @return TestResponse<Response>
  */
-function postStripeWebhook(object $test, array $payload): TestResponse
+function postStripeWebhook(PHPUnit\Framework\TestCase $test, array $payload): TestResponse
 {
     $body = json_encode($payload, JSON_THROW_ON_ERROR);
     $secret = (string) config('cashier.webhook.secret');
@@ -280,7 +282,7 @@ function vcsScope(string $country, string $vatStatus = 'payer'): array
     return [$user, $client];
 }
 
-function vcsIssueInvoice(object $test, User $user, Client $client, string $issuedAt, float $unitPrice, float $vatRate): Invoice
+function vcsIssueInvoice(PHPUnit\Framework\TestCase $test, User $user, Client $client, string $issuedAt, float $unitPrice, float $vatRate): Invoice
 {
     $currency = $client->country === 'CZ' ? 'CZK' : 'EUR';
 
@@ -299,4 +301,26 @@ function vcsIssueInvoice(object $test, User $user, Client $client, string $issue
         ->assertOk();
 
     return Invoice::withoutGlobalScope('user')->whereKey($created->json('data.id'))->firstOrFail();
+}
+
+/**
+ * Store a system (account-less) exchange rate.
+ *
+ * Since 2026_08_19_000002_restrict_system_exchange_rate_writes the shared
+ * rows in `exchange_rates` are readable but not writable from the tenant
+ * connection the tests run on, so the factory lost its system() state along
+ * with the policy. Fixtures go through the same SECURITY DEFINER function
+ * the application uses — which is the point: if a test can still write a
+ * system rate the ordinary way, so can a request.
+ */
+function systemExchangeRate(string $base, string $target, string $date, string $rate, string $source = 'cnb'): void
+{
+    DB::select('SELECT public.upsert_system_exchange_rate(?, ?, ?, ?, ?, ?)', [
+        (string) (new ExchangeRate)->newUniqueId(),
+        $base,
+        $target,
+        $date,
+        $rate,
+        $source,
+    ]);
 }

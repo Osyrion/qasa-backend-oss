@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Services\AiTransparencyRegister;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -77,9 +79,9 @@ class AiTransparencyController extends Controller
     )]
     public function show(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesAiPreferences&ProvidesPlanEntitlements $user */
         $user = $request->user();
 
-        return response()->json(['data' => $this->register->forOwner($user->accountOwner())]);
+        return response()->json(['data' => $this->register->forOwner($user)]);
     }
 }

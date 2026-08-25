@@ -35,10 +35,22 @@ interface ProvidesAccountMeta
     public function planSlug(): ?string;
 
     /**
-     * Card-free trial state, or null when the edition has no trials or the
-     * account is not on one.
+     * Card-free trial state, or null when the edition has no trials and when
+     * the account has nothing pending or running.
      *
-     * @return array{ends_at: string, days_left: int}|null
+     * Two shapes, told apart by `status`:
+     *
+     * - `active` — a trial is running; `ends_at` and `days_left` are set.
+     * - `pending_verification` — the account is entitled to a trial but has
+     *   not verified a phone number yet; `eligible_until` and `days_left`
+     *   (days left to verify, not days of trial) are set instead.
+     *
+     * The discriminator exists because those two states used to be
+     * indistinguishable from "no trial at all", which left the UI with
+     * nothing to say to an account that was one SMS away from fourteen free
+     * days.
+     *
+     * @return array{status: 'active'|'pending_verification', ends_at: string|null, days_left: int, eligible_until: string|null}|null
      */
     public function trialMeta(): ?array;
 }

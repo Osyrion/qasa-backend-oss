@@ -1,0 +1,5 @@
+{
+    "_": "How many boundary violations each deptrac baseline still excuses. This number may only ever go DOWN. tests/Architecture/DeptracTest.php fails when a baseline file holds a different count than the one recorded here, so regenerating a baseline cannot pass without editing this file by hand — and the deptrac-ratchet job in .github/workflows/ci.yml fails when a baseline gains an entry that origin/main did not have, so editing it by hand does not help either. Fixing a violation is the only direction that works: delete its line, drop the number here.",
+    "deptrac.layers.baseline.yaml": 0,
+    "deptrac.modules.baseline.yaml": 6
+}

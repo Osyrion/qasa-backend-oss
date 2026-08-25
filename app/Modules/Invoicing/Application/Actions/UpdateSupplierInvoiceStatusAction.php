@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\UpdateSupplierInvoiceStatusActionInterface;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Invoicing\Domain\ValueObjects\DocumentParty;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -17,7 +18,20 @@ readonly class UpdateSupplierInvoiceStatusAction implements UpdateSupplierInvoic
 {
     public function __construct(
         private SupplierInvoiceRepositoryInterface $repository,
+        private ClientDirectory $clients,
     ) {}
+
+    /**
+     * @throws DomainException
+     * @throws Throwable
+     */
+    public function transition(string $supplierInvoiceId, SupplierInvoiceStatus $newStatus, ?string $paidAt = null): void
+    {
+        /** @var SupplierInvoice $supplierInvoice */
+        $supplierInvoice = SupplierInvoice::query()->findOrFail($supplierInvoiceId);
+
+        $this->execute($supplierInvoice, $newStatus, $paidAt);
+    }
 
     /**
      * @throws DomainException
@@ -40,8 +54,7 @@ readonly class UpdateSupplierInvoiceStatusAction implements UpdateSupplierInvoic
             $attributes = ['status' => $newStatus->value];
 
             if ($newStatus === SupplierInvoiceStatus::Received) {
-                $supplierInvoice->loadMissing('client');
-                $attributes['vendor_snapshot'] = $this->buildVendorSnapshot($supplierInvoice->client);
+                $attributes['vendor_snapshot'] = $this->buildVendorSnapshot($supplierInvoice->client_id, $supplierInvoice->user_id);
             }
 
             if ($newStatus === SupplierInvoiceStatus::Paid) {
@@ -65,26 +78,19 @@ readonly class UpdateSupplierInvoiceStatusAction implements UpdateSupplierInvoic
     }
 
     /**
+     * Null where the vendor has since been archived away — the same answer the
+     * `client` relation gave when this read the aggregate.
+     *
      * @return array<string, mixed>|null
      */
-    private function buildVendorSnapshot(?Client $client): ?array
+    private function buildVendorSnapshot(string $clientId, string $ownerId): ?array
     {
-        if ($client === null) {
+        $profile = $this->clients->profilesFor([$clientId])[$clientId] ?? null;
+
+        if ($profile === null) {
             return null;
         }
 
-        return [
-            'name' => $client->display_name,
-            'ico' => $client->ico,
-            'dic' => $client->dic,
-            'vat_id' => $client->vat_id,
-            'is_vat_payer' => $client->is_vat_payer,
-            'address' => $client->address,
-            'city' => $client->city,
-            'postal_code' => $client->postal_code,
-            'country' => $client->country,
-            'email' => $client->email,
-            'phone' => $client->phone,
-        ];
+        return DocumentParty::fromProfile($profile, $this->clients->requirePeppolId($clientId, $ownerId))->toSnapshot();
     }
 }

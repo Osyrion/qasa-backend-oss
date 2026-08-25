@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
 use App\Modules\Shared\Domain\Models\ActivityLog;
 use App\Modules\Shared\Support\TenantContext;
 use Carbon\CarbonImmutable;
@@ -14,6 +14,7 @@ final readonly class PurgeActivityLogAction
 {
     public function __construct(
         private ActivityRecorderInterface $recorder,
+        private AccountLocator $accounts,
     ) {}
 
     /**
@@ -59,7 +60,7 @@ final readonly class PurgeActivityLogAction
             $count = ActivityLog::withoutGlobalScope('user')->where('created_at', '<', $cutoff)->delete();
             $deleted += $count;
 
-            $user = User::find($accountId);
+            $user = $this->accounts->find($accountId);
 
             if ($user !== null) {
                 $this->recorder->record($accountId, null, $user, 'activity.purged', [

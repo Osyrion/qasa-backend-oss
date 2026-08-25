@@ -4,15 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
+use App\Modules\Invoicing\Application\Contracts\AddInvoiceItemActionInterface;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\CreateInvoiceActionInterface;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
+use App\Modules\Invoicing\Application\DTOs\InvoiceItemData;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceItemDraft;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use Illuminate\Support\Facades\DB;
@@ -22,38 +26,62 @@ use Throwable;
 readonly class CreateInvoiceAction implements CreateInvoiceActionInterface
 {
     public function __construct(
+        private ClientDirectory $clients,
         private InvoiceRepositoryInterface $repository,
         private BankAccountRepositoryInterface $bankAccounts,
         private TaxSystemResolverInterface $taxSystemResolver,
-        private ClientUsageGuardInterface $usageGuard,
+        private AddInvoiceItemActionInterface $addItem,
     ) {}
+
+    /**
+     * @param  list<InvoiceItemDraft>  $items
+     *
+     * @throws DomainException
+     * @throws Throwable
+     */
+    public function create(
+        InvoiceData $data,
+        Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $user,
+        array $items = [],
+    ): string {
+        // One transaction over both halves: a document that came into being
+        // with lines must not be able to exist without them. execute()'s own
+        // transaction nests into this as a savepoint.
+        return DB::transaction(function () use ($data, $user, $items): string {
+            $invoice = $this->execute($data, $user);
+
+            foreach ($items as $draft) {
+                $this->addItem->execute($invoice, new InvoiceItemData(
+                    description: $draft->description,
+                    quantity: $draft->quantity,
+                    unit: $draft->unit,
+                    unit_price: $draft->unitPrice,
+                    vat_rate: $draft->vatRate,
+                    sort_order: $draft->sortOrder,
+                ));
+            }
+
+            return $invoice->id;
+        });
+    }
 
     /**
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(InvoiceData $data, User $user): Invoice
+    public function execute(InvoiceData $data, Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $user): Invoice
     {
-        $client = Client::query()->find($data->client_id);
 
-        if ($client !== null) {
-            if ($client->isArchived()) {
-                throw DomainException::because(__('clients.archived'));
-            }
+        $client = $this->clients->requireForNewDocument($data->client_id, $user->accountOwnerId());
 
-            $this->usageGuard->ensureUsable($client);
-        }
+        $this->validateCurrency($data, $user);
 
-        $this->validateCurrency($data, $user->accountOwner());
+        return DB::transaction(function () use ($data, $user, $client): Invoice {
+            $userId = $user->accountOwnerId();
+            $profile = $user->supplierProfile();
 
-        return DB::transaction(function () use ($data, $user): Invoice {
-            $owner = $user->accountOwner();
-            $userId = $owner->id;
-
-            $client = Client::forUser($userId)->findOrFail($data->client_id);
-
-            $decision = $this->taxSystemResolver->forUser($owner)->vatRegimeResolver()->resolve(
-                $owner->vat_status,
+            $decision = $this->taxSystemResolver->forSupplier($profile)->vatRegimeResolver()->resolve(
+                $profile->vatStatus,
                 $client,
                 $data->reverse_charge,
             );
@@ -97,9 +125,9 @@ readonly class CreateInvoiceAction implements CreateInvoiceActionInterface
     /**
      * @throws DomainException
      */
-    private function validateCurrency(InvoiceData $data, User $owner): void
+    private function validateCurrency(InvoiceData $data, Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $owner): void
     {
-        if ($data->currency !== $owner->default_currency && ! $owner->hasFeature('multi_currency')) {
+        if ($data->currency !== $owner->supplierProfile()->defaultCurrency && ! $owner->hasFeature('multi_currency')) {
             throw DomainException::because(__('subscriptions.multi_currency_required'));
         }
     }

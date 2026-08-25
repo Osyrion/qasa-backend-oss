@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Middleware;
 
-use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
+use App\Modules\Shared\Application\Contracts\ErrorReportingContext;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -24,13 +24,17 @@ class RequestId
 {
     public const HEADER = 'X-Request-Id';
 
+    public function __construct(
+        private readonly ErrorReportingContext $errorContext,
+    ) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $requestId = $this->resolveRequestId($request);
 
         $request->attributes->set('request_id', $requestId);
         Log::withContext(['request_id' => $requestId]);
-        SentryContext::tagRequest($requestId);
+        $this->errorContext->tagRequest($requestId);
 
         /** @var Response $response */
         $response = $next($request);

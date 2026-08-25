@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Policies;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\CashDocument;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Policies\InteractsWithAccount;
 
 /**
@@ -16,17 +16,17 @@ class CashDocumentPolicy
 {
     use InteractsWithAccount;
 
-    public function viewAny(User $user): bool
+    public function viewAny(Actor $user): bool
     {
         return $user->can('invoices.view');
     }
 
-    public function view(User $user, CashDocument $document): bool
+    public function view(Actor $user, CashDocument $document): bool
     {
         return $this->sameAccount($user, $document->user_id) && $user->can('invoices.view');
     }
 
-    public function create(User $user): bool
+    public function create(Actor $user): bool
     {
         return $user->can('invoices.manage');
     }

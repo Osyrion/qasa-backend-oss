@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Services\Statistics\HealthStatisticsService;
 use App\Modules\Invoicing\Application\Services\Statistics\OverviewStatisticsService;
 use App\Modules\Invoicing\Application\Services\Statistics\PartnerStatisticsService;
 use App\Modules\Invoicing\Application\Services\Statistics\ReceivablesStatisticsService;
 use App\Modules\Invoicing\Application\Services\Statistics\TableStatisticsService;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -125,7 +126,7 @@ class StatisticsController extends Controller
     )]
     public function overview(Request $request, OverviewStatisticsService $service): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         return response()->json(['data' => $service->getStatistics($user)]);
@@ -200,7 +201,7 @@ class StatisticsController extends Controller
     )]
     public function tables(Request $request, TableStatisticsService $service): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -240,7 +241,7 @@ class StatisticsController extends Controller
     )]
     public function receivables(Request $request, ReceivablesStatisticsService $service): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         return response()->json(['data' => $service->getStatistics($user)]);
@@ -306,7 +307,7 @@ class StatisticsController extends Controller
     )]
     public function partners(Request $request, PartnerStatisticsService $service): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -373,7 +374,7 @@ class StatisticsController extends Controller
     )]
     public function health(Request $request, HealthStatisticsService $service): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         return response()->json(['data' => $service->getStatistics($user)]);

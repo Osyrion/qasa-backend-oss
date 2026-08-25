@@ -1,0 +1,9 @@
+deptrac:
+  skip_violations:
+    App\Modules\Shared\Infrastructure\Providers\SharedServiceProvider:
+      - App\Modules\Auth\Domain\Models\User
+      - App\Modules\Clients\Domain\Models\Client
+      - App\Modules\Invoicing\Domain\Models\CashDocument
+      - App\Modules\Invoicing\Domain\Models\Invoice
+      - App\Modules\Invoicing\Domain\Models\Quote
+      - App\Modules\Orders\Domain\Models\Order

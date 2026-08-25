@@ -4,56 +4,55 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\QuoteData;
 use App\Modules\Invoicing\Domain\Models\Quote;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 readonly class CreateQuoteAction
 {
     public function __construct(
+        private ClientDirectory $clients,
         private QuoteRepositoryInterface $repository,
-        private ClientUsageGuardInterface $usageGuard,
     ) {}
 
     /**
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(QuoteData $data, User $user): Quote
+    public function execute(QuoteData $data, Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user): Quote
     {
-        $client = Client::query()->find($data->client_id);
+        $this->clients->requireForNewDocument($data->client_id, $user->accountOwnerId());
 
-        if ($client !== null) {
-            if ($client->isArchived()) {
-                throw DomainException::because(__('clients.archived'));
-            }
-
-            $this->usageGuard->ensureUsable($client);
-        }
-
-        $this->validateCurrency($data, $user->accountOwner());
+        $this->validateCurrency($data, $user);
 
         return DB::transaction(function () use ($data, $user): Quote {
-            $owner = $user->accountOwner();
-            $userId = $owner->id;
+            $numbering = $user->invoiceNumbering();
+            $userId = $user->accountOwnerId();
 
-            Client::forUser($userId)->findOrFail($data->client_id);
+            // Re-checked inside the transaction, as it was before: the
+            // pre-flight check above runs outside it.
+            if (! $this->clients->existsForAccount($data->client_id, $userId)) {
+                throw new ModelNotFoundException;
+            }
 
             $mask = new InvoiceNumberMask(
-                $owner->quote_number_mask ?? config('invoicing.quote_number_mask', 'CP-{YYYY}-{NNN}')
+                $numbering->quoteMask ?? config('invoicing.quote_number_mask', 'CP-{YYYY}-{NNN}')
             );
 
             $quoteNumber = $this->repository->nextQuoteNumber(
                 userId: $userId,
                 mask: $mask,
-                start: $owner->quote_number_start ?? 1,
+                start: $numbering->quoteStart,
             );
 
             return $this->repository->create([
@@ -78,9 +77,9 @@ readonly class CreateQuoteAction
     /**
      * @throws DomainException
      */
-    private function validateCurrency(QuoteData $data, User $owner): void
+    private function validateCurrency(QuoteData $data, Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $owner): void
     {
-        if ($data->currency !== $owner->default_currency && ! $owner->hasFeature('multi_currency')) {
+        if ($data->currency !== $owner->supplierProfile()->defaultCurrency && ! $owner->hasFeature('multi_currency')) {
             throw DomainException::because(__('subscriptions.multi_currency_required'));
         }
     }

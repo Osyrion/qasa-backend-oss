@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Enums\RecurringTemplateStatus;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
@@ -16,6 +16,7 @@ use Throwable;
 readonly class UpdateRecurringTemplateAction
 {
     public function __construct(
+        private ClientDirectory $clients,
         private ClientUsageGuardInterface $usageGuard,
     ) {}
 
@@ -27,7 +28,7 @@ readonly class UpdateRecurringTemplateAction
         $owner = $template->user;
         assert($owner !== null);
 
-        if (! $owner->accountOwner()->vat_status->canChargeVat() && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+        if (! $owner->supplierProfile()->vatStatus->canChargeVat() && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
             throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
         }
 
@@ -36,11 +37,7 @@ readonly class UpdateRecurringTemplateAction
         }
 
         if ($data->client_id !== $template->client_id) {
-            $client = Client::query()->find($data->client_id);
-
-            if ($client !== null) {
-                $this->usageGuard->ensureUsable($client);
-            }
+            $this->clients->assertWithinPlanLimits($data->client_id);
         }
 
         return DB::transaction(function () use ($template, $data): RecurringInvoiceTemplate {

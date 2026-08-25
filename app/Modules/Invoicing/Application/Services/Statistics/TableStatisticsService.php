@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Support\Carbon;
 
 /**
@@ -27,12 +28,12 @@ final readonly class TableStatisticsService
     /**
      * @return array<string, mixed>
      */
-    public function getStatistics(User $user, ?int $year): array
+    public function getStatistics(Account&ProvidesSupplierProfile $user, ?int $year): array
     {
         $year ??= (int) Carbon::now()->year;
 
         return [
-            'currency' => $user->default_currency->value,
+            'currency' => $user->supplierProfile()->defaultCurrency->value,
             'by_year' => $this->byYear($user),
             'by_month' => $this->byMonth($user, $year),
             'assumptions' => self::ASSUMPTIONS,
@@ -42,7 +43,7 @@ final readonly class TableStatisticsService
     /**
      * @return list<array<string, mixed>>
      */
-    private function byYear(User $user): array
+    private function byYear(Account&ProvidesSupplierProfile $user): array
     {
         $years = $this->aggregator->activityYears($user);
 
@@ -69,7 +70,7 @@ final readonly class TableStatisticsService
     /**
      * @return list<array<string, mixed>>
      */
-    private function byMonth(User $user, int $year): array
+    private function byMonth(Account&ProvidesSupplierProfile $user, int $year): array
     {
         $from = sprintf('%04d-01-01', $year);
         $to = sprintf('%04d-12-31', $year);

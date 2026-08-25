@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\UpsertAiCredentialAction;
 use App\Modules\Invoicing\Application\Actions\VerifyAiCredentialAction;
 use App\Modules\Invoicing\Application\DTOs\UpsertAiCredentialData;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
 use App\Modules\Invoicing\Domain\Models\AiCredential;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,7 +58,7 @@ class AiCredentialController extends Controller
         $owner = $this->owner($request);
 
         $existing = AiCredential::query()
-            ->where('user_id', $owner->id)
+            ->where('user_id', $owner->accountOwnerId())
             ->get()
             ->keyBy(fn (AiCredential $credential): string => $credential->provider->value);
 
@@ -131,7 +131,7 @@ class AiCredentialController extends Controller
         $aiProvider = $this->resolveProvider($provider);
 
         AiCredential::query()
-            ->where('user_id', $owner->id)
+            ->where('user_id', $owner->accountOwnerId())
             ->where('provider', $aiProvider->value)
             ->delete();
 
@@ -167,7 +167,7 @@ class AiCredentialController extends Controller
         $aiProvider = $this->resolveProvider($provider);
 
         $credential = AiCredential::query()
-            ->where('user_id', $owner->id)
+            ->where('user_id', $owner->accountOwnerId())
             ->where('provider', $aiProvider->value)
             ->first();
 
@@ -188,12 +188,12 @@ class AiCredentialController extends Controller
      * account owner may view, rotate or test them, not a team member
      * merely benefiting from the owner's key.
      */
-    private function owner(Request $request): User
+    private function owner(Request $request): Account
     {
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
-        abort_unless($user->accountOwnerId() === $user->id, 403);
+        abort_unless($user->isOwner(), 403);
 
         return $user;
     }

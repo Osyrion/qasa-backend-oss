@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Orders\Domain\Models\Order;
 use App\Modules\Orders\Domain\Models\OrderAttachment;
 use App\Modules\Orders\Presentation\Resources\OrderAttachmentResource;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -131,12 +131,12 @@ class OrderAttachmentController extends Controller
 
         $nextSortOrder = $order->attachments()->max('sort_order') + 1;
 
-        /** @var User $user */
+        /** @var Actor $user */
         $user = $request->user();
 
         /** @var OrderAttachment $attachment */
         $attachment = $order->attachments()->create([
-            'user_id' => $user->id,
+            'user_id' => $user->actorId(),
             'disk' => $disk,
             'path' => $path,
             'filename' => $file->getClientOriginalName(),

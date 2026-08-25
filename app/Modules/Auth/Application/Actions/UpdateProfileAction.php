@@ -7,9 +7,7 @@ namespace App\Modules\Auth\Application\Actions;
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Domain\Events\UserIcoChanged;
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Domain\Models\Quote;
-use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Invoicing\Application\Contracts\AccountInvoicingState;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +17,10 @@ use Throwable;
 
 class UpdateProfileAction
 {
+    public function __construct(
+        private readonly AccountInvoicingState $invoicing,
+    ) {}
+
     /**
      * @throws DomainException
      * @throws Throwable
@@ -167,11 +169,7 @@ class UpdateProfileAction
 
         $ownerId = $user->accountOwnerId();
 
-        $hasDocuments = Invoice::withoutGlobalScope('user')->where('user_id', $ownerId)->exists()
-            || Quote::withoutGlobalScope('user')->where('user_id', $ownerId)->exists()
-            || SupplierInvoice::withoutGlobalScope('user')->where('user_id', $ownerId)->exists();
-
-        if ($hasDocuments) {
+        if ($this->invoicing->hasAnyDocument($ownerId)) {
             throw DomainException::because(__('taxation.ico_locked'));
         }
     }

@@ -17,9 +17,9 @@ return new class extends Migration
             $table->foreignUuid('related_invoice_id')
                 ->nullable()
                 ->after('type')
+                ->comment('Original invoice for credit_note/storno')
                 ->constrained('invoices')
-                ->nullOnDelete()
-                ->comment('Original invoice for credit_note/storno');
+                ->nullOnDelete();
             $table->date('taxable_supply_at')->nullable()->after('issued_at')->comment('DUZP');
             $table->string('variable_symbol', 10)->nullable()->after('due_at');
             $table->foreignUuid('bank_account_id')

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\DTOs\AiFeatureDisclosure;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Every capability that sends account data to an LLM describes itself here,
@@ -23,8 +25,9 @@ use App\Modules\Shared\Application\DTOs\AiFeatureDisclosure;
 interface AiFeatureDescriptor
 {
     /**
-     * $owner is the account owner (not necessarily the caller) — `enabled`
-     * reflects that account's switches, plan features and credentials.
+     * $owner is the account (a team member is fine — plan entitlements
+     * already resolve to the owner) — `enabled` reflects that account's
+     * switches, plan features and credentials.
      */
-    public function disclosureFor(User $owner): AiFeatureDisclosure;
+    public function disclosureFor(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): AiFeatureDisclosure;
 }

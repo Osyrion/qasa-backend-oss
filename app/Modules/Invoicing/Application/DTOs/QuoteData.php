@@ -40,7 +40,7 @@ class QuoteData extends Data
             'issued_at' => ['required', 'date'],
             'currency' => ['required', Rule::enum(Currency::class)],
             'valid_until' => ['nullable', 'date', 'after_or_equal:issued_at'],
-            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
             'note' => ['nullable', 'string', 'max:2000'],
             'note_above' => ['nullable', 'string', 'max:2000'],
         ];

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Application\DTOs\VatReturnReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatReturnReportData;
 use App\Modules\Taxation\Infrastructure\Cz\DphDp3XmlBuilder;
 
 /**
@@ -139,7 +139,7 @@ it('builds a schema-valid golden CZ XML from a directly constructed report', fun
         assumptions: [],
     );
 
-    $xml = app(DphDp3XmlBuilder::class)->build($report, $user);
+    $xml = app(DphDp3XmlBuilder::class)->build($report, $user->supplierProfile());
 
     [$valid, $errors] = czVrValidateXsd($xml, base_path('tests/Fixtures/vat-return/dphdp3_epo2.xsd'));
     expect($errors)->toBeEmpty();

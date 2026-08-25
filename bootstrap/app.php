@@ -1,5 +1,7 @@
 <?php
 
+use App\Modules\Auth\Domain\Exceptions\CaptchaRequiredException;
+use App\Modules\Auth\Domain\Exceptions\TooManyLoginAttemptsException;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Exceptions\ExpectedIntegrationFailure;
 use App\Modules\Shared\Presentation\Middleware\AllowAllFeatures;
@@ -17,6 +19,7 @@ use App\Providers\TelescopeServiceProvider;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Sentry\Laravel\Integration as SentryIntegration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -30,6 +33,23 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // See config/cloudflare.php — off by default, so this is a no-op
+        // until a deployment is actually behind Cloudflare's proxy. Reads the
+        // config file directly (like the edition overlay require() below)
+        // rather than via the config() helper: this closure also runs while
+        // resolving the Console Kernel during `composer install`'s
+        // package:discover step, before the container has a 'config' binding.
+        $cloudflare = require __DIR__.'/../config/cloudflare.php';
+        if ($cloudflare['proxy_enabled']) {
+            $middleware->trustProxies(
+                at: $cloudflare['trusted_proxies'],
+                headers: Request::HEADER_X_FORWARDED_FOR
+                    | Request::HEADER_X_FORWARDED_HOST
+                    | Request::HEADER_X_FORWARDED_PORT
+                    | Request::HEADER_X_FORWARDED_PROTO,
+            );
+        }
+
         $middleware->prepend(RequestId::class);
         $middleware->prepend(BindTenantContext::class);
         $middleware->append(SetLocale::class);
@@ -88,6 +108,27 @@ return Application::configure(basePath: dirname(__DIR__))
         // ExpectedIntegrationFailure. Still logged, just never paged for.
         $exceptions->dontReportWhen(
             fn (Throwable $e): bool => $e instanceof ExpectedIntegrationFailure && $e->isExpected()
+        );
+
+        // Ahead of the DomainException rule below for the same reason as the
+        // one under it: same 422, but the client cannot act on it without
+        // the flag telling it to render a captcha rather than an error.
+        $exceptions->renderable(
+            fn (CaptchaRequiredException $e) => response()->json([
+                'message' => $e->getMessage(),
+                'captcha_required' => true,
+            ], 422)
+        );
+
+        // Ahead of the DomainException rule below, which is its parent and
+        // would otherwise answer for it: render callbacks are matched in
+        // registration order and the first hit wins. A login backoff is a
+        // wait rather than a rejected value, so it needs the 429 and the
+        // header saying how long — see TooManyLoginAttemptsException.
+        $exceptions->renderable(
+            fn (TooManyLoginAttemptsException $e) => response()
+                ->json(['message' => $e->getMessage()], 429)
+                ->header('Retry-After', (string) $e->retryAfterSeconds)
         );
 
         // Business-rule violations always surface as 422 JSON — the single

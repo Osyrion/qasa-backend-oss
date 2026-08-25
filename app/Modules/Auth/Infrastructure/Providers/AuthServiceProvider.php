@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Auth\Infrastructure\Providers;
 
+use App\Modules\Auth\Application\Contracts\AccountRepresentation;
 use App\Modules\Auth\Application\Contracts\TwoFactorServiceInterface;
 use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Application\Services\DashboardService;
 use App\Modules\Auth\Application\Services\SetupStatusService;
 use App\Modules\Auth\Application\Services\TwoFactorService;
+use App\Modules\Auth\Domain\Contracts\PhoneVerificationProviderInterface;
 use App\Modules\Auth\Domain\Events\LoginFailed;
 use App\Modules\Auth\Domain\Events\LoginSucceeded;
 use App\Modules\Auth\Domain\Events\RecoveryCodesRegenerated;
@@ -19,12 +21,17 @@ use App\Modules\Auth\Domain\Events\TwoFactorEnabled;
 use App\Modules\Auth\Domain\Events\UserLoggedOut;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Infrastructure\Sanctum\TenantAwarePersonalAccessToken;
+use App\Modules\Auth\Infrastructure\Services\NullPhoneVerificationProvider;
 use App\Modules\Auth\Presentation\Console\CreateUserCommand;
 use App\Modules\Auth\Presentation\Console\PurgeDeletedAccountsCommand;
+use App\Modules\Auth\Presentation\Support\UserResourceRepresentation;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
+use App\Modules\Invoicing\Application\Contracts\AccountInvoicingState;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
 use App\Modules\Shared\Authorization\AbilityCatalog;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -34,12 +41,19 @@ class AuthServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // The account's canonical API body, so Taxation and Team can hand an
+        // account back without reaching into Auth's resources.
+        $this->app->bind(AccountRepresentation::class, UserResourceRepresentation::class);
+
         // Both payloads are assembled from sections other modules own — the
         // tag is empty in the OSS edition, which is exactly how those keys
         // disappear from the response there.
         $this->app->bind(
             DashboardService::class,
-            fn ($app): DashboardService => new DashboardService($app->tagged('dashboard.stats')),
+            fn ($app): DashboardService => new DashboardService(
+                $app->make(ClientDirectory::class),
+                $app->tagged('dashboard.stats'),
+            ),
         );
 
         $this->app->bind(
@@ -50,9 +64,19 @@ class AuthServiceProvider extends ServiceProvider
         // Consumed by the admin guard too — see TwoFactorServiceInterface.
         $this->app->bind(TwoFactorServiceInterface::class, TwoFactorService::class);
 
+        // No SMS gateway in the core edition: the null provider never sends,
+        // which surfaces as "verification unavailable" rather than an error.
+        // A premium module binds a real gateway over the top — its provider
+        // registers after this one, so the later bind wins.
+        $this->app->bind(PhoneVerificationProviderInterface::class, NullPhoneVerificationProvider::class);
+
         $this->app->bind(
             SetupStatusService::class,
-            fn ($app): SetupStatusService => new SetupStatusService($app->tagged('setup.steps')),
+            fn ($app): SetupStatusService => new SetupStatusService(
+                $app->make(ClientDirectory::class),
+                $app->make(AccountInvoicingState::class),
+                $app->tagged('setup.steps'),
+            ),
         );
 
         // Token scopes: a scoped personal access token (created via
@@ -134,8 +158,29 @@ class AuthServiceProvider extends ServiceProvider
             return $this->app->isProduction() ? $rule->uncompromised() : $rule;
         });
 
-        // Reset links land on the SPA, which posts the token back to the API.
+        // Reset links land on the SPA by default, which posts the token back
+        // to the API — flok_mobile gets its own deep link instead when the
+        // request that triggered this came from the app.
+        //
+        // sendPasswordResetNotification() re-resolves its own $user instance
+        // inside the broker, so there is no request object here to read a
+        // `platform` param from directly. PasswordResetController stashes it
+        // in the cache, keyed by e-mail, right before calling
+        // Password::sendResetLink() — the same one-shot-signal shape as
+        // GoogleAuthController's OAuth state, for the same reason.
         ResetPassword::createUrlUsing(function (User $user, string $token): string {
+            $platform = Cache::pull('password_reset_platform:'.$user->email);
+
+            if ($platform === 'mobile') {
+                // The scheme (default "flok://") already ends in the slashes
+                // a URL needs — unlike frontend_url below, appending it here
+                // must not run through rtrim('/'), or "flok://" collapses to
+                // "flok:" and the link no longer opens the app at all.
+                return config('qasa.mobile_app_scheme').'reset-password'
+                    .'?token='.$token
+                    .'&email='.urlencode($user->email);
+            }
+
             return rtrim((string) config('app.frontend_url'), '/')
                 .'/reset-password?token='.$token
                 .'&email='.urlencode($user->email);

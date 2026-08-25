@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Middleware;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,7 +24,10 @@ final class RequireTaxResidency
     {
         $user = $request->user('sanctum');
 
-        if ($user instanceof User && ! $user->hasTaxResidency()) {
+        // The account's country, not the member's own row: residency is an
+        // account fact (AcceptInvitationAction copies it onto a joining
+        // member, and that copy goes stale the moment the owner moves).
+        if ($user instanceof ProvidesSupplierProfile && $user->supplierProfile()->country === null) {
             return response()->json(['message' => __('taxation.residency_required')], 409);
         }
 

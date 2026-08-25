@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
+use App\Modules\Invoicing\Application\Actions\GenerateWorkReportAction;
 use App\Modules\Invoicing\Application\Actions\SyncWorkReportLinesAction;
-use App\Modules\Invoicing\Application\Contracts\WorkReportGeneratorInterface;
 use App\Modules\Invoicing\Application\DTOs\WorkReportLineData;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Presentation\Resources\WorkReportLineResource;
@@ -23,7 +23,7 @@ class WorkReportController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private readonly WorkReportGeneratorInterface $generator,
+        private readonly GenerateWorkReportAction $generateAction,
         private readonly SyncWorkReportLinesAction $syncAction,
     ) {}
 
@@ -82,7 +82,7 @@ class WorkReportController extends Controller
         $this->authorize('update', $invoice);
 
         try {
-            $lines = $this->generator->generate($invoice);
+            $lines = $this->generateAction->execute($invoice);
 
             return WorkReportLineResource::collection($lines)->response();
         } catch (DomainException $e) {

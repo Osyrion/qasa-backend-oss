@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\ValueObjects;
 
-use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
-
 /**
  * Everything an IncomeTaxReturnCalculator needs — system-derived income plus
  * the wizard's personal-circumstances answers. One shared shape for both

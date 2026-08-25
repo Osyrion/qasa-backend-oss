@@ -29,6 +29,8 @@ return [
 
     'trial_ending_title' => 'Zkušební období se blíží ke konci',
     'trial_ending_body' => 'Bezplatné zkušební období končí za :days dní. Vyberte si plán a vše nastavené vám zůstane.',
+    'trial_pending_title' => 'Zkušební období čeká na ověření čísla',
+    'trial_pending_body' => 'Ověřte telefonní číslo do :days dní a spustí se bezplatné zkušební období.',
     'trial_expired_title' => 'Zkušební období skončilo',
     'trial_expired_body' => 'Účet je zpět na bezplatné úrovni. Nic se nesmazalo — klienti nad bezplatný limit jsou jen ke čtení, dokud si předplatné nezaložíte.',
 

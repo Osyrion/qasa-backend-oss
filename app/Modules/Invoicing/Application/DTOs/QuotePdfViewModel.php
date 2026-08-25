@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\DTOs;
 
 use App\Modules\Invoicing\Domain\Models\Quote;
-use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Invoicing\Domain\ValueObjects\VatRecapRow;
 
 /**
  * Everything the quote PDF blade needs, precomputed so the template stays

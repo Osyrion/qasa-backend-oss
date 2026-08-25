@@ -60,13 +60,15 @@ function aiPlumbingClasses(): array
         'App\Modules\Invoicing\Application\Contracts\AiAssistantServiceInterface',
         'App\Modules\Invoicing\Domain\Contracts\InvoiceFieldExtractor',
         'App\Modules\Invoicing\Domain\Contracts\LlmProviderDriver',
-        'App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException',
+        'App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException',
         'App\Modules\Shared\Application\Contracts\AiFeatureDescriptor',
         'App\Modules\Invoicing\Application\Services\AiAssistantService',
         'App\Modules\Invoicing\Application\Services\ConfiguredAiModelResolver',
         'App\Modules\Invoicing\Application\Services\LlmProviderRegistry',
         'App\Modules\Invoicing\Infrastructure\Ocr\CompositeExtractor',
+        'App\Modules\Invoicing\Application\Contracts\LlmFieldExtractorFactoryInterface',
         'App\Modules\Invoicing\Infrastructure\Ocr\LlmFieldExtractor',
+        'App\Modules\Invoicing\Infrastructure\Ocr\LlmFieldExtractorFactory',
         'App\Modules\Invoicing\Infrastructure\Providers\InvoicingServiceProvider',
     ];
 }

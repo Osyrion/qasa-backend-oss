@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Domain\Contracts;
 
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
 use App\Modules\Shared\Exceptions\DomainException;
 
 /**

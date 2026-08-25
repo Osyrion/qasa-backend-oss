@@ -6,10 +6,11 @@ namespace App\Modules\Invoicing\Domain\Events;
 
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
+use App\Modules\Invoicing\Domain\ValueObjects\PublicInvoice;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class PaymentRecorded
+class PaymentRecorded implements CarriesInvoice
 {
     use Dispatchable;
     use SerializesModels;
@@ -18,4 +19,9 @@ class PaymentRecorded
         public readonly Invoice $invoice,
         public readonly InvoicePayment $payment,
     ) {}
+
+    public function publicInvoice(): PublicInvoice
+    {
+        return $this->invoice->publicView();
+    }
 }

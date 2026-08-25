@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\Contracts;
 
-use App\Modules\Invoicing\Application\DTOs\EuSalesListRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\EuSalesListRowData;
 
 /**
  * SK/CZ súhrnný výkaz (EU sales list): groups a tenant's intra-EU

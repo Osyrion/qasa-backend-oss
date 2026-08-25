@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 
 /**
  * SK kontrolný výkaz DPH / CZ kontrolní hlášení: classifies a tenant's
@@ -18,7 +18,7 @@ interface ControlStatementBuilder
 {
     public function classify(string $userId, int $year, ?int $quarter = null, ?int $month = null): VatControlStatementReportData;
 
-    public function toXml(VatControlStatementReportData $report, User $user): string;
+    public function toXml(VatControlStatementReportData $report, SupplierProfile $supplier): string;
 
     /**
      * @return list<string> caveats specific to the XML draft

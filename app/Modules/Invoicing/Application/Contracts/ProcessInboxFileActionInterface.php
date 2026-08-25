@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
+use App\Modules\Shared\Domain\Contracts\Account;
 
 /**
  * The contract other modules reach through — ModuleBoundariesTest requires
@@ -37,5 +37,5 @@ interface ProcessInboxFileActionInterface
         'text/xml',
     ];
 
-    public function execute(User $owner, string $disk, string $path, ?string $originalFilename = null): ?InvoiceInboxItem;
+    public function execute(Account $owner, string $disk, string $path, ?string $originalFilename = null): ?InvoiceInboxItem;
 }

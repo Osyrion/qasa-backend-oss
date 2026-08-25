@@ -8,6 +8,7 @@ use App\Modules\Auth\Presentation\Controllers\EmailVerificationController;
 use App\Modules\Auth\Presentation\Controllers\GoogleAuthController;
 use App\Modules\Auth\Presentation\Controllers\PasswordResetController;
 use App\Modules\Auth\Presentation\Controllers\PersonalAccessTokenController;
+use App\Modules\Auth\Presentation\Controllers\PhoneVerificationController;
 use App\Modules\Auth\Presentation\Controllers\SessionController;
 use App\Modules\Auth\Presentation\Controllers\SetupStatusController;
 use App\Modules\Auth\Presentation\Controllers\TwoFactorController;
@@ -16,7 +17,12 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api/v1')->group(function (): void {
     // Public routes — throttled against brute force and enumeration
     Route::middleware('throttle:10,1')->group(function (): void {
-        Route::post('auth/register', [AuthController::class, 'register'])->name('auth.register');
+        // Its own limiter rather than the group's: registration is the one
+        // endpoint here that creates state, and a trial with it, so it is
+        // capped harder than the read-mostly siblings it sits next to.
+        Route::post('auth/register', [AuthController::class, 'register'])
+            ->middleware('throttle:register')
+            ->name('auth.register');
         // Extra per-account limiter on top of the group's per-IP throttle,
         // so distributed credential stuffing against one account is capped.
         Route::post('auth/login', [AuthController::class, 'login'])
@@ -24,6 +30,9 @@ Route::prefix('api/v1')->group(function (): void {
             ->name('auth.login');
         Route::get('auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
         Route::post('auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+        // Google's redirect target for the mobile flow — see the controller.
+        Route::get('auth/google/callback/mobile', [GoogleAuthController::class, 'mobileCallbackBridge'])
+            ->name('auth.google.callback.mobile');
         Route::post('auth/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('auth.password.email');
         Route::post('auth/reset-password', [PasswordResetController::class, 'reset'])->name('auth.password.reset');
         // Completes a login stuck at the 2FA challenge — the caller holds a
@@ -63,6 +72,17 @@ Route::prefix('api/v1')->group(function (): void {
         Route::get('auth/sessions', [SessionController::class, 'index'])->name('auth.sessions.index');
         Route::delete('auth/sessions', [SessionController::class, 'destroyOthers'])->name('auth.sessions.destroy-others');
         Route::delete('auth/sessions/{id}', [SessionController::class, 'destroy'])->name('auth.sessions.destroy');
+        Route::put('auth/push-token', [SessionController::class, 'updatePushToken'])->name('auth.push-token.update');
+
+        // Phone verification. Authenticated because it is a step *after*
+        // registration, never a condition of it — an SMS gateway outage must
+        // not be able to stop an account being created.
+        Route::post('auth/phone/send-code', [PhoneVerificationController::class, 'sendCode'])
+            ->middleware('throttle:phone-send')
+            ->name('auth.phone.send-code');
+        Route::post('auth/phone/verify', [PhoneVerificationController::class, 'verify'])
+            ->middleware('throttle:phone-verify')
+            ->name('auth.phone.verify');
 
         // Two-factor authentication management
         Route::post('auth/2fa/enable', [TwoFactorController::class, 'enable'])->name('auth.2fa.enable');

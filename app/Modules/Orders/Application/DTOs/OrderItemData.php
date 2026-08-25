@@ -39,9 +39,9 @@ class OrderItemData extends Data
     public static function rules(): array
     {
         return [
-            'quantity' => ['numeric', 'min:0.001'],
-            'unit_price' => ['numeric', 'min:0'],
-            'vat_rate' => ['numeric', 'min:0', 'max:100'],
+            'quantity' => ['numeric', 'min:0.001', 'decimal:0,3'],
+            'unit_price' => ['numeric', 'min:0', 'decimal:0,2'],
+            'vat_rate' => ['numeric', 'min:0', 'max:100', 'decimal:0,2'],
             'sort_order' => ['integer', 'min:0'],
             'price_list_item_id' => config('qasa.rules.price_list_item_id'),
         ];

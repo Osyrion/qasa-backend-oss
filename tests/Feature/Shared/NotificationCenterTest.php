@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Application\Mail\OverdueInvoicesDigestMail;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Presentation\Mail\OverdueInvoicesDigestMail;
 use App\Modules\Shared\Application\Actions\PurgeNotificationsAction;
 use App\Modules\Shared\Application\DTOs\NotificationPayload;
 use App\Modules\Shared\Application\Notifications\InAppNotification;

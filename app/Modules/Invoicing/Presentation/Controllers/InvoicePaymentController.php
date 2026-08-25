@@ -115,7 +115,7 @@ class InvoicePaymentController extends Controller
         $request->validate(PaymentData::rules());
 
         try {
-            $payment = $this->recordAction->execute($invoice, PaymentData::fromRequest($request));
+            $payment = $this->recordAction->execute($invoice->id, PaymentData::fromRequest($request));
 
             return InvoicePaymentResource::make($payment)->response()->setStatusCode(201);
         } catch (DomainException $e) {

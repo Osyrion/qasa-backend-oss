@@ -51,6 +51,11 @@ function publicRouteAllowlist(): array
         'auth.login' => 'pre-login',
         'auth.google.redirect' => 'pre-login OAuth kickoff',
         'auth.google.callback' => 'pre-login OAuth exchange',
+        // Google's own redirect target for the mobile flow: it only hands the
+        // parameters it was given to a fixed configured scheme. Nothing is
+        // read, nothing is written, and the state it carries is still spent
+        // by auth.google.callback above.
+        'auth.google.callback.mobile' => 'pre-login OAuth redirect bridge, touches no data',
         'auth.password.email' => 'pre-login password reset request',
         'auth.password.reset' => 'pre-login password reset completion, proven by the emailed token',
         // Completes a login stuck at the 2FA challenge with a short-lived
@@ -58,6 +63,11 @@ function publicRouteAllowlist(): array
         'auth.2fa.verify' => 'pre-login 2FA challenge, proven by the challenge token',
         // Signed link from the verification e-mail — the signature is the proof.
         'verification.verify' => 'signed link, no bearer token involved',
+
+        // Pre-account: collects a marketing-page e-mail before any account
+        // exists, nothing to authenticate against. Rate-limited (throttle:waitlist)
+        // and idempotent (SubscribeToWaitlistAction), not a foreign-id write.
+        'waitlist.store' => 'pre-account beta signup, no tenant data touched',
 
         // Public tokenized documents — proven by the document's own opaque
         // token (public.document: middleware), not a bearer token.
@@ -150,6 +160,17 @@ function ownAccountRouteAllowlist(): array
         'auth.sessions.index' => 'own user record',
         'auth.sessions.destroy-others' => 'scoped via $user->tokens() in the controller',
         'auth.sessions.destroy' => "scoped via \$user->tokens()->where('id', ...) in the controller",
+        // Writes to currentAccessToken() — the very token the request
+        // authenticated with — and its only other write is scoped through
+        // $user->tokens().
+        'auth.push-token.update' => 'own session token',
+        // Phone verification acts on auth()->user() and nothing else. The
+        // cross-account question it does ask — "has another account already
+        // verified this number" — is answered by a SECURITY DEFINER lookup
+        // that returns an id and never a row, so there is no foreign record
+        // to authorize against.
+        'auth.phone.send-code' => 'own user record',
+        'auth.phone.verify' => 'own user record',
 
         // Personal preference, not an account setting — each caller reads/
         // writes only their own row (see NotificationPreferencesController).
@@ -294,6 +315,23 @@ function hasAdminGuardMiddleware(array $middleware): bool
  * that scopes by owner some other way (explicit `->forUser()`/`->where()`
  * scoping) is not detected here and belongs in ownAccountRouteAllowlist()
  * instead, with a reason a reviewer can check.
+ *
+ * Since 2026-08-20 there is a second legitimate shape. A module that must not
+ * name another module's model cannot use `$this->authorize()` at all — the
+ * Gate finds a policy by model class — so it asks through a published
+ * contract instead: `$this->authorization->allows($user, InvoiceAbility::X, $id)`
+ * (see Invoicing\Application\Contracts\InvoiceAuthorization, whose
+ * implementation delegates to the very same policy). That counts, and is
+ * detected by the pair `->allows(` + a `*Ability::` enum case — both together,
+ * so neither a bare `allows()` on something unrelated nor an enum mentioned in
+ * passing is enough to satisfy this check.
+ *
+ * Since 2026-08-25 the class-level form of that shape counts too:
+ * `->allowsCreate($actor)`. A "may this person create one at all" check has no
+ * document to name, so there is no ability enum to pair it with — the method
+ * name is the specific thing, and it is as auditable as the pair above. Kept
+ * to that exact spelling rather than any `allows*`, so it stays a named shape
+ * a reviewer recognises and not a wildcard anything can slip through.
  */
 function controllerActionAuthorizes(RoutingRoute $route): bool
 {
@@ -347,7 +385,15 @@ function methodBodyContainsAuthorizeCall(ReflectionMethod $method, string $needl
     $length = $method->getEndLine() - $method->getStartLine() + 1;
     $body = implode('', array_slice($lines, $start, $length));
 
-    return str_contains($body, $needle) || str_contains($body, 'authorizeResource(');
+    if (str_contains($body, $needle) || str_contains($body, 'authorizeResource(')) {
+        return true;
+    }
+
+    if (str_contains($body, '->allowsCreate(')) {
+        return true;
+    }
+
+    return str_contains($body, '->allows(') && preg_match('/\b[A-Za-z]+Ability::/', $body) === 1;
 }
 
 it('requires an authentication middleware on every api/v1 route unless explicitly public', function (): void {

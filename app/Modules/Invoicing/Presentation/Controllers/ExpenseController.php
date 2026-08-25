@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\ExpenseRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\ExpenseData;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Presentation\Resources\ExpenseResource;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -126,7 +126,7 @@ class ExpenseController extends Controller
 
         $data = ExpenseData::validateAndCreate($request->all());
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $expense = $this->repository->create([

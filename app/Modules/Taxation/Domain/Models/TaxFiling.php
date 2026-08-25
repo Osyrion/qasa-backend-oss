@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Traits\HasUserScope;
 use App\Modules\Taxation\Domain\Enums\TaxFilingStatus;
@@ -41,7 +40,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $supersedes_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User|null $user
  * @property-read TaxFiling|null $supersedes
  *
  * @method static TaxFilingFactory factory($count = null, $state = [])
@@ -104,14 +102,6 @@ class TaxFiling extends Model
                 throw DomainException::because(__('taxation.tax_filing_immutable'));
             }
         });
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     /**

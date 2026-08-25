@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +24,7 @@ final readonly class ReceivablesStatisticsService
     /**
      * @return array<string, mixed>
      */
-    public function getStatistics(User $user): array
+    public function getStatistics(Account $user): array
     {
         $today = Carbon::now()->startOfDay();
 
@@ -38,7 +38,7 @@ final readonly class ReceivablesStatisticsService
     /**
      * @return array<string, array<string, array{amount: float, count: int}>>
      */
-    private function receivables(User $user, Carbon $today): array
+    private function receivables(Account $user, Carbon $today): array
     {
         // Balances come from a join, not a correlated subquery — the latter
         // re-runs once per open invoice. Each is rounded per document before
@@ -60,7 +60,7 @@ final readonly class ReceivablesStatisticsService
     /**
      * @return array<string, array<string, array{amount: float, count: int}>>
      */
-    private function payables(User $user, Carbon $today): array
+    private function payables(Account $user, Carbon $today): array
     {
         // No partial payments are tracked against supplier invoices, so the
         // full total falls due and one rounding at the end is enough.

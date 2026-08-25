@@ -103,10 +103,7 @@ function ublInvoice(array $attributes = [], float|array $vatRate = 23.0, ?User $
 
 function buildUbl(Invoice $invoice): string
 {
-    $fresh = $invoice->fresh(['items', 'relatedInvoice']);
-    assert($fresh !== null);
-
-    return app(Ubl21InvoiceBuilder::class)->build($fresh);
+    return app(Ubl21InvoiceBuilder::class)->build($invoice->id);
 }
 
 /**

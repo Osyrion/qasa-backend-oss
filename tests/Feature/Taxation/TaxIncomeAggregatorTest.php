@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Domain\Models\ExchangeRate;
+use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
@@ -46,13 +46,57 @@ it('aggregates business income, expenses and contributions for the year, in the 
         ->and($data->totalActualExpenses())->toBe(350.0);
 });
 
+it('counts a standalone receipt once and a receipt for money already counted not at all', function (): void {
+    $user = createUser(['country' => 'SK']);
+    $client = Client::factory()->create(['user_id' => $user->id]);
+
+    $invoice = Invoice::factory()->create([
+        'user_id' => $user->id, 'client_id' => $client->id,
+        'type' => 'invoice', 'status' => 'sent', 'currency' => 'EUR',
+        'issued_at' => '2026-01-10', 'total' => 500,
+    ]);
+    $payment = InvoicePayment::factory()->create([
+        'invoice_id' => $invoice->id, 'amount' => 500, 'paid_at' => '2026-03-05',
+    ]);
+
+    // The receipt written for that very payment. Counting it would bill the
+    // owner twice for one collection — the reason the query filters on these
+    // two foreign keys at all.
+    CashDocument::factory()->income()->create([
+        'user_id' => $user->id, 'amount' => 500, 'currency' => 'EUR',
+        'issued_at' => '2026-03-05', 'invoice_payment_id' => $payment->id,
+    ]);
+
+    // Cash taken in without an invoice behind it: this one is the only record
+    // of the money, so it counts.
+    CashDocument::factory()->income()->create([
+        'user_id' => $user->id, 'amount' => 120, 'currency' => 'EUR',
+        'issued_at' => '2026-06-01',
+    ]);
+
+    $expense = Expense::factory()->create([
+        'user_id' => $user->id, 'currency' => 'EUR', 'amount' => 40, 'date' => '2026-05-01',
+    ]);
+    CashDocument::factory()->expense()->create([
+        'user_id' => $user->id, 'amount' => 40, 'currency' => 'EUR',
+        'issued_at' => '2026-05-01', 'expense_id' => $expense->id,
+    ]);
+    CashDocument::factory()->expense()->create([
+        'user_id' => $user->id, 'amount' => 15, 'currency' => 'EUR',
+        'issued_at' => '2026-07-02',
+    ]);
+
+    $data = app(TaxIncomeAggregator::class)->aggregate($user, 2026, TaxResidency::Sk);
+
+    expect($data->businessIncome)->toBe(620.0)
+        ->and($data->otherExpenses)->toBe(55.0);
+});
+
 it('converts amounts in a foreign currency into the filing currency using the daily rate', function (): void {
     $user = createUser(['country' => 'SK']);
     $client = Client::factory()->create(['user_id' => $user->id]);
 
-    ExchangeRate::factory()->system()->create([
-        'base_currency' => 'CZK', 'target_currency' => 'EUR', 'rate' => 0.04, 'date' => '2026-03-04',
-    ]);
+    systemExchangeRate('CZK', 'EUR', '2026-03-04', '0.040000');
 
     $invoice = Invoice::factory()->create([
         'user_id' => $user->id, 'client_id' => $client->id,

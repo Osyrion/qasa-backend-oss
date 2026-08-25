@@ -6,6 +6,7 @@ use App\Modules\Taxation\Domain\Models\CzTaxRateParameterSet;
 use App\Modules\Taxation\Domain\Models\SkTaxRateParameterSet;
 use App\Modules\Taxation\Infrastructure\Cz\CzIncomeTaxReturnCalculator;
 use App\Modules\Taxation\Infrastructure\Cz\Rates\DbBackedCzRateTable;
+use App\Modules\Taxation\Infrastructure\Rates\ConfiguredRateTables;
 use App\Modules\Taxation\Infrastructure\Sk\Rates\DbBackedSkRateTable;
 use App\Modules\Taxation\Infrastructure\Sk\SkIncomeTaxReturnCalculator;
 
@@ -16,12 +17,12 @@ it('has no DB row for a hardcoded year until one is written', function (): void 
 });
 
 it('still supports a hardcoded year with no DB override', function (): void {
-    expect((new SkIncomeTaxReturnCalculator)->supportsYear(2025))->toBeTrue()
-        ->and((new CzIncomeTaxReturnCalculator)->supportsYear(2025))->toBeTrue();
+    expect((new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->supportsYear(2025))->toBeTrue()
+        ->and((new CzIncomeTaxReturnCalculator(new ConfiguredRateTables))->supportsYear(2025))->toBeTrue();
 });
 
 it('does not support an unlisted year with no DB override', function (): void {
-    expect((new SkIncomeTaxReturnCalculator)->supportsYear(2030))->toBeFalse();
+    expect((new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->supportsYear(2030))->toBeFalse();
 });
 
 it('starts supporting a year once an admin override row exists for it', function (): void {
@@ -44,7 +45,7 @@ it('starts supporting a year once an admin override row exists for it', function
         'child_bonus_cap_shares' => [1 => 0.20, 2 => 0.27, 3 => 0.34, 4 => 0.41, 5 => 0.48, 6 => 0.55],
     ]);
 
-    expect((new SkIncomeTaxReturnCalculator)->supportsYear(2030))->toBeTrue();
+    expect((new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->supportsYear(2030))->toBeTrue();
 
     $rates = DbBackedSkRateTable::forYear(2030);
     expect($rates)->not->toBeNull();

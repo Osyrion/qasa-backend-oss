@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\CreateVatRateAction;
 use App\Modules\Invoicing\Application\Actions\DeleteVatRateAction;
 use App\Modules\Invoicing\Application\Actions\UpdateVatRateAction;
@@ -12,6 +11,7 @@ use App\Modules\Invoicing\Application\Contracts\VatRateRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\VatRateData;
 use App\Modules\Invoicing\Domain\Models\VatRate;
 use App\Modules\Invoicing\Presentation\Resources\VatRateResource;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -53,7 +53,7 @@ class VatRateController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $rates = $this->repository->allForUser($user->accountOwnerId());
@@ -114,7 +114,7 @@ class VatRateController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $request->validate(VatRateData::rules($user->accountOwnerId()));

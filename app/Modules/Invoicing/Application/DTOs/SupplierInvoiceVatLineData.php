@@ -21,9 +21,9 @@ class SupplierInvoiceVatLineData extends Data
     public static function rules(): array
     {
         return [
-            'vat_rate' => ['required', 'numeric', 'min:0', 'max:100'],
-            'base' => ['required', 'numeric', 'min:0'],
-            'vat_amount' => ['required', 'numeric', 'min:0'],
+            'vat_rate' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
+            'base' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'vat_amount' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ];
     }

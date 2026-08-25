@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\DTOs\ExchangeRateData;
 use App\Modules\Invoicing\Domain\Models\ExchangeRate;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -95,13 +95,15 @@ class ExchangeRateController extends Controller
     {
         $this->authorize('create', ExchangeRate::class);
 
+        $request->validate(ExchangeRateData::getValidationRules($request->all()));
+
         $data = ExchangeRateData::fromRequest($request);
 
         if ($data->base_currency === $data->target_currency) {
             return response()->json(['message' => __('invoicing.currencies_must_differ')], 422);
         }
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $rate = ExchangeRate::updateOrCreate(

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Enums\CashDocumentType;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -48,7 +47,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $reverses_cash_document_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User|null $user
  * @property-read InvoicePayment|null $invoicePayment
  * @property-read Expense|null $expense
  * @property-read CashDocument|null $reverses
@@ -116,14 +114,6 @@ class CashDocument extends Model
     public function isReversal(): bool
     {
         return $this->reverses_cash_document_id !== null;
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 
     /**

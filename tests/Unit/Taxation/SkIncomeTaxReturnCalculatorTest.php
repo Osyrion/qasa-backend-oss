@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 use App\Modules\Shared\Enums\Currency;
-use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
+use App\Modules\Taxation\Domain\ValueObjects\SystemIncomeData;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnInput;
+use App\Modules\Taxation\Infrastructure\Rates\ConfiguredRateTables;
 use App\Modules\Taxation\Infrastructure\Sk\SkIncomeTaxReturnCalculator;
 
 function skSystemIncome(float $businessIncome, float $actualExpenses = 0.0, float $socialPaid = 0.0, float $healthPaid = 0.0): SystemIncomeData
@@ -46,7 +47,7 @@ function skInput(array $overrides = []): TaxReturnInput
 }
 
 it('rejects an unsupported year', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     expect($calculator->supportsYear(2025))->toBeTrue()
         ->and($calculator->supportsYear(2026))->toBeTrue()
@@ -54,7 +55,7 @@ it('rejects an unsupported year', function (): void {
 });
 
 it('computes flat-rate expenses at 60% plus contributions actually paid, capped at €20,000', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 20_000, socialPaid: 1_000, healthPaid: 800),
@@ -67,7 +68,7 @@ it('computes flat-rate expenses at 60% plus contributions actually paid, capped 
 });
 
 it('caps the flat expense rate at the annual ceiling for high income', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 100_000),
@@ -79,7 +80,7 @@ it('caps the flat expense rate at the annual ceiling for high income', function 
 });
 
 it('applies the 15% simplified rate for gross income at or under €60,000', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 40_000),
@@ -91,7 +92,7 @@ it('applies the 15% simplified rate for gross income at or under €60,000', fun
 });
 
 it('applies the progressive 19/25% rate for gross income above €60,000', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 200_000, actualExpenses: 20_000),
@@ -104,7 +105,7 @@ it('applies the progressive 19/25% rate for gross income above €60,000', funct
 });
 
 it('grants the full basic NČZD below the phase-out threshold and less above it', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $low = $calculator->calculate(skInput(['systemIncome' => skSystemIncome(businessIncome: 15_000), 'useActualExpenses' => true]));
     $high = $calculator->calculate(skInput(['systemIncome' => skSystemIncome(businessIncome: 100_000, actualExpenses: 10_000), 'useActualExpenses' => true]));
@@ -113,7 +114,7 @@ it('grants the full basic NČZD below the phase-out threshold and less above it'
 });
 
 it('has no social contribution obligation under the income threshold', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 5_000),
@@ -124,7 +125,7 @@ it('has no social contribution obligation under the income threshold', function 
 });
 
 it('caps the child bonus at a share of the business partial tax base', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 5_000),
@@ -141,7 +142,7 @@ it('caps the child bonus at a share of the business partial tax base', function 
  * A single flat 20 % under-credits every family past the first child.
  */
 it('widens the child bonus cap with the number of children', function (int $children, float $expectedShare): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $result = $calculator->calculate(skInput([
         // Low enough that the cap, not the per-child amount, is what binds.
@@ -162,7 +163,7 @@ it('widens the child bonus cap with the number of children', function (int $chil
 ]);
 
 it('counts only bonus-eligible children towards the cap band', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     // Two eligible children and two adults: the band is the two-child 27 %,
     // not the four-"child" 41 %.
@@ -176,7 +177,7 @@ it('counts only bonus-eligible children towards the cap band', function (): void
 });
 
 it('ignores a child older than 18 for the bonus', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $withAdultChild = $calculator->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 50_000),
@@ -188,7 +189,7 @@ it('ignores a child older than 18 for the bonus', function (): void {
 });
 
 it('grants a larger spouse allowance only when eligible', function (): void {
-    $calculator = new SkIncomeTaxReturnCalculator;
+    $calculator = new SkIncomeTaxReturnCalculator(new ConfiguredRateTables);
 
     $withoutSpouse = $calculator->calculate(skInput(['systemIncome' => skSystemIncome(businessIncome: 30_000), 'useActualExpenses' => true]));
     $withSpouse = $calculator->calculate(skInput([
@@ -209,7 +210,7 @@ it('grants a larger spouse allowance only when eligible', function (): void {
  * it stood: the mixed case the wizard accepts was never exercised.
  */
 it('does not extend the 15% business rate to employment income', function (): void {
-    $result = (new SkIncomeTaxReturnCalculator)->calculate(skInput([
+    $result = (new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 10_000),
         'employmentIncome' => 50_000.0,
     ]));
@@ -232,7 +233,7 @@ it('does not extend the 15% business rate to employment income', function (): vo
 });
 
 it('taxes a pure employment base on the 19/25 scale with no business income', function (): void {
-    $result = (new SkIncomeTaxReturnCalculator)->calculate(skInput([
+    $result = (new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 0.0),
         'employmentIncome' => 60_000.0,
     ]));
@@ -254,7 +255,7 @@ it('taxes a pure employment base on the 19/25 scale with no business income', fu
  * the result says so, rather than presenting the number as a liability.
  */
 it('flags that the contribution estimate ignores the statutory assessment bounds', function (): void {
-    $result = (new SkIncomeTaxReturnCalculator)->calculate(skInput([
+    $result = (new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 400_000),
     ]));
 
@@ -262,7 +263,7 @@ it('flags that the contribution estimate ignores the statutory assessment bounds
 });
 
 it('does not flag the contribution estimate when nothing is owed', function (): void {
-    $result = (new SkIncomeTaxReturnCalculator)->calculate(skInput([
+    $result = (new SkIncomeTaxReturnCalculator(new ConfiguredRateTables))->calculate(skInput([
         'systemIncome' => skSystemIncome(businessIncome: 0.0),
         'monthsActive' => 0,
     ]));

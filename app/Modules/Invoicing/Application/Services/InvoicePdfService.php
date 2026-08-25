@@ -7,9 +7,9 @@ namespace App\Modules\Invoicing\Application\Services;
 use App\Modules\Invoicing\Application\DTOs\InvoicePdfViewModel;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Domain\Services\ClientTaxLabelMap;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Shared\Enums\VatStatus;
+use App\Modules\Shared\Support\ClientTaxLabelMap;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -30,7 +30,7 @@ class InvoicePdfService
         $invoice->loadMissing(['client', 'items', 'user', 'bankAccount', 'relatedInvoice', 'workReportLines']);
 
         // Set locale for invoice language
-        $locale = $invoice->client->locale ?? $invoice->user->locale ?? 'sk';
+        $locale = $invoice->client->locale ?? $invoice->user?->preferredLocale() ?? 'sk';
         App::setLocale($locale);
 
         $pdf = Pdf::loadView('invoices::pdf', [
@@ -129,23 +129,7 @@ class InvoicePdfService
 
         assert($user !== null);
 
-        return [
-            'name' => $user->supplierName(),
-            'ico' => $user->ico,
-            'dic' => $user->dic,
-            'vat_id' => $user->vat_id,
-            'is_vat_payer' => $user->is_vat_payer,
-            'vat_status' => $user->vat_status->value,
-            'address' => $user->address,
-            'city' => $user->city,
-            'postal_code' => $user->postal_code,
-            'country' => $user->country,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'website' => $user->website,
-            'logo_path' => $user->logo_path,
-            'invoice_footer_text' => $user->invoice_footer_text,
-        ];
+        return $user->supplierProfile()->toSnapshot();
     }
 
     /**

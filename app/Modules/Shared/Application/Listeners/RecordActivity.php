@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Listeners;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Contracts\ActivityRecorderInterface;
 use App\Modules\Shared\Application\Services\ActivityEventRegistry;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -45,7 +45,7 @@ final class RecordActivity
         // any request where the admin guard is the default into a foreign-key
         // violation at the moment something is logged.
         $actor = auth()->user();
-        $actorId = $actor instanceof User ? $actor->getKey() : null;
+        $actorId = $actor instanceof Account ? $actor->getKey() : null;
 
         $this->recorder->record(
             $userId,
@@ -63,7 +63,7 @@ final class RecordActivity
      */
     private function tenantIdFor(Model $subject): ?string
     {
-        if ($subject instanceof User) {
+        if ($subject instanceof Account) {
             return $subject->accountOwnerId();
         }
 

@@ -23,6 +23,7 @@
         "laravel/socialite": "^5.26",
         "laravel/tinker": "^3.0",
         "league/csv": "^9.28",
+        "league/flysystem-aws-s3-v3": "^3.25",
         "pragmarx/google2fa": "^8.0",
         "sentry/sentry-laravel": "^4.27",
         "smalot/pdfparser": "^2.12",
@@ -35,6 +36,7 @@
         "barryvdh/laravel-debugbar": "^4.2",
         "barryvdh/laravel-ide-helper": "^3.7",
         "darkaonline/l5-swagger": "^11.0",
+        "deptrac/deptrac": "^4.7",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.9",
         "laravel/pail": "^1.2.5",
@@ -88,7 +90,17 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ],
-        "phpstan": "phpstan analyse --memory-limit=1G"
+        "phpstan": "phpstan analyse --memory-limit=768M",
+        "deptrac": [
+            "deptrac analyse --config-file=deptrac.layers.php --no-progress",
+            "deptrac analyse --config-file=deptrac.modules.php --no-progress"
+        ],
+        "deptrac:prune": "python3 scripts/deptrac-prune.py",
+        "deptrac:baseline": [
+            "deptrac analyse --config-file=deptrac.layers.php --no-progress --formatter=baseline --output=deptrac.layers.baseline.yaml || true",
+            "deptrac analyse --config-file=deptrac.modules.php --no-progress --formatter=baseline --output=deptrac.modules.baseline.yaml || true",
+            "echo 'Baselines rewritten. They may only ever shrink: update deptrac.baseline.counts.json to match (the failing test names both numbers), and expect the deptrac-ratchet CI job to reject any entry main did not already have.'"
+        ]
     },
     "extra": {
         "laravel": {

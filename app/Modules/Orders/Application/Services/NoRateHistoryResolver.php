@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Orders\Application\Contracts\OrderRateResolverInterface;
 use App\Modules\Orders\Application\Contracts\OrderRateSheetInterface;
-use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Shared\Domain\Contracts\Account;
 
 /**
  * OSS core default: rate history is a Pricing (premium) feature, so the
@@ -16,7 +14,7 @@ use App\Modules\Orders\Domain\Models\Order;
  */
 final class NoRateHistoryResolver implements OrderRateResolverInterface
 {
-    public function sheetFor(User $user, ?Client $client = null, ?Order $order = null): OrderRateSheetInterface
+    public function sheetFor(Account $user, ?string $clientId = null, ?string $orderId = null): OrderRateSheetInterface
     {
         return new EmptyOrderRateSheet;
     }

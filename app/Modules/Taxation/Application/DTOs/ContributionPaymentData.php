@@ -33,7 +33,7 @@ class ContributionPaymentData extends Data
         return [
             'period_year' => ['integer', 'min:2000', 'max:2100'],
             'period_month' => ['nullable', 'integer', 'min:1', 'max:12'],
-            'amount' => ['numeric', 'min:0.01'],
+            'amount' => ['numeric', 'min:0.01', 'decimal:0,2'],
             'paid_at' => ['date'],
         ];
     }

@@ -6,7 +6,7 @@ namespace App\Modules\Invoicing\Application\DTOs;
 
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceWorkReportLine;
-use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Invoicing\Domain\ValueObjects\VatRecapRow;
 use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Support\Collection;
 

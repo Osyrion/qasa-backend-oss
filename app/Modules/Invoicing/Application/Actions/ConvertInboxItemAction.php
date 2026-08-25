@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +26,7 @@ readonly class ConvertInboxItemAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(InvoiceInboxItem $item, SupplierInvoiceData $data, User $user): SupplierInvoice
+    public function execute(InvoiceInboxItem $item, SupplierInvoiceData $data, Account&ProvidesInvoiceNumbering&ProvidesSupplierProfile $user): SupplierInvoice
     {
         if (! $item->statusEnum()->canConvert()) {
             throw DomainException::because(__('invoicing.inbox.already_processed'));

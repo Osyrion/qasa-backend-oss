@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
+use App\Modules\Invoicing\Application\Mail\InvoiceReminderMail;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceReminded;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Presentation\Mail\InvoiceReminderMail;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\VerifiedSenderGuard;
 use Illuminate\Support\Facades\Mail;
@@ -62,7 +62,7 @@ readonly class RemindInvoiceAction
             throw DomainException::because(__('invoicing.client_email_missing_for_reminder'));
         }
 
-        $locale = $invoice->client->locale ?? $invoice->user->locale ?? (string) config('app.locale');
+        $locale = $invoice->client->locale ?? $invoice->user?->preferredLocale() ?? (string) config('app.locale');
 
         $publicUrl = null;
 

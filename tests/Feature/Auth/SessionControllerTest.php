@@ -114,3 +114,88 @@ it('does not list an API integration token among sessions even when created dire
 
     expect($names)->toBe(['current-device']);
 });
+
+it('registers a push token on the current session', function (): void {
+    $user = createUser();
+    [$plain, $tokenId] = sessionBearer($user, 'phone');
+
+    $this->withHeader('Authorization', "Bearer {$plain}")
+        ->putJson('/api/v1/auth/push-token', ['push_token' => 'ExponentPushToken[abc]', 'push_platform' => 'ios'])
+        ->assertNoContent();
+
+    asAccount($user, function () use ($user, $tokenId): void {
+        $token = $user->tokens()->whereKey($tokenId)->firstOrFail();
+        expect($token->push_token)->toBe('ExponentPushToken[abc]')
+            ->and($token->push_platform)->toBe('ios');
+    });
+
+    $sessions = $this->withHeader('Authorization', "Bearer {$plain}")
+        ->getJson('/api/v1/auth/sessions')
+        ->assertOk();
+
+    expect($sessions->json('data.0.has_push_token'))->toBeTrue();
+});
+
+it('clears a push token by sending null', function (): void {
+    $user = createUser();
+    [$plain, $tokenId] = sessionBearer($user, 'phone');
+
+    $this->withHeader('Authorization', "Bearer {$plain}")
+        ->putJson('/api/v1/auth/push-token', ['push_token' => 'ExponentPushToken[abc]', 'push_platform' => 'ios'])
+        ->assertNoContent();
+
+    $this->withHeader('Authorization', "Bearer {$plain}")
+        ->putJson('/api/v1/auth/push-token', ['push_token' => null, 'push_platform' => null])
+        ->assertNoContent();
+
+    asAccount($user, function () use ($user, $tokenId): void {
+        $token = $user->tokens()->whereKey($tokenId)->firstOrFail();
+        expect($token->push_token)->toBeNull();
+    });
+});
+
+it('rejects a push token registration from an API integration token', function (): void {
+    $user = createUser();
+    subscribeToPaidPlan($user);
+    $apiToken = $user->createToken('zapier', ['invoices.view']);
+    $apiToken->accessToken->forceFill(['type' => 'api'])->save();
+
+    $this->withHeader('Authorization', "Bearer {$apiToken->plainTextToken}")
+        ->putJson('/api/v1/auth/push-token', ['push_token' => 'ExponentPushToken[abc]', 'push_platform' => 'ios'])
+        ->assertUnprocessable();
+});
+
+it('moves a push token off the session that held it before', function (): void {
+    $user = createUser();
+    [$oldPlain, $oldTokenId] = sessionBearer($user, 'phone-before-reinstall');
+    [$newPlain, $newTokenId] = sessionBearer($user, 'phone-after-reinstall');
+
+    foreach ([$oldPlain, $newPlain] as $plain) {
+        // Two bearer tokens, two requests, one test process: the guard
+        // memoizes the user (and with it currentAccessToken()) the first
+        // time it resolves one, so without this the second request would
+        // still be running as the first session — the exact distinction
+        // this test is about.
+        $this->app['auth']->forgetGuards();
+
+        $this->withHeader('Authorization', "Bearer {$plain}")
+            ->putJson('/api/v1/auth/push-token', ['push_token' => 'ExponentPushToken[same-device]', 'push_platform' => 'android'])
+            ->assertNoContent();
+    }
+
+    asAccount($user, function () use ($user, $oldTokenId, $newTokenId): void {
+        expect($user->tokens()->whereKey($oldTokenId)->firstOrFail()->push_token)->toBeNull()
+            ->and($user->tokens()->whereKey($oldTokenId)->firstOrFail()->push_platform)->toBeNull()
+            ->and($user->tokens()->whereKey($newTokenId)->firstOrFail()->push_token)->toBe('ExponentPushToken[same-device]');
+    });
+});
+
+it('requires push_platform when a push_token is set', function (): void {
+    $user = createUser();
+    [$plain] = sessionBearer($user, 'phone');
+
+    $this->withHeader('Authorization', "Bearer {$plain}")
+        ->putJson('/api/v1/auth/push-token', ['push_token' => 'ExponentPushToken[abc]'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrorFor('push_platform');
+});

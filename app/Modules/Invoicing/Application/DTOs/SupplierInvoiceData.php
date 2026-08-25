@@ -77,7 +77,7 @@ class SupplierInvoiceData extends Data
             'taxable_supply_at' => ['nullable', 'date'],
             'due_at' => ['nullable', 'date', 'after_or_equal:issued_at'],
             'received_at' => ['nullable', 'date'],
-            'exchange_rate' => ['nullable', 'numeric', 'min:0'],
+            'exchange_rate' => ['nullable', 'numeric', 'min:0', 'decimal:0,6'],
             'variable_symbol' => ['nullable', 'string', 'regex:/^\d{1,10}$/'],
             'note' => ['nullable', 'string', 'max:2000'],
             // Vendor payment account: domestic pair and IBAN pair are each
@@ -89,11 +89,11 @@ class SupplierInvoiceData extends Data
             'vat_regime' => ['sometimes', Rule::enum(SupplierVatRegime::class)],
             'vat_lines' => ['required', 'array', 'min:1'],
             'vat_lines.*.vat_rate' => [
-                'required', 'numeric', 'min:0', 'max:100',
+                'required', 'numeric', 'min:0', 'max:100', 'decimal:0,2',
                 ...($userId !== null && $country !== null && ! $isImport ? [new VatRateInCatalog($userId, $country, $onDate)] : []),
             ],
-            'vat_lines.*.base' => ['required', 'numeric', 'min:0'],
-            'vat_lines.*.vat_amount' => ['required', 'numeric', 'min:0'],
+            'vat_lines.*.base' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'vat_lines.*.vat_amount' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
             'vat_lines.*.sort_order' => ['sometimes', 'integer', 'min:0'],
         ];
     }

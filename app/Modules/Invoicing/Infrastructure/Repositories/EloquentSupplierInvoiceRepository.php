@@ -9,7 +9,7 @@ use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceExportData;
 use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;

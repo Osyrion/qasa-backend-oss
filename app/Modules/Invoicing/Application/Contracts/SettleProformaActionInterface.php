@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Throwable;
 
@@ -20,5 +20,5 @@ interface SettleProformaActionInterface
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Invoice $proforma, User $user): Invoice;
+    public function execute(Invoice $proforma, Account $user): Invoice;
 }

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
 use App\Modules\Invoicing\Application\Contracts\SupplierInvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceData;
 use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
@@ -30,7 +32,7 @@ readonly class CreateSupplierInvoiceAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(SupplierInvoiceData $data, User $user, Provenance $provenance = Provenance::Manual): SupplierInvoice
+    public function execute(SupplierInvoiceData $data, Account&ProvidesInvoiceNumbering&ProvidesSupplierProfile $user, Provenance $provenance = Provenance::Manual): SupplierInvoice
     {
         $client = $this->clients->findByIdOrFail($data->client_id);
 
@@ -40,22 +42,24 @@ readonly class CreateSupplierInvoiceAction
 
         $this->usageGuard->ensureUsable($client);
 
-        if ($data->vat_regime !== SupplierVatRegime::Domestic && $user->accountOwner()->vat_status === VatStatus::NonPayer) {
+        if ($data->vat_regime !== SupplierVatRegime::Domestic && $user->supplierProfile()->vatStatus === VatStatus::NonPayer) {
             throw DomainException::because(__('invoicing.supplier_invoice.self_assessment_requires_vat_status'));
         }
 
         return DB::transaction(function () use ($data, $user, $provenance): SupplierInvoice {
             $userId = $user->accountOwnerId();
 
+            $numbering = $user->invoiceNumbering();
+
             $mask = new InvoiceNumberMask(
-                $user->accountOwner()->supplier_invoice_number_mask
+                $numbering->supplierInvoiceMask
                     ?? config('invoicing.supplier_invoice_number_mask', 'DF-{YYYY}-{NNNN}')
             );
 
             $internalNumber = $this->repository->nextInternalNumber(
                 userId: $userId,
                 mask: $mask,
-                start: $user->accountOwner()->supplier_invoice_number_start ?? 1,
+                start: $numbering->supplierInvoiceStart,
             );
 
             $supplierInvoice = $this->repository->create([

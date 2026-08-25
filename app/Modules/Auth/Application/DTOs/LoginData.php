@@ -21,6 +21,12 @@ class LoginData extends Data
 
         public readonly bool $remember = false,
         public readonly ?string $device_name = null,
+
+        // Cloudflare Turnstile, the same field register and the waitlist
+        // post. Only ever looked at once an account has taken enough
+        // failures to trip LoginCaptchaGate — a normal sign-in never
+        // carries one, and a deployment without Turnstile never needs one.
+        public readonly ?string $turnstile_token = null,
     ) {}
 
     /**
@@ -33,6 +39,7 @@ class LoginData extends Data
             'password' => ['required', 'string', 'max:255'],
             'remember' => ['sometimes', 'boolean'],
             'device_name' => ['nullable', 'string', 'max:255'],
+            'turnstile_token' => ['nullable', 'string'],
         ];
     }
 
@@ -43,6 +50,7 @@ class LoginData extends Data
             password: $request->string('password')->toString(),
             remember: $request->boolean('remember', false),
             device_name: $request->filled('device_name') ? $request->string('device_name')->toString() : null,
+            turnstile_token: $request->filled('turnstile_token') ? $request->string('turnstile_token')->toString() : null,
         );
     }
 }

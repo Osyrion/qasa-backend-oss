@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Contracts;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Which model actually answers for an account, and on whose key — the one
@@ -21,5 +23,5 @@ interface AiModelResolver
     /**
      * @return array{provider: string|null, model: string|null, byok: bool}
      */
-    public function resolveFor(User $owner): array;
+    public function resolveFor(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): array;
 }

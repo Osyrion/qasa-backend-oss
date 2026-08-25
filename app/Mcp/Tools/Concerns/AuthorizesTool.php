@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Mcp\Tools\Concerns;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Actor;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Auth\AuthenticationException;
 use Laravel\Mcp\Request;
 
@@ -19,11 +21,17 @@ use Laravel\Mcp\Request;
  */
 trait AuthorizesTool
 {
-    private function authenticatedUser(Request $request): User
+    /**
+     * Typed as the contracts rather than the edition's User model: the SaaS
+     * edition swaps that class through the auth config, and naming it here
+     * would flatten onto every tool that uses this trait (deptrac counts a
+     * trait's dependencies against its users).
+     */
+    private function authenticatedUser(Request $request): Actor&ProvidesPlanEntitlements&ProvidesSupplierProfile
     {
         $user = $request->user();
 
-        if (! $user instanceof User) {
+        if (! $user instanceof Actor || ! $user instanceof ProvidesPlanEntitlements || ! $user instanceof ProvidesSupplierProfile) {
             throw new AuthenticationException(__('mcp.unauthenticated'));
         }
 

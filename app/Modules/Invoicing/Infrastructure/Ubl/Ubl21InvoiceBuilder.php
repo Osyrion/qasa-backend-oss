@@ -12,6 +12,7 @@ use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
 use App\Modules\Shared\Exceptions\DomainException;
 use DOMDocument;
 use DOMElement;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * OASIS UBL 2.1 invoice built to the EN 16931 semantic model — the invoice's
@@ -62,9 +63,28 @@ final class Ubl21InvoiceBuilder implements UblInvoiceBuilderInterface
     }
 
     /**
+     * @throws ModelNotFoundException when the account cannot see the document
      * @throws DomainException when the document type has no UBL equivalent
      */
-    public function build(Invoice $invoice): string
+    public function build(string $invoiceId): string
+    {
+        /** @var Invoice $invoice */
+        $invoice = Invoice::query()
+            // The relations the rendering below reads. Loading them here
+            // rather than asking the caller to is the point of taking an id:
+            // a caller outside Invoicing cannot know this list, and the one
+            // that guessed it was the reason two Peppol actions had to name
+            // the model at all.
+            ->with(['items', 'relatedInvoice'])
+            ->findOrFail($invoiceId);
+
+        return $this->render($invoice);
+    }
+
+    /**
+     * @throws DomainException when the document type has no UBL equivalent
+     */
+    private function render(Invoice $invoice): string
     {
         $isCreditNote = $invoice->type === InvoiceType::CreditNote;
 

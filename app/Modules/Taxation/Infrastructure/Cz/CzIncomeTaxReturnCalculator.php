@@ -5,13 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Taxation\Application\Contracts\EffectiveRateTables;
+use App\Modules\Taxation\Domain\Contracts\CzRateTable;
 use App\Modules\Taxation\Domain\Contracts\IncomeTaxReturnCalculator;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnInput;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnResult;
-use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRates2025;
-use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRates2026;
-use App\Modules\Taxation\Infrastructure\Cz\Rates\CzRateTable;
-use App\Modules\Taxation\Infrastructure\Cz\Rates\DbBackedCzRateTable;
 
 /**
  * §7 (samostatná činnost) worksheet — real vs. flat-rate expenses (whichever
@@ -22,20 +20,11 @@ use App\Modules\Taxation\Infrastructure\Cz\Rates\DbBackedCzRateTable;
  */
 final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalculator
 {
-    /** @var array<int, CzRateTable> */
-    private array $rateTables;
-
-    public function __construct()
-    {
-        $this->rateTables = [
-            2025 => new CzRates2025,
-            2026 => new CzRates2026,
-        ];
-    }
+    public function __construct(private EffectiveRateTables $rates) {}
 
     public function supportsYear(int $year): bool
     {
-        return isset($this->rateTables[$year]) || DbBackedCzRateTable::hasYear($year);
+        return $this->rates->cz($year) !== null;
     }
 
     public function calculate(TaxReturnInput $input): TaxReturnResult
@@ -96,8 +85,7 @@ final readonly class CzIncomeTaxReturnCalculator implements IncomeTaxReturnCalcu
      */
     private function ratesFor(int $year): CzRateTable
     {
-        return DbBackedCzRateTable::forYear($year)
-            ?? $this->rateTables[$year]
+        return $this->rates->cz($year)
             ?? throw DomainException::because(__('taxation.unsupported_tax_year', ['year' => $year]));
     }
 

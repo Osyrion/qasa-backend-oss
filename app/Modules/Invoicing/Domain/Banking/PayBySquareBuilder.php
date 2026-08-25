@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Domain\Banking;
 
 use App\Modules\Invoicing\Domain\Banking\Contracts\PaymentQrScheme;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use App\Modules\Shared\Enums\Currency;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -82,10 +83,13 @@ final class PayBySquareBuilder implements PaymentQrScheme
     }
 
     /**
-     * @throws RuntimeException when the xz binary is unavailable — callers
-     *                          (PaymentQrService) already catch broadly and
-     *                          degrade to "no QR", matching every other
-     *                          builder's failure mode.
+     * @throws RuntimeException when the xz binary is unavailable or fails.
+     *                          PaymentQrService catches it and degrades to
+     *                          "no QR" on the PDF; SupplierPaymentQrService
+     *                          converts it to a DomainException, because its
+     *                          QR is the whole response. Until 2026-08-21
+     *                          neither did, and this threw straight through
+     *                          the invoice render.
      */
     public function build(
         string $iban,

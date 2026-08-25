@@ -33,11 +33,11 @@ class RecurringTemplateItemData extends Data
     {
         return [
             'description' => ['required', 'string', 'max:500'],
-            'quantity' => ['required', 'numeric', 'min:0.001'],
+            'quantity' => ['required', 'numeric', 'min:0.001', 'decimal:0,3'],
             'unit' => ['sometimes', 'string', 'max:20'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
+            'unit_price' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
             'vat_rate' => [
-                'sometimes', 'numeric', 'min:0', 'max:100',
+                'sometimes', 'numeric', 'min:0', 'max:100', 'decimal:0,2',
                 ...($userId !== null && $country !== null ? [new VatRateInCatalog($userId, $country)] : []),
             ],
             'sort_order' => ['sometimes', 'integer', 'min:0'],

@@ -51,6 +51,21 @@ final class AccountLookup
     }
 
     /**
+     * The account that has *verified* $phone, without binding anything.
+     *
+     * Unverified numbers are invisible here on purpose — see the function's
+     * own migration. Used by PhoneAvailable to keep one number from
+     * unlocking a trial on account after account.
+     */
+    public static function byPhone(string $phone): ?string
+    {
+        /** @var object{account: string|null}|null $row */
+        $row = DB::selectOne('SELECT public.account_for_phone(?) AS account', [$phone]);
+
+        return $row?->account;
+    }
+
+    /**
      * Bind the connection to the account owning user id $id, if any.
      *
      * For callers that already hold a trusted id — not from user input, but

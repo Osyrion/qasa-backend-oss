@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Presentation\Resources;
 
-use App\Modules\Clients\Presentation\Resources\ClientResource;
+use App\Modules\Clients\Application\Contracts\ClientRepresentation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -49,11 +49,11 @@ class OrderResource extends JsonResource
             'readme' => $this->resource->readme,
             'status' => $this->resource->status,
             'billing_type' => $this->resource->billing_type?->value,
-            'rate' => $this->resource->rate !== null ? (float) $this->rate : null,
+            'rate' => $this->resource->rate !== null ? (float) $this->resource->rate : null,
             'currency' => $this->resource->currency?->value,
             'effective_currency' => $this->resource->effectiveCurrency()->value,
-            'estimated_hours' => $this->resource->estimated_hours !== null ? (float) $this->estimated_hours : null,
-            'estimated_price' => $this->resource->estimated_price !== null ? (float) $this->estimated_price : null,
+            'estimated_hours' => $this->resource->estimated_hours !== null ? (float) $this->resource->estimated_hours : null,
+            'estimated_price' => $this->resource->estimated_price !== null ? (float) $this->resource->estimated_price : null,
             'deadline' => $this->resource->deadline?->toDateString(),
             'is_personal' => $this->resource->isPersonal(),
             'is_billable' => $this->resource->isBillable(),
@@ -61,7 +61,9 @@ class OrderResource extends JsonResource
             // Conditionally loaded relations
             'client' => $this->when(
                 $this->resource->relationLoaded('client') && $this->resource->client !== null,
-                fn (): ClientResource => ClientResource::make($this->resource->client),
+                fn (): ?array => $this->resource->client === null
+                    ? null
+                    : app(ClientRepresentation::class)->forClient($this->resource->client),
             ),
 
             'items' => $this->when(

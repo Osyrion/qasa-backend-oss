@@ -45,6 +45,14 @@ Thumbs.db
 !storage/framework/views/.gitignore
 !storage/logs/.gitignore
 
+# deptrac's AST cache, tens of MB and rebuilt on demand. The depfiles point it
+# at storage/framework/cache (already ignored there); this is the tool's own
+# default name, which an ad-hoc run without -c would drop here.
+/.deptrac.cache
+
+# Python bytecode from the ratchet scripts in scripts/
+__pycache__/
+
 # --- OSTATNÉ ---
 .env.testing
 /dist

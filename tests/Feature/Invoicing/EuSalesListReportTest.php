@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -27,7 +28,7 @@ function euSalesListScope(): array
     return [$user, $client];
 }
 
-function issueEuRcInvoice(object $test, User $user, Client $client, string $issuedAt, float $unitPrice = 1000): Invoice
+function issueEuRcInvoice(TestCase $test, User $user, Client $client, string $issuedAt, float $unitPrice = 1000): Invoice
 {
     $created = $test->actingAs($user)->postJson('/api/v1/invoices', [
         'client_id' => $client->id,

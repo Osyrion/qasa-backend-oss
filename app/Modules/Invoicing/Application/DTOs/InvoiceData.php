@@ -62,7 +62,7 @@ class InvoiceData extends Data
             'taxable_supply_at' => ['nullable', 'date'],
             'variable_symbol' => ['nullable', 'string', 'regex:/^\d{1,10}$/'],
             'bank_account_id' => ['nullable', 'uuid', 'exists:bank_accounts,id'],
-            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
             'note' => ['nullable', 'string', 'max:2000'],
             'note_above' => ['nullable', 'string', 'max:2000'],
             'reverse_charge' => ['sometimes', 'boolean'],

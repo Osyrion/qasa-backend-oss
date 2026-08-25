@@ -75,7 +75,7 @@ class ClientResource extends JsonResource
             'is_vendor' => $this->resource->is_vendor,
             'reverse_charge_allowed' => $this->resource->reverse_charge_allowed,
             'vat_verified_at' => $this->resource->vat_verified_at?->toISOString(),
-            'is_locked' => ! app(ClientUsagePolicyInterface::class)->isUsable($this->resource),
+            'is_locked' => ! app(ClientUsagePolicyInterface::class)->isUsable($this->resource->usageSubject()),
             'archived_at' => $this->resource->archived_at?->toISOString(),
             'is_archived' => $this->resource->isArchived(),
             'email' => $this->resource->email,

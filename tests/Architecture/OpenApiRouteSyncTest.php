@@ -117,6 +117,59 @@ function normalizedPathKey(string $method, string $path): string
     return "{$method} {$path}";
 }
 
+it('declares every path parameter of every documented operation', function (): void {
+    // An operation whose `{param}` has no matching `in: path` entry renders in
+    // Swagger UI with no field to fill, and a stricter generator than orval
+    // produces a client that cannot call it at all. Six operations had drifted
+    // this way (Automation 2, Banking 4) — every one of them a route whose
+    // path parameter swagger-php had been inferring from a route-model-bound
+    // controller argument, which stops the moment that argument becomes a
+    // plain string. Declaring OA\Parameter explicitly is what the other 440
+    // operations already do; this makes it the rule.
+    Artisan::call('l5-swagger:generate');
+
+    /** @var array{paths: array<string, array<string, mixed>>} $spec */
+    $spec = json_decode((string) file_get_contents(storage_path('api-docs/api-docs.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    $httpMethods = ['get', 'post', 'put', 'patch', 'delete'];
+    $missing = [];
+
+    foreach ($spec['paths'] as $path => $operations) {
+        preg_match_all('/\{([^}]+)\}/', (string) $path, $matches);
+        $inPath = $matches[1];
+
+        if ($inPath === []) {
+            continue;
+        }
+
+        foreach ($operations as $method => $operation) {
+            if (! in_array($method, $httpMethods, true) || ! is_array($operation)) {
+                continue;
+            }
+
+            $declared = [];
+
+            foreach ($operation['parameters'] ?? [] as $parameter) {
+                if (($parameter['in'] ?? null) === 'path' && isset($parameter['name'])) {
+                    $declared[] = (string) $parameter['name'];
+                }
+            }
+
+            foreach (array_diff($inPath, $declared) as $undeclared) {
+                $missing[] = strtoupper((string) $method)." {$path} → {$undeclared}";
+            }
+        }
+    }
+
+    sort($missing);
+
+    expect($missing)->toBe(
+        [],
+        'These documented operations do not declare a path parameter they take — '.
+        'add an OA\Parameter for each: '.implode(', ', $missing),
+    );
+});
+
 it('has an OpenAPI annotation for every registered api/v1 route, unless justified', function (): void {
     $allowlist = undocumentedRouteAllowlist();
     $routes = normalizedRouteMap();

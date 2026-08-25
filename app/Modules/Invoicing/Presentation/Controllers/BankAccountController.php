@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\CreateBankAccountAction;
 use App\Modules\Invoicing\Application\Actions\UpdateBankAccountAction;
 use App\Modules\Invoicing\Application\Contracts\BankAccountRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\BankAccountData;
 use App\Modules\Invoicing\Domain\Models\BankAccount;
 use App\Modules\Invoicing\Presentation\Resources\BankAccountResource;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -52,7 +52,7 @@ class BankAccountController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $accounts = $this->repository->allForUser($user->accountOwnerId());
@@ -116,7 +116,7 @@ class BankAccountController extends Controller
     {
         $request->validate(BankAccountData::rules());
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         try {

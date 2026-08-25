@@ -6,7 +6,8 @@ namespace App\Modules\Taxation\Application\Actions;
 
 use App\Modules\Auth\Domain\Events\TaxResidencyCompleted;
 use App\Modules\Auth\Domain\Events\UserIcoChanged;
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Application\DTOs\CompleteResidencyData;
@@ -16,6 +17,7 @@ use App\Modules\Taxation\Domain\Rules\ValidCzIco;
 use App\Modules\Taxation\Domain\Rules\ValidSkDic;
 use App\Modules\Taxation\Domain\Rules\ValidSkIco;
 use App\Modules\Taxation\Domain\Rules\ValidSkVatId;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -25,9 +27,9 @@ class CompleteResidencyAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(User $user, CompleteResidencyData $data): User
+    public function execute(Account&Model&ProvidesSupplierProfile $user, CompleteResidencyData $data): void
     {
-        if ($user->country !== null) {
+        if ($user->supplierProfile()->country !== null) {
             throw DomainException::because(__('taxation.residency_already_set'));
         }
 
@@ -37,7 +39,7 @@ class CompleteResidencyAction
         $this->assertValidDic($residency, $data->dic);
         $this->assertValidVatId($residency, $data->vat_id);
 
-        $user = DB::transaction(function () use ($user, $data, $residency): User {
+        DB::transaction(function () use ($user, $data, $residency): void {
             $user->update([
                 'country' => $residency->value,
                 'ico' => $data->ico,
@@ -54,11 +56,7 @@ class CompleteResidencyAction
 
             event(new UserIcoChanged($user, null, $data->ico));
             event(new TaxResidencyCompleted($user));
-
-            return $user;
         });
-
-        return $user;
     }
 
     /**

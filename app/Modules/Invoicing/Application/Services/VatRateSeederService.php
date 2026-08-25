@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Domain\Models\VatRate;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 
 /**
@@ -20,15 +21,17 @@ class VatRateSeederService
         private readonly TaxSystemResolverInterface $taxSystemResolver,
     ) {}
 
-    public function seedFor(User $user): void
+    public function seedFor(Account&ProvidesSupplierProfile $user): void
     {
-        if ($user->country === null) {
+        $profile = $user->supplierProfile();
+
+        if ($profile->country === null) {
             return;
         }
 
         $userId = $user->accountOwnerId();
-        $country = strtoupper($user->country);
-        $taxSystem = $this->taxSystemResolver->forUser($user);
+        $country = strtoupper($profile->country);
+        $taxSystem = $this->taxSystemResolver->forSupplier($profile);
 
         $rates = $taxSystem->vatRateCatalog();
         $defaultRate = $taxSystem->defaultVatRate();

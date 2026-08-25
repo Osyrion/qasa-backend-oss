@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Policies;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Policies\InteractsWithAccount;
 use App\Modules\Taxation\Domain\Models\TaxFiling;
 
@@ -16,22 +16,22 @@ class TaxFilingPolicy
 {
     use InteractsWithAccount;
 
-    public function viewAny(User $user): bool
+    public function viewAny(Actor $user): bool
     {
         return $user->can('taxation.view');
     }
 
-    public function view(User $user, TaxFiling $filing): bool
+    public function view(Actor $user, TaxFiling $filing): bool
     {
         return $this->sameAccount($user, $filing->user_id) && $user->can('taxation.view');
     }
 
-    public function create(User $user): bool
+    public function create(Actor $user): bool
     {
         return $user->can('taxation.manage');
     }
 
-    public function update(User $user, TaxFiling $filing): bool
+    public function update(Actor $user, TaxFiling $filing): bool
     {
         return $this->sameAccount($user, $filing->user_id) && $user->can('taxation.manage');
     }

@@ -99,6 +99,8 @@ class OrderItemController extends Controller
     {
         $this->authorize('update', $order);
 
+        $request->validate(OrderItemData::getValidationRules($request->all()));
+
         $data = OrderItemData::fromRequest($request);
         $item = $this->upsertAction->execute($order, $data);
 
@@ -148,6 +150,8 @@ class OrderItemController extends Controller
     {
         $this->authorize('update', $order);
 
+        $request->validate(OrderItemData::getValidationRules($request->all()));
+
         $data = OrderItemData::fromRequest($request);
         $updated = $this->upsertAction->execute($order, $data, $item);
 
@@ -174,7 +178,7 @@ class OrderItemController extends Controller
     {
         $this->authorize('update', $order);
 
-        if ($item->isTime() && $this->billableWork->isOrderItemInvoiced($item)) {
+        if ($item->isTime() && $this->billableWork->isOrderItemInvoiced($item->id)) {
             return response()->json([
                 'message' => __('orders.item_not_deletable_invoiced'),
             ], 422);

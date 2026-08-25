@@ -60,6 +60,28 @@ return [
             'report' => false,
         ],
 
+        // Cloudflare R2 — S3-compatible, so it uses the same 's3' driver via
+        // league/flysystem-aws-s3-v3, just pointed at the account's R2
+        // endpoint with path-style addressing (R2 has no per-bucket DNS).
+        // Not wired up as the default disk anywhere yet — Documents module
+        // has a couple of spots hardcoding Storage::disk('local') (see
+        // UploadDocumentAction, DocumentController::download) that would
+        // need to switch to $document->disk / config('filesystems.default')
+        // before this can actually replace local storage in production.
+        // R2 has no egress fees, which is the point versus AWS_* above.
+        'r2' => [
+            'driver' => 's3',
+            'key' => env('R2_ACCESS_KEY_ID'),
+            'secret' => env('R2_SECRET_ACCESS_KEY'),
+            'region' => 'auto',
+            'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_URL'),
+            'endpoint' => env('R2_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

@@ -114,6 +114,66 @@ class SessionController extends Controller
         return response()->json(['revoked' => $revoked]);
     }
 
+    #[OA\Put(
+        path: '/api/v1/auth/push-token',
+        summary: "Register or clear this device's push notification token",
+        description: 'Attached to the session token the request is authenticated with — revoking that '
+            .'session (or logging out) stops its pushes too, no separate unregister call needed.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'push_token', type: 'string', nullable: true, description: 'Null clears the registration'),
+                    new OA\Property(property: 'push_platform', type: 'string', enum: ['ios', 'android'], nullable: true),
+                ]
+            )
+        ),
+        tags: ['Sessions'],
+        responses: [
+            new OA\Response(response: 204, description: 'Updated'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Not authenticated via a login session (e.g. an API integration token)'),
+        ]
+    )]
+    public function updatePushToken(Request $request): JsonResponse
+    {
+        $request->validate([
+            'push_token' => ['nullable', 'string', 'max:255'],
+            'push_platform' => ['nullable', 'string', 'in:ios,android', 'required_with:push_token'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        $token = $user->currentAccessToken();
+
+        // @phpstan-ignore instanceof.alwaysTrue
+        if (! $token instanceof PersonalAccessToken || $token->type !== 'session') {
+            return response()->json(['message' => __('auth.push_token_requires_session')], 422);
+        }
+
+        $pushToken = $request->input('push_token');
+
+        // One device, one registration. Reinstalling the app or signing in
+        // again mints a fresh session while the previous one may still be
+        // alive and still carrying the same Expo token — leaving it there
+        // would make the sender deliver every notification to that handset
+        // twice, once per session row.
+        if (is_string($pushToken) && $pushToken !== '') {
+            $user->tokens()
+                ->where('push_token', $pushToken)
+                ->whereKeyNot($token->getKey())
+                ->update(['push_token' => null, 'push_platform' => null]);
+        }
+
+        $token->forceFill([
+            'push_token' => $pushToken,
+            'push_platform' => $request->input('push_platform'),
+        ])->save();
+
+        return response()->json(null, 204);
+    }
+
     /**
      * currentAccessToken() is typed as PersonalAccessToken but, at runtime,
      * is a TransientToken whenever the request authenticated some other way
