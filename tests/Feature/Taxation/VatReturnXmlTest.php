@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Application\DTOs\VatReturnReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatReturnReportData;
 use App\Modules\Taxation\Infrastructure\Sk\DphXmlBuilder;
 
 /**
@@ -176,7 +176,7 @@ it('builds a byte-structurally-valid golden XML from a directly constructed repo
         assumptions: [],
     );
 
-    $xml = app(DphXmlBuilder::class)->build($report, $user);
+    $xml = app(DphXmlBuilder::class)->build($report, $user->supplierProfile());
 
     [$valid, $errors] = vrValidateXsd($xml, base_path('tests/Fixtures/vat-return/dph2025.xsd'));
     expect($errors)->toBeEmpty();

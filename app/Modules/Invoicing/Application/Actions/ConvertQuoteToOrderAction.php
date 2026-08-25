@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Actions;
 
 use App\Modules\Invoicing\Domain\Models\Quote;
+use App\Modules\Invoicing\Domain\Models\QuoteItem;
 use App\Modules\Orders\Application\Contracts\CreateOrderActionInterface;
 use App\Modules\Orders\Application\DTOs\OrderData;
-use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Domain\ValueObjects\OrderItemDraft;
 use App\Modules\Shared\Enums\BillingType;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
@@ -20,19 +21,21 @@ readonly class ConvertQuoteToOrderAction
     ) {}
 
     /**
+     * @return string the new order's id
+     *
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Quote $quote): Order
+    public function execute(Quote $quote): string
     {
         $this->assertConvertible($quote);
 
-        return DB::transaction(function () use ($quote): Order {
+        return DB::transaction(function () use ($quote): string {
             $quote->loadMissing(['items', 'user']);
             $user = $quote->user;
             assert($user !== null);
 
-            $order = $this->createOrderAction->execute(
+            $orderId = $this->createOrderAction->create(
                 new OrderData(
                     name: $quote->quote_number,
                     billing_type: BillingType::Mixed,
@@ -46,25 +49,19 @@ readonly class ConvertQuoteToOrderAction
                     deadline: null,
                 ),
                 $user,
+                array_values($quote->items->map(static fn (QuoteItem $item): OrderItemDraft => new OrderItemDraft(
+                    description: $item->description,
+                    quantity: (float) $item->quantity,
+                    unit: $item->unit,
+                    unitPrice: (float) $item->unit_price,
+                    vatRate: (float) $item->vat_rate,
+                    sortOrder: $item->sort_order,
+                ))->all()),
             );
 
-            foreach ($quote->items as $item) {
-                $orderItem = $order->items()->make([
-                    'type' => 'service',
-                    'description' => $item->description,
-                    'quantity' => $item->quantity,
-                    'unit' => $item->unit,
-                    'unit_price' => $item->unit_price,
-                    'vat_rate' => $item->vat_rate,
-                    'sort_order' => $item->sort_order,
-                ]);
-                $orderItem->recalculate();
-                $orderItem->save();
-            }
+            $quote->forceFill(['converted_order_id' => $orderId])->save();
 
-            $quote->forceFill(['converted_order_id' => $order->id])->save();
-
-            return $order;
+            return $orderId;
         });
     }
 

@@ -1,0 +1,14 @@
+# Four entries left, all of one kind, and none of them fixable at this layer.
+#
+# A controller naming an Infrastructure export builder is closed the usual
+# way — a contract in Application. Here that contract would have to be typed
+# `build(iterable<Invoice>)` / `build(iterable<SubscriptionInvoice>)`, and a
+# contract naming another module's Eloquent model is a *module* violation:
+# the attempt on 2026-08-19 traded these four layer violations for five new
+# module ones, which is the trade the ratchet exists to refuse.
+#
+# Closing them for real means giving the exporters an export DTO of their own
+# instead of the aggregate — the same work as the 121 shared-model entries in
+# deptrac.modules.baseline.yaml, tracked there and in APLIKACIA.md kap. 18.
+deptrac:
+  skip_violations:

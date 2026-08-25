@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Infrastructure\Sentry;
 
+use App\Modules\Shared\Application\Contracts\ErrorReportingContext;
 use Sentry\State\Scope;
 use Sentry\UserDataBag;
 
@@ -27,16 +28,16 @@ use function Sentry\configureScope;
  *   would have crossed, and there is a Sentry account-id lookup for the rare
  *   case where someone genuinely needs the person.
  */
-final class SentryContext
+final class SentryContext implements ErrorReportingContext
 {
-    public static function tagRequest(string $requestId): void
+    public function tagRequest(string $requestId): void
     {
         configureScope(static function (Scope $scope) use ($requestId): void {
             $scope->setTag('request_id', $requestId);
         });
     }
 
-    public static function identify(string $userId, string $accountOwnerId): void
+    public function identify(string $userId, string $accountOwnerId): void
     {
         configureScope(static function (Scope $scope) use ($userId, $accountOwnerId): void {
             $scope->setUser(UserDataBag::createFromArray([
@@ -59,7 +60,7 @@ final class SentryContext
      * coexist — run_id says which execution, request_id says which request
      * asked for it.
      */
-    public static function tagBackgroundRun(string $kind, string $name, string $runId): void
+    public function tagBackgroundRun(string $kind, string $name, string $runId): void
     {
         configureScope(static function (Scope $scope) use ($kind, $name, $runId): void {
             $scope->setTag('run_id', $runId);

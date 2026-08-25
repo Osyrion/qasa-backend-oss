@@ -12,7 +12,8 @@ info:
 paths:
   /api:
     servers:
-      - url: 'http://localhost:8000'
+      -
+        url: 'http://localhost:8000'
         description: 'QASA API Server'
   /api/v1/auth/register:
     post:
@@ -72,6 +73,10 @@ paths:
                 device_name:
                   type: string
                   example: mobile-app
+                invitation_token:
+                  description: 'Beta waitlist invitation. Required while public registration is closed, and must match the address the invitation was sent to.'
+                  type: string
+                  nullable: true
               type: object
       responses:
         201:
@@ -128,6 +133,10 @@ paths:
                 device_name:
                   type: string
                   example: mobile-app
+                turnstile_token:
+                  description: 'Cloudflare Turnstile token. Only needed after a 422 carrying captcha_required — an account under attack must answer a challenge before its credentials are looked at.'
+                  type: string
+                  nullable: true
               type: object
       responses:
         200:
@@ -146,7 +155,8 @@ paths:
                     nullable: true
                   user:
                     oneOf:
-                      - $ref: '#/components/schemas/User'
+                      -
+                        $ref: '#/components/schemas/User'
                     nullable: true
                   challenge_token:
                     description: 'Present only when two_factor_required is true — pass it to POST /auth/2fa/verify'
@@ -154,7 +164,7 @@ paths:
                     nullable: true
                 type: object
         422:
-          description: 'Invalid credentials'
+          description: 'Invalid credentials, or a captcha challenge when the account has taken enough failures to trip the gate'
           content:
             application/json:
               schema:
@@ -162,6 +172,20 @@ paths:
                   message:
                     type: string
                     example: 'Nesprávny email alebo heslo.'
+                  captcha_required:
+                    description: 'Present and true when the caller must resubmit with turnstile_token. Credentials were not checked.'
+                    type: boolean
+                    nullable: true
+                type: object
+        429:
+          description: 'Too many failed attempts from this address for this account — progressive backoff. Retry-After carries the wait in seconds.'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message:
+                    type: string
+                    example: 'Príliš veľa neúspešných pokusov o prihlásenie. Skúste to znova o 2 min.'
                 type: object
   /api/v1/auth/logout:
     post:
@@ -650,6 +674,17 @@ paths:
         - Authentication
       summary: 'Get Google OAuth redirect URL'
       operationId: c01f7b2858813d01dee1fd7179ec7e83
+      parameters:
+        -
+          name: platform
+          in: query
+          description: "web (default) uses the SPA callback URL; mobile uses the app's custom-scheme in-app-browser callback"
+          schema:
+            type: string
+            default: web
+            enum:
+              - web
+              - mobile
       responses:
         200:
           description: 'Google OAuth redirect URL'
@@ -662,6 +697,16 @@ paths:
                     type: string
                     example: 'https://accounts.google.com/oauth/authorize?...&state=...'
                 type: object
+  /api/v1/auth/google/callback/mobile:
+    get:
+      tags:
+        - Authentication
+      summary: "Bridge Google's mobile callback to the app's custom scheme"
+      description: 'Not called by any client directly — Google redirects the in-app browser here, and this hands the code/state on to the app. A Web OAuth client only accepts http(s) redirect URIs, so the app cannot be the redirect target itself.'
+      operationId: af25237c4e68c9a365cc79ea31e9cb75
+      responses:
+        302:
+          description: 'Redirect to the app (flok://auth/google/callback?code=&state=)'
   /api/v1/auth/google/callback:
     post:
       tags:
@@ -705,7 +750,8 @@ paths:
                     nullable: true
                   user:
                     oneOf:
-                      - $ref: '#/components/schemas/User'
+                      -
+                        $ref: '#/components/schemas/User'
                     nullable: true
                   challenge_token:
                     description: 'Present only when two_factor_required is true — pass it to POST /auth/2fa/verify'
@@ -740,6 +786,13 @@ paths:
                   type: string
                   format: email
                   example: jan@example.com
+                platform:
+                  description: "web (default) e-mails a link to the SPA; mobile e-mails the app's deep link"
+                  type: string
+                  default: web
+                  enum:
+                    - web
+                    - mobile
               type: object
       responses:
         200:
@@ -882,6 +935,80 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/auth/phone/send-code:
+    post:
+      tags:
+        - Auth
+      summary: 'Send an SMS verification code to the account phone number'
+      description: 'Issues a one-time code. Returns 503 when phone verification is switched off or the SMS gateway is unreachable — never an error the caller can fix by changing the request.'
+      operationId: f3199e678cc8779ea5f08362a73edef9
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - phone
+              properties:
+                phone:
+                  description: 'E.164. Spaces, dashes and brackets are stripped before validation.'
+                  type: string
+                  example: '+421900123456'
+              type: object
+      responses:
+        200:
+          description: 'Code sent'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message:
+                    type: string
+                type: object
+        422:
+          description: 'Number already verified by another account, or resent inside the cooldown'
+        503:
+          description: 'Verification disabled, or the SMS gateway is unavailable'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/phone/verify:
+    post:
+      tags:
+        - Auth
+      summary: 'Confirm the SMS verification code'
+      description: 'Marks the number proved. On the SaaS edition this is what converts a pending trial entitlement into an active trial.'
+      operationId: c193c75ee106182f78af68d4f2aa29a6
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - code
+              properties:
+                code:
+                  description: 'The six digits from the SMS'
+                  type: string
+                  example: '123456'
+              type: object
+      responses:
+        200:
+          description: 'Number verified'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/User'
+                type: object
+        422:
+          description: 'Wrong, expired or exhausted code, or the number was verified elsewhere first'
+      security:
+        -
+          sanctum: []
   /api/v1/auth/sessions:
     get:
       tags:
@@ -940,6 +1067,40 @@ paths:
           description: 'Not found'
         422:
           description: 'Attempted to revoke the current session'
+      security:
+        -
+          sanctum: []
+  /api/v1/auth/push-token:
+    put:
+      tags:
+        - Sessions
+      summary: "Register or clear this device's push notification token"
+      description: 'Attached to the session token the request is authenticated with — revoking that session (or logging out) stops its pushes too, no separate unregister call needed.'
+      operationId: 56a84d08c0c2de7b19f6a6a7395ca022
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                push_token:
+                  description: 'Null clears the registration'
+                  type: string
+                  nullable: true
+                push_platform:
+                  type: string
+                  nullable: true
+                  enum:
+                    - ios
+                    - android
+              type: object
+      responses:
+        204:
+          description: Updated
+        401:
+          description: Unauthenticated
+        422:
+          description: 'Not authenticated via a login session (e.g. an API integration token)'
       security:
         -
           sanctum: []
@@ -6498,7 +6659,8 @@ paths:
                             $ref: '#/components/schemas/StatisticsKpiBlock'
                           profit:
                             allOf:
-                              - $ref: '#/components/schemas/StatisticsKpiBlock'
+                              -
+                                $ref: '#/components/schemas/StatisticsKpiBlock'
                               -
                                 properties:
                                   ytd_margin_percent:
@@ -6760,7 +6922,8 @@ paths:
                         type: object
                         example:
                           EUR:
-                            - client_id: ...
+                            -
+                              client_id: ...
                               name: 'Acme s.r.o.'
                               amount: 1000
                               percent_share: 42.5
@@ -6768,7 +6931,8 @@ paths:
                         type: object
                         example:
                           EUR:
-                            - client_id: ...
+                            -
+                              client_id: ...
                               name: 'Vendor s.r.o.'
                               amount: 500
                               percent_share: 30
@@ -7806,7 +7970,8 @@ paths:
                     type: object
                     example:
                       A1:
-                        - document_number: 2026-0001
+                        -
+                          document_number: 2026-0001
                           date: '2026-07-01'
                           partner_name: 'Acme s.r.o.'
                           partner_tax_id: SK1234567890
@@ -7818,7 +7983,8 @@ paths:
                     type: object
                     example:
                       B3:
-                        - rate: 20
+                        -
+                          rate: 20
                           base: 100
                           vat: 20
                   assumptions:
@@ -9056,6 +9222,17 @@ paths:
       responses:
         200:
           description: 'Paginated notifications'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  meta:
+                    type: object
+                type: object
         401:
           description: Unauthenticated
       security:
@@ -9070,6 +9247,13 @@ paths:
       responses:
         200:
           description: 'Unread count'
+          content:
+            application/json:
+              schema:
+                properties:
+                  count:
+                    type: integer
+                type: object
         401:
           description: Unauthenticated
       security:
@@ -9092,6 +9276,13 @@ paths:
       responses:
         200:
           description: 'The notification'
+          content:
+            application/json:
+              schema:
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Notification'
+                type: object
         403:
           description: 'Addressed to somebody else'
         404:
@@ -9108,6 +9299,13 @@ paths:
       responses:
         200:
           description: 'How many were marked'
+          content:
+            application/json:
+              schema:
+                properties:
+                  marked:
+                    type: integer
+                type: object
         401:
           description: Unauthenticated
       security:
@@ -9202,6 +9400,56 @@ paths:
       security:
         -
           sanctum: []
+  /api/v1/public/waitlist:
+    post:
+      tags:
+        - Waitlist
+      summary: 'Join the beta waitlist'
+      operationId: 6a31227b1feb642dcff0bab40016dfad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - email
+                - locale
+              properties:
+                email:
+                  type: string
+                  format: email
+                locale:
+                  type: string
+                  enum:
+                    - cs
+                    - sk
+                    - en
+                page_variant:
+                  type: string
+                  example: cz-invoicing-vida
+                  nullable: true
+                  maxLength: 50
+                honeypot:
+                  description: 'Anti-spam trap field — must stay empty'
+                  type: string
+                  nullable: true
+                turnstile_token:
+                  description: 'Cloudflare Turnstile response token — required only when services.turnstile.enabled is on'
+                  type: string
+                  nullable: true
+              type: object
+      responses:
+        201:
+          description: 'Signup accepted (idempotent — also returned for an address already on the list)'
+          content:
+            application/json:
+              schema:
+                properties:
+                  message:
+                    type: string
+                type: object
+        422:
+          description: 'Validation failed, or captcha verification failed'
   /api/v1/contributions:
     get:
       tags:
@@ -10331,6 +10579,8 @@ components:
           nullable: true
         is_current:
           type: boolean
+        has_push_token:
+          type: boolean
         last_used_at:
           type: string
           format: date-time
@@ -10501,6 +10751,10 @@ components:
         email_verified:
           type: boolean
           example: true
+        phone_verified:
+          description: 'Whether the account has proved it holds `phone` by SMS. On the SaaS edition this is what releases a pending trial.'
+          type: boolean
+          example: false
         terms_accepted_at:
           type: string
           format: date-time
@@ -10543,15 +10797,31 @@ components:
           example: pro
           nullable: true
         trial:
-          description: 'Card-free trial state; null when not on one (and always null in the core edition)'
+          description: 'Card-free trial state; null when there is neither a running nor a pending trial (and always null in the core edition). `status=active` means a trial is running — `ends_at` and `days_left` are set. `status=pending_verification` means the account is entitled to a trial but has not verified a phone number yet — `eligible_until` is set and `days_left` counts days left to *claim* it, not days of trial.'
           properties:
+            status:
+              type: string
+              enum:
+                - active
+                - pending_verification
             ends_at:
               type: string
               format: date-time
+              nullable: true
             days_left:
               type: integer
+            eligible_until:
+              type: string
+              format: date-time
+              nullable: true
           type: object
           nullable: true
+        disabled_features:
+          description: 'Feature slugs currently killed platform-wide (saas.disabled_features), always [] in the core edition'
+          type: array
+          items:
+            type: string
+            example: logbook
         created_at:
           type: string
           format: date-time
@@ -11007,7 +11277,8 @@ components:
           nullable: true
         matched_client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         supplier_invoice_id:
           type: string
@@ -11301,7 +11572,8 @@ components:
           nullable: true
         client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         items:
           type: array
@@ -11449,7 +11721,8 @@ components:
           nullable: true
         client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         items:
           type: array
@@ -11546,7 +11819,8 @@ components:
           nullable: true
         client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         items:
           type: array
@@ -11706,7 +11980,8 @@ components:
             - unreliable
         client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         vat_lines:
           type: array
@@ -11964,7 +12239,8 @@ components:
           type: boolean
         client:
           oneOf:
-            - $ref: '#/components/schemas/Client'
+            -
+              $ref: '#/components/schemas/Client'
           nullable: true
         items:
           type: array
@@ -12166,78 +12442,120 @@ components:
       name: Authorization
       in: header
 tags:
-  - name: Dashboard
+  -
+    name: Dashboard
     description: 'Home-screen summary stats for the authenticated account'
-  - name: Tokens
+  -
+    name: Tokens
     description: 'Scoped personal access tokens for third-party integrations'
-  - name: Sessions
+  -
+    name: Sessions
     description: 'Login tokens ("my devices") — separate from API integration tokens'
-  - name: TwoFactor
+  -
+    name: TwoFactor
     description: 'TOTP-based two-factor authentication'
-  - name: Clients
+  -
+    name: Clients
     description: 'Client management endpoints'
-  - name: 'Contact Persons'
+  -
+    name: 'Contact Persons'
     description: 'Contact person management endpoints'
-  - name: Invoicing
+  -
+    name: Invoicing
     description: 'Invoice, quote and supplier document management'
-  - name: BankAccounts
+  -
+    name: BankAccounts
     description: 'Supplier bank accounts printed on invoices'
-  - name: Cash
+  -
+    name: Cash
     description: 'Cash receipts and payments (PPD/VPD) and the cash book'
-  - name: 'Client Portal'
+  -
+    name: 'Client Portal'
     description: 'Unauthenticated client-facing portal (all invoices of one client)'
-  - name: 'Expense Attachments'
+  -
+    name: 'Expense Attachments'
     description: 'Manage the receipt/invoice document attached to an expense'
-  - name: Invoices
+  -
+    name: Invoices
     description: 'Invoice management endpoints'
-  - name: 'Invoice Export'
+  -
+    name: 'Invoice Export'
     description: 'Bulk export of issued invoices for accounting handoff'
-  - name: InvoiceInbox
+  -
+    name: InvoiceInbox
     description: 'Review queue for supplier invoices scanned from the inbox folder'
-  - name: 'Invoice PDF'
+  -
+    name: 'Invoice PDF'
     description: 'Invoice PDF generation endpoints'
-  - name: 'Invoice e-invoice'
+  -
+    name: 'Invoice e-invoice'
     description: 'UBL 2.1 / EN 16931 export'
-  - name: 'Public Invoice'
+  -
+    name: 'Public Invoice'
     description: 'Unauthenticated client-facing invoice page endpoints'
-  - name: 'Public Quote'
+  -
+    name: 'Public Quote'
     description: 'Unauthenticated client-facing quote page endpoints'
-  - name: Quotes
+  -
+    name: Quotes
     description: 'Quote management endpoints'
-  - name: 'Recurring Invoice Templates'
+  -
+    name: 'Recurring Invoice Templates'
     description: 'Templates that generate draft invoices on a schedule. Note and item description fields support period placeholders {BOM}, {EOM}, {MONTH}, {YEAR} resolved at generation time against the tax date (issue date for proforma).'
-  - name: Statistics
+  -
+    name: Statistics
     description: 'BI dashboard endpoints — KPIs, aging, top partners, financial health and year/month tables'
-  - name: SupplierInvoices
+  -
+    name: SupplierInvoices
     description: 'Received (supplier) invoice bookkeeping endpoints'
-  - name: VatRates
+  -
+    name: VatRates
     description: 'Per-tenant VAT rate catalog'
-  - name: VatReports
+  -
+    name: VatReports
     description: 'Read-only VAT reporting endpoints'
-  - name: 'Order Attachments'
+  -
+    name: 'Order Attachments'
     description: 'Manage file attachments on orders'
-  - name: Orders
+  -
+    name: Orders
     description: 'Order management endpoints'
-  - name: 'Order Items'
+  -
+    name: 'Order Items'
     description: 'Manage order line items'
-  - name: 'Order Notes'
+  -
+    name: 'Order Notes'
     description: 'Manage internal notes on orders'
-  - name: Activity
+  -
+    name: Activity
     description: 'Read-only audit trail of account activity'
-  - name: AI
+  -
+    name: AI
     description: 'AI transparency (Regulation (EU) 2024/1689)'
-  - name: Notifications
+  -
+    name: Notifications
     description: 'In-app notification centre'
-  - name: Taxation
+  -
+    name: Taxation
     description: 'Tax residency, contribution payments, income-tax-return wizard, and the filing archive'
-  - name: Authentication
+  -
+    name: Authentication
     description: Authentication
-  - name: Profile
+  -
+    name: Auth
+    description: Auth
+  -
+    name: Profile
     description: Profile
-  - name: ExchangeRates
+  -
+    name: ExchangeRates
     description: ExchangeRates
-  - name: Expenses
+  -
+    name: Expenses
     description: Expenses
+  -
+    name: Waitlist
+    description: Waitlist
 security:
   -
     sanctum: []

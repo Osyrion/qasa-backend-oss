@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('supplier_invoices', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('client_id')->constrained()->restrictOnDelete()->comment('Vendor (is_vendor = true)');
+            $table->foreignUuid('client_id')->comment('Vendor (is_vendor = true)')->constrained()->restrictOnDelete();
 
             $table->string('internal_number', 30)->comment('Our internal reference number, e.g. DF-2026-001');
             $table->string('supplier_invoice_number', 60)->comment('Original document number as issued by the vendor');

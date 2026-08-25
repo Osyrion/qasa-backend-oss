@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
-use App\Modules\Invoicing\Application\DTOs\EuSalesListRowData;
-use App\Modules\Invoicing\Application\Services\EuSalesListService;
+use App\Modules\Invoicing\Application\Contracts\EuSalesListSourceInterface;
+use App\Modules\Invoicing\Domain\ValueObjects\EuSalesListRowData;
 use App\Modules\Taxation\Domain\Contracts\EuSalesListBuilder;
 
 /**
@@ -17,7 +17,7 @@ use App\Modules\Taxation\Domain\Contracts\EuSalesListBuilder;
 final class CzEuSalesListBuilder implements EuSalesListBuilder
 {
     public function __construct(
-        private readonly EuSalesListService $collector,
+        private readonly EuSalesListSourceInterface $collector,
     ) {}
 
     public function build(string $userId, int $year, ?int $quarter = null, ?int $month = null): array

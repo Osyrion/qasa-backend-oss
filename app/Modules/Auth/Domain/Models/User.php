@@ -5,28 +5,27 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Domain\Models;
 
 use App\Modules\Auth\Domain\Contracts\ProvidesAccountMeta;
-use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Domain\Models\ExchangeRate;
-use App\Modules\Invoicing\Domain\Models\Expense;
-use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Orders\Domain\Models\Order;
-use App\Modules\Orders\Domain\Models\OrderAttachment;
-use App\Modules\Orders\Domain\Models\OrderNote;
 use App\Modules\Shared\Authorization\AbilityCatalog;
+use App\Modules\Shared\Domain\Contracts\Actor;
+use App\Modules\Shared\Domain\Contracts\FullAccount;
+use App\Modules\Shared\Domain\Contracts\ManagesNotificationPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesClockifyCredentials;
+use App\Modules\Shared\Domain\Contracts\ProvidesTwoFactorStatus;
 use App\Modules\Shared\Domain\Models\AccountNotification;
+use App\Modules\Shared\Domain\ValueObjects\InvoiceNumberingProfile;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Enums\NotificationCategory;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Taxation\Domain\Contracts\ProvidesVatFilingSettings;
 use App\Modules\Taxation\Domain\Enums\VatFilingFrequency;
 use Database\Factories\Modules\Auth\Domain\Models\UserFactory;
 use Eloquent;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -97,27 +96,14 @@ use Laravel\Sanctum\PersonalAccessToken;
  * @property Carbon|null $terms_accepted_at Null for accounts that predate this column — never backfilled, since that would fabricate a consent that never happened
  * @property string|null $terms_version Semver of the terms/privacy doc accepted, e.g. matched against config('gdpr.terms_version')
  * @property Carbon|null $email_verified_at
+ * @property Carbon|null $phone_verified_at Set only by ConfirmPhoneVerificationAction; deliberately not fillable
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read Collection<int, Client> $clients
- * @property-read int|null $clients_count
- * @property-read Collection<int, ExchangeRate> $exchangeRates
- * @property-read int|null $exchange_rates_count
- * @property-read Collection<int, Expense> $expenses
- * @property-read int|null $expenses_count
  * @property-read string $full_name
- * @property-read Collection<int, Invoice> $invoices
- * @property-read int|null $invoices_count
  * @property-read DatabaseNotificationCollection<int, AccountNotification> $notifications
  * @property-read int|null $notifications_count
- * @property-read Collection<int, OrderAttachment> $orderAttachments
- * @property-read int|null $order_attachments_count
- * @property-read Collection<int, OrderNote> $orderNotes
- * @property-read int|null $order_notes_count
- * @property-read Collection<int, Order> $orders
- * @property-read int|null $orders_count
  * @property-read Collection<int, PersonalAccessToken> $tokens
  * @property-read int|null $tokens_count
  *
@@ -157,7 +143,7 @@ use Laravel\Sanctum\PersonalAccessToken;
  *
  * @mixin Eloquent
  */
-class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMeta
+class User extends Authenticatable implements Actor, FullAccount, ManagesNotificationPreferences, ProvidesAccountMeta, ProvidesClockifyCredentials, ProvidesTwoFactorStatus, ProvidesVatFilingSettings
 {
     use HasApiTokens;
 
@@ -240,6 +226,7 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
             'is_vat_payer' => 'boolean',
@@ -310,6 +297,127 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         return $this->company_name ?? $this->full_name;
     }
 
+    /**
+     * The account as a supplier: the fields printed on a document or filed in
+     * a VAT return, without the aggregate that stores them.
+     *
+     * Handing this to a builder instead of `$this` is what keeps Taxation,
+     * Accounting and Integrations from depending on the auth model — see
+     * SupplierProfile.
+     *
+     * The owner's row, never the member's own — same rule as
+     * invoiceNumbering() below, and for the same reason: a team member issues
+     * documents and files returns as the account, not as themselves. Their own
+     * row carries no company_name, IČO or country and its default_currency is
+     * whatever they happened to register with, so reading the profile off
+     * `$this` answered a different account's question wherever the caller held
+     * the authenticated user rather than the owner (statistics currency, the
+     * MCP tax summary's residency, Stripe Connect onboarding).
+     */
+    public function supplierProfile(): SupplierProfile
+    {
+        $owner = $this->accountOwner();
+
+        return new SupplierProfile(
+            name: $owner->supplierName(),
+            email: $owner->email,
+            phone: $owner->phone,
+            ico: $owner->ico,
+            dic: $owner->dic,
+            vatId: $owner->vat_id,
+            vatStatus: $owner->vat_status,
+            address: $owner->address,
+            city: $owner->city,
+            postalCode: $owner->postal_code,
+            country: $owner->country,
+            defaultCurrency: $owner->default_currency,
+            website: $owner->website,
+            logoPath: $owner->logo_path,
+            invoiceFooterText: $owner->invoice_footer_text,
+            firstName: $owner->name,
+            lastName: $owner->surname,
+        );
+    }
+
+    /**
+     * The account's invoicing switches — the owner's row throughout, for the
+     * same reason invoiceNumbering() resolves it: a team member has no
+     * reminder cadence of their own.
+     */
+    public function invoiceInboxEnabled(): bool
+    {
+        return (bool) $this->accountOwner()->invoice_inbox_enabled;
+    }
+
+    public function overdueDigestEnabled(): bool
+    {
+        return (bool) $this->accountOwner()->overdue_digest_enabled;
+    }
+
+    public function autoRemindEnabled(): bool
+    {
+        return (bool) $this->accountOwner()->auto_remind_enabled;
+    }
+
+    public function autoRemindAfterDays(): int
+    {
+        return $this->accountOwner()->auto_remind_after_days;
+    }
+
+    public function autoRemindMaxCount(): int
+    {
+        return $this->accountOwner()->auto_remind_max_count;
+    }
+
+    public function clockifyApiKey(): ?string
+    {
+        return $this->accountOwner()->clockify_api_key;
+    }
+
+    public function clockifyWorkspaceId(): ?string
+    {
+        return $this->accountOwner()->clockify_workspace_id;
+    }
+
+    public function vatFilingFrequency(): ?VatFilingFrequency
+    {
+        return $this->accountOwner()->vat_filing_frequency;
+    }
+
+    public function taxFilingRemindersEnabled(): bool
+    {
+        return (bool) $this->accountOwner()->tax_filing_reminder_enabled;
+    }
+
+    /**
+     * The account-wide AI extraction switch — the owner's row, never the
+     * member's own, same rule as invoiceNumbering() below.
+     */
+    public function aiExtractionEnabled(): bool
+    {
+        return (bool) $this->accountOwner()->ai_extraction_enabled;
+    }
+
+    /**
+     * The owner's numbering, never the member's own row: a team member issues
+     * documents in the account's series. Resolving that here is the point —
+     * it used to be `accountOwner()` repeated at each numbering site.
+     */
+    public function invoiceNumbering(): InvoiceNumberingProfile
+    {
+        $owner = $this->accountOwner();
+
+        return new InvoiceNumberingProfile(
+            prefix: $owner->invoice_prefix,
+            mask: $owner->invoice_number_mask,
+            start: $owner->invoice_number_start ?? 1,
+            supplierInvoiceMask: $owner->supplier_invoice_number_mask,
+            supplierInvoiceStart: $owner->supplier_invoice_number_start ?? 1,
+            quoteMask: $owner->quote_number_mask,
+            quoteStart: $owner->quote_number_start ?? 1,
+        );
+    }
+
     public function hasTaxResidency(): bool
     {
         return $this->country !== null;
@@ -355,6 +463,36 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
             NotificationCategory::Billing => $this->notify_billing_enabled,
             NotificationCategory::Banking => $this->notify_banking_enabled,
             NotificationCategory::System => $this->notify_system_enabled,
+        };
+    }
+
+    /**
+     * Personal, not account-wide — see ManagesNotificationPreferences: these
+     * six columns are the one set on the row that means the *person*, so this
+     * writes `$this` rather than accountOwner().
+     */
+    public function updateNotificationPreferences(array $wanted): void
+    {
+        $changes = [];
+
+        foreach ($wanted as $category => $enabled) {
+            $changes[self::notificationColumn(NotificationCategory::from($category))] = $enabled;
+        }
+
+        if ($changes !== []) {
+            $this->forceFill($changes)->save();
+        }
+    }
+
+    private static function notificationColumn(NotificationCategory $category): string
+    {
+        return match ($category) {
+            NotificationCategory::Invoice => 'notify_invoice_enabled',
+            NotificationCategory::Quote => 'notify_quote_enabled',
+            NotificationCategory::Tax => 'notify_tax_enabled',
+            NotificationCategory::Billing => 'notify_billing_enabled',
+            NotificationCategory::Banking => 'notify_banking_enabled',
+            NotificationCategory::System => 'notify_system_enabled',
         };
     }
 
@@ -404,9 +542,36 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
         return $this->id;
     }
 
+    /**
+     * Laravel's own locale contract, honoured automatically by Mailable and
+     * Notification. Documents and mail sent *on the account's behalf* go out
+     * in the account's language, which is why other modules ask for this
+     * rather than reading the column — the column is storage, this is the
+     * contract, and only the latter survives the module boundary.
+     */
+    public function preferredLocale(): ?string
+    {
+        return $this->locale;
+    }
+
     public function accountOwner(): self
     {
         return $this;
+    }
+
+    public function actorId(): string
+    {
+        return $this->id;
+    }
+
+    /**
+     * The core edition is single-account: there are no team members, so
+     * every user is the owner of their own account. The SaaS user model
+     * overrides this against owner_id.
+     */
+    public function isOwner(): bool
+    {
+        return true;
     }
 
     /**
@@ -419,6 +584,27 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     }
 
     /**
+     * Plan-limit hook for callers that report the remaining quota instead of
+     * just enforcing it. -1 is unlimited, which is what the core (OSS)
+     * edition answers for every key — it has no plans to be limited by.
+     */
+    public function planLimit(string $limitKey): int
+    {
+        return -1;
+    }
+
+    /**
+     * Plan gate for card payments on invoices. False in the core (OSS)
+     * edition, which has no Stripe Connect at all — the same answer its
+     * AlwaysUnavailableOnlinePayment binding gives per invoice. The SaaS
+     * user model overrides this against the plan's online_payments column.
+     */
+    public function allowsOnlinePayments(): bool
+    {
+        return false;
+    }
+
+    /**
      * Plan feature-gate hook. The core (OSS) edition has no plans — every
      * feature is available. The SaaS user model overrides this against the
      * active subscription's features.
@@ -426,6 +612,19 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     public function hasFeature(string $feature): bool
     {
         return true;
+    }
+
+    /**
+     * Platform kill-switch hook, for the front end to hide a nav entry
+     * instead of waiting on a 403. The core (OSS) edition has no platform
+     * settings to disable a feature from. The SaaS user model overrides
+     * this against saas.disabled_features.
+     *
+     * @return list<string>
+     */
+    public function disabledFeatures(): array
+    {
+        return [];
     }
 
     // ── ProvidesAccountMeta (single-account defaults) ─────────────────────────
@@ -483,61 +682,5 @@ class User extends Authenticatable implements MustVerifyEmail, ProvidesAccountMe
     public function notifications(): MorphMany
     {
         return $this->morphMany(AccountNotification::class, 'notifiable')->latest();
-    }
-
-    /**
-     * @return HasMany<Client, $this>
-     */
-    public function clients(): HasMany
-    {
-        return $this->hasMany(Client::class);
-    }
-
-    /**
-     * @return HasMany<Order, $this>
-     */
-    public function orders(): HasMany
-    {
-        return $this->hasMany(Order::class);
-    }
-
-    /**
-     * @return HasMany<OrderNote, $this>
-     */
-    public function orderNotes(): HasMany
-    {
-        return $this->hasMany(OrderNote::class);
-    }
-
-    /**
-     * @return HasMany<OrderAttachment, $this>
-     */
-    public function orderAttachments(): HasMany
-    {
-        return $this->hasMany(OrderAttachment::class);
-    }
-
-    /**
-     * @return HasMany<Expense, $this>
-     */
-    public function expenses(): HasMany
-    {
-        return $this->hasMany(Expense::class);
-    }
-
-    /**
-     * @return HasMany<ExchangeRate, $this>
-     */
-    public function exchangeRates(): HasMany
-    {
-        return $this->hasMany(ExchangeRate::class);
-    }
-
-    /**
-     * @return HasMany<Invoice, $this>
-     */
-    public function invoices(): HasMany
-    {
-        return $this->hasMany(Invoice::class);
     }
 }

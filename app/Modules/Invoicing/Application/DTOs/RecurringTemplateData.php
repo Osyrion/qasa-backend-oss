@@ -59,7 +59,7 @@ class RecurringTemplateData extends Data
             'type' => ['sometimes', Rule::in([InvoiceType::Invoice->value, InvoiceType::Proforma->value])],
             'currency' => ['required', Rule::enum(Currency::class)],
             'due_days' => ['required', 'integer', 'between:0,365'],
-            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
             'reverse_charge' => ['sometimes', 'boolean'],
             'tax_date_mode' => ['sometimes', Rule::enum(TaxDateMode::class)],
             'auto_send' => ['sometimes', 'boolean'],

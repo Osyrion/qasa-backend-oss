@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -32,6 +33,56 @@ it('sends a reset link for a known address', function (): void {
         ->assertOk();
 
     Notification::assertSentTo($user, ResetPassword::class);
+});
+
+it('stashes the mobile platform for the reset e-mail closure to read, keyed by e-mail', function (): void {
+    // Faked so the notification is never actually rendered. Unfaked, the
+    // real send goes on to call toMail() within the same request, and
+    // createUrlUsing()'s closure (registered in AuthServiceProvider)
+    // Cache::pull()s this exact key as part of building the URL — the
+    // assertion below would then see it already gone, for the right
+    // behavior but the wrong reason.
+    Notification::fake();
+
+    $user = createUser();
+
+    $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email, 'platform' => 'mobile'])
+        ->assertOk();
+
+    expect(Cache::get('password_reset_platform:'.$user->email))->toBe('mobile');
+});
+
+it('does not stash a platform for a plain web request', function (): void {
+    Notification::fake();
+
+    $user = createUser();
+
+    $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email])
+        ->assertOk();
+
+    expect(Cache::get('password_reset_platform:'.$user->email))->toBeNull();
+});
+
+it('builds the app deep link, not the SPA URL, once the mobile platform is stashed', function (): void {
+    $user = createUser();
+    Cache::put('password_reset_platform:'.$user->email, 'mobile', now()->addMinutes(10));
+
+    $mail = (new ResetPassword('a-token'))->toMail($user);
+
+    expect($mail->actionUrl)->toBe('flok://reset-password?token=a-token&email='.urlencode($user->email));
+    // One-shot, same as the OAuth state: a second render must not still see it.
+    expect(Cache::get('password_reset_platform:'.$user->email))->toBeNull();
+});
+
+it('builds the SPA URL when no platform was stashed', function (): void {
+    $user = createUser();
+
+    $mail = (new ResetPassword('a-token'))->toMail($user);
+    $frontendUrl = config('app.frontend_url');
+    assert(is_string($frontendUrl) && $frontendUrl !== '');
+
+    expect($mail->actionUrl)->toStartWith($frontendUrl)
+        ->and($mail->actionUrl)->toContain('/reset-password?token=a-token');
 });
 
 it('resets the password with a valid token', function (): void {

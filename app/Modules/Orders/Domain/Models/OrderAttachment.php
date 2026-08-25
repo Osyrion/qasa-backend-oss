@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Database\Factories\Modules\Orders\Domain\Models\OrderAttachmentFactory;
 use Eloquent;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +37,7 @@ use Illuminate\Support\Facades\Storage;
  * @property-read string $display_name
  * @property-read string|null $url
  * @property-read Order|null $order
- * @property-read User|null $user
+ * @property-read Account|null $user
  *
  * @method static OrderAttachmentFactory factory($count = null, $state = [])
  * @method static Builder<static>|OrderAttachment newModelQuery()
@@ -138,10 +142,13 @@ class OrderAttachment extends Model
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        /** @var class-string<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile> $account */
+        $account = config('auth.providers.users.model');
+
+        return $this->belongsTo($account);
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Actor;
 use App\Modules\Shared\Domain\Models\AccountNotification;
 use App\Modules\Shared\Enums\NotificationCategory;
 use App\Modules\Shared\Presentation\Resources\NotificationResource;
@@ -41,7 +41,14 @@ class NotificationController extends Controller
             new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Paginated notifications'),
+            new OA\Response(
+                response: 200,
+                description: 'Paginated notifications',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Notification')),
+                    new OA\Property(property: 'meta', type: 'object'),
+                ])
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
@@ -74,7 +81,11 @@ class NotificationController extends Controller
         security: [['sanctum' => []]],
         tags: ['Notifications'],
         responses: [
-            new OA\Response(response: 200, description: 'Unread count'),
+            new OA\Response(
+                response: 200,
+                description: 'Unread count',
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'count', type: 'integer')])
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
@@ -97,7 +108,13 @@ class NotificationController extends Controller
         tags: ['Notifications'],
         parameters: [new OA\Parameter(name: 'notification', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid'))],
         responses: [
-            new OA\Response(response: 200, description: 'The notification'),
+            new OA\Response(
+                response: 200,
+                description: 'The notification',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'data', ref: '#/components/schemas/Notification'),
+                ])
+            ),
             new OA\Response(response: 403, description: 'Addressed to somebody else'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
@@ -121,7 +138,11 @@ class NotificationController extends Controller
         security: [['sanctum' => []]],
         tags: ['Notifications'],
         responses: [
-            new OA\Response(response: 200, description: 'How many were marked'),
+            new OA\Response(
+                response: 200,
+                description: 'How many were marked',
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'marked', type: 'integer')])
+            ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
@@ -160,9 +181,9 @@ class NotificationController extends Controller
 
     private function userId(Request $request): string
     {
-        /** @var User $user */
+        /** @var Actor $user */
         $user = $request->user();
 
-        return $user->id;
+        return $user->actorId();
     }
 }

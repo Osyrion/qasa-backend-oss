@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Resources;
 
-use App\Modules\Clients\Presentation\Resources\ClientResource;
+use App\Modules\Clients\Application\Contracts\ClientRepresentation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -89,7 +89,9 @@ class SupplierInvoiceResource extends JsonResource
 
             'client' => $this->when(
                 $this->resource->relationLoaded('client'),
-                fn (): ClientResource => ClientResource::make($this->resource->client),
+                fn (): ?array => $this->resource->client === null
+                    ? null
+                    : app(ClientRepresentation::class)->forClient($this->resource->client),
             ),
 
             'vat_lines' => $this->when(

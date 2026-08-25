@@ -20,6 +20,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trial-claim retention
+    |--------------------------------------------------------------------------
+    |
+    | How long trial_phone_claims remembers that a phone number has already
+    | had its free trial. The row holds a peppered HMAC and a date — never
+    | the number, never an account — because it has to survive the account
+    | purge to be worth anything: otherwise deleting the account and waiting
+    | out account_purge_grace_days above earns a second trial.
+    |
+    | Finite rather than indefinite: fraud prevention is a legitimate
+    | interest (Recital 47), but "forever" is hard to square with Art.
+    | 5(1)(e) whatever the hashing. Two years is long enough that replaying
+    | the trial is not worth anyone's time, and short enough to defend. The
+    | trade-off is explicit — after this window the same number can claim
+    | again.
+    |
+    | Pruned by qasa:subscriptions:trial-reminders on its daily run.
+    |
+    */
+
+    'trial_claim_retention_months' => (int) env('QASA_TRIAL_CLAIM_RETENTION_MONTHS', 24),
+
+    /*
+    |--------------------------------------------------------------------------
     | Request metadata retention
     |--------------------------------------------------------------------------
     |

@@ -70,6 +70,62 @@ return [
         // the `qasa:user` artisan command instead.
         'registration' => (bool) env('QASA_REGISTRATION', false),
 
+        // SMS verification of the account owner's phone number. Core, not
+        // saas.*, on purpose: scripts/build-oss.sh deletes config/saas.php,
+        // so a core class reading a saas.* key would resolve to null in the
+        // generated OSS tree and switch the feature off with no way back —
+        // and EditionBoundaryTest cannot see it, because it checks class
+        // references, not config strings.
+        //
+        // Off by default so a deployment without an SMS provider configured
+        // behaves exactly as it did before this existed. The SaaS admin can
+        // flip it at runtime — PlatformSettingsRegistry allowlists this key.
+        'phone_verification' => (bool) env('QASA_PHONE_VERIFICATION', false),
+
+    ],
+
+    'waitlist' => [
+
+        // How long an invitation off the beta waitlist stays usable. Short
+        // enough that a leaked link goes stale, long enough to survive
+        // somebody's holiday.
+        'invitation_days' => (int) env('QASA_WAITLIST_INVITATION_DAYS', 14),
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Phone verification
+    |--------------------------------------------------------------------------
+    |
+    | One-time codes sent by SMS. The provider itself is bound behind
+    | Auth\Domain\Contracts\PhoneVerificationProviderInterface — the core
+    | edition binds a null implementation that never sends, so these knobs
+    | only matter once a real provider is registered.
+    |
+    | max_attempts is per code, not per account: a wrong guess burns one of
+    | them and the code dies at zero, which is what keeps a 6-digit secret
+    | (a million possibilities, but only ~10 minutes of life) out of reach of
+    | online guessing. The rate limiters in AppServiceProvider cover the
+    | other half — cost, and flooding one number with messages.
+    |
+    */
+
+    'phone_verification' => [
+        'code_ttl_minutes' => (int) env('QASA_PHONE_CODE_TTL_MINUTES', 10),
+        'max_attempts' => (int) env('QASA_PHONE_MAX_ATTEMPTS', 5),
+        'resend_cooldown_seconds' => (int) env('QASA_PHONE_RESEND_COOLDOWN', 60),
+
+        // How long a verified number must stand before it can be swapped for
+        // a different one. Changing is a legitimate thing to want — new
+        // operator, lost handset, a company number left behind — so this is
+        // days rather than the "never" a stricter reading would suggest.
+        //
+        // It exists for cost, not for abuse: cycling numbers earns nothing
+        // now that the trial is locked per tenant (users.trial_used_at), but
+        // each attempt is still a paid SMS, and the per-number rate limit
+        // resets the moment a different number is typed. 0 switches it off.
+        'change_cooldown_days' => (int) env('QASA_PHONE_CHANGE_COOLDOWN_DAYS', 3),
     ],
 
     /*
@@ -136,5 +192,42 @@ return [
     */
 
     'require_verified_sender' => (bool) env('QASA_REQUIRE_VERIFIED_SENDER', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | flok_mobile deep link scheme
+    |--------------------------------------------------------------------------
+    |
+    | Matches app.json's "scheme" in the mobile repo. Unlike the Google OAuth
+    | redirect_uri (Auth\GoogleAuthController), this is not restricted by an
+    | external provider to http(s) — an emailed link opening the app directly
+    | is exactly what a custom scheme is for, so PasswordResetController uses
+    | it as-is, no https bridge route needed.
+    |
+    */
+
+    'mobile_app_scheme' => env('MOBILE_APP_SCHEME', 'flok://'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Operational metrics textfile
+    |--------------------------------------------------------------------------
+    |
+    | Directory qasa:metrics:export writes flok.prom into, and the monitoring
+    | agent reads *.prom out of (docker/alloy/config.alloy mounts this same
+    | path read-only). Under storage/ rather than /var/lib/node_exporter so
+    | that the writer needs no privilege it does not already have, and so a
+    | deployment without the observability stack simply writes a file nobody
+    | reads.
+    |
+    | Nothing tenant-specific is ever written here — see the command's
+    | docblock. The file leaves the machine as metrics, so it must stay
+    | operational counts only.
+    |
+    */
+
+    'metrics' => [
+        'textfile_dir' => env('QASA_METRICS_DIR', storage_path('app/metrics')),
+    ],
 
 ];

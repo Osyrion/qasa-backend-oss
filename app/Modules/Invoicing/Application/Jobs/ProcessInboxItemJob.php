@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Jobs;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
+use App\Modules\Invoicing\Application\Contracts\UblInvoiceParserInterface;
 use App\Modules\Invoicing\Application\Services\FieldExtractorFactory;
 use App\Modules\Invoicing\Domain\Contracts\FieldExtractionInput;
 use App\Modules\Invoicing\Domain\Contracts\InvoiceFieldExtractor;
 use App\Modules\Invoicing\Domain\Contracts\InvoiceTextExtractor;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
 use App\Modules\Invoicing\Domain\Events\InboxItemCreated;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
-use App\Modules\Invoicing\Infrastructure\Ubl\Ubl21InvoiceParser;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
+use App\Modules\Shared\Domain\Contracts\FullAccount;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -48,7 +49,8 @@ final class ProcessInboxItemJob implements ShouldQueue
         FieldExtractorFactory $extractorFactory,
         InvoiceFieldExtractor $regexExtractor,
         ClientRepositoryInterface $clients,
-        Ubl21InvoiceParser $ublParser,
+        UblInvoiceParserInterface $ublParser,
+        AccountLocator $accounts,
     ): void {
         $item = $this->findItem();
 
@@ -83,7 +85,7 @@ final class ProcessInboxItemJob implements ShouldQueue
             mime: $item->mime_type,
         );
 
-        $owner = $this->resolveOwner($item->user_id);
+        $owner = $this->resolveOwner($item->user_id, $accounts);
 
         [$suggestions, $source, $provider, $model] = $owner === null
             ? [$regexExtractor->parse($input)->suggestions, 'regex', null, null]
@@ -113,7 +115,7 @@ final class ProcessInboxItemJob implements ShouldQueue
      */
     private function settleFromUbl(
         InvoiceInboxItem $item,
-        Ubl21InvoiceParser $ublParser,
+        UblInvoiceParserInterface $ublParser,
         ClientRepositoryInterface $clients,
     ): bool {
         // Cheap gate first: only an XML-ish payload is worth reading into a
@@ -152,7 +154,7 @@ final class ProcessInboxItemJob implements ShouldQueue
      * @return array{0: array<string, mixed>, 1: string, 2: string|null, 3: string|null}
      */
     private function extractFields(
-        User $owner,
+        FullAccount $owner,
         FieldExtractionInput $input,
         FieldExtractorFactory $extractorFactory,
         InvoiceFieldExtractor $regexExtractor,
@@ -214,20 +216,13 @@ final class ProcessInboxItemJob implements ShouldQueue
     }
 
     /**
-     * InvoiceInboxItem::user() is hardcoded to the core Auth\Domain\Models\User
-     * class (a plain Eloquent belongsTo can't resolve the edition's swapped
-     * model), so it would silently skip the SaaS User subclass's real
-     * hasFeature()/currentPlan() overrides — always reporting every
-     * feature as granted. FieldExtractorFactory needs the real edition
-     * model to gate correctly, so the owner is re-fetched through the
-     * configured auth provider, exactly like RegisterUserAction does.
+     * Through AccountLocator rather than the item's own `user` relation:
+     * FieldExtractorFactory gates on plan features, and only the edition's
+     * own model carries the real hasFeature()/currentPlan() overrides — a
+     * core instance reports every feature as granted.
      */
-    private function resolveOwner(string $userId): ?User
+    private function resolveOwner(string $userId, AccountLocator $accounts): ?FullAccount
     {
-        /** @var class-string<User> $model */
-        $model = config('auth.providers.users.model', User::class);
-
-        /** @var User|null */
-        return $model::query()->find($userId);
+        return $accounts->find($userId);
     }
 }

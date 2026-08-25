@@ -91,6 +91,11 @@
                                     "device_name": {
                                         "type": "string",
                                         "example": "mobile-app"
+                                    },
+                                    "invitation_token": {
+                                        "description": "Beta waitlist invitation. Required while public registration is closed, and must match the address the invitation was sent to.",
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -175,6 +180,11 @@
                                     "device_name": {
                                         "type": "string",
                                         "example": "mobile-app"
+                                    },
+                                    "turnstile_token": {
+                                        "description": "Cloudflare Turnstile token. Only needed after a 422 carrying captcha_required — an account under attack must answer a challenge before its credentials are looked at.",
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -219,7 +229,7 @@
                         }
                     },
                     "422": {
-                        "description": "Invalid credentials",
+                        "description": "Invalid credentials, or a captcha challenge when the account has taken enough failures to trip the gate",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -227,6 +237,27 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Nesprávny email alebo heslo."
+                                        },
+                                        "captcha_required": {
+                                            "description": "Present and true when the caller must resubmit with turnstile_token. Credentials were not checked.",
+                                            "type": "boolean",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too many failed attempts from this address for this account — progressive backoff. Retry-After carries the wait in seconds.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Príliš veľa neúspešných pokusov o prihlásenie. Skúste to znova o 2 min."
                                         }
                                     },
                                     "type": "object"
@@ -936,6 +967,21 @@
                 ],
                 "summary": "Get Google OAuth redirect URL",
                 "operationId": "c01f7b2858813d01dee1fd7179ec7e83",
+                "parameters": [
+                    {
+                        "name": "platform",
+                        "in": "query",
+                        "description": "web (default) uses the SPA callback URL; mobile uses the app's custom-scheme in-app-browser callback",
+                        "schema": {
+                            "type": "string",
+                            "default": "web",
+                            "enum": [
+                                "web",
+                                "mobile"
+                            ]
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Google OAuth redirect URL",
@@ -953,6 +999,21 @@
                                 }
                             }
                         }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/google/callback/mobile": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Bridge Google's mobile callback to the app's custom scheme",
+                "description": "Not called by any client directly — Google redirects the in-app browser here, and this hands the code/state on to the app. A Web OAuth client only accepts http(s) redirect URIs, so the app cannot be the redirect target itself.",
+                "operationId": "af25237c4e68c9a365cc79ea31e9cb75",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to the app (flok://auth/google/callback?code=&state=)"
                     }
                 }
             }
@@ -1068,6 +1129,15 @@
                                         "type": "string",
                                         "format": "email",
                                         "example": "jan@example.com"
+                                    },
+                                    "platform": {
+                                        "description": "web (default) e-mails a link to the SPA; mobile e-mails the app's deep link",
+                                        "type": "string",
+                                        "default": "web",
+                                        "enum": [
+                                            "web",
+                                            "mobile"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -1293,6 +1363,122 @@
                 ]
             }
         },
+        "/api/v1/auth/phone/send-code": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Send an SMS verification code to the account phone number",
+                "description": "Issues a one-time code. Returns 503 when phone verification is switched off or the SMS gateway is unreachable — never an error the caller can fix by changing the request.",
+                "operationId": "f3199e678cc8779ea5f08362a73edef9",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "description": "E.164. Spaces, dashes and brackets are stripped before validation.",
+                                        "type": "string",
+                                        "example": "+421900123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Code sent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Number already verified by another account, or resent inside the cooldown"
+                    },
+                    "503": {
+                        "description": "Verification disabled, or the SMS gateway is unavailable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/phone/verify": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Confirm the SMS verification code",
+                "description": "Marks the number proved. On the SaaS edition this is what converts a pending trial entitlement into an active trial.",
+                "operationId": "c193c75ee106182f78af68d4f2aa29a6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "description": "The six digits from the SMS",
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Number verified",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Wrong, expired or exhausted code, or the number was verified elsewhere first"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/auth/sessions": {
             "get": {
                 "tags": [
@@ -1378,6 +1564,57 @@
                     },
                     "422": {
                         "description": "Attempted to revoke the current session"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/push-token": {
+            "put": {
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Register or clear this device's push notification token",
+                "description": "Attached to the session token the request is authenticated with — revoking that session (or logging out) stops its pushes too, no separate unregister call needed.",
+                "operationId": "56a84d08c0c2de7b19f6a6a7395ca022",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "push_token": {
+                                        "description": "Null clears the registration",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "push_platform": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "ios",
+                                            "android"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Updated"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Not authenticated via a login session (e.g. an API integration token)"
                     }
                 },
                 "security": [
@@ -13174,7 +13411,25 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated notifications"
+                        "description": "Paginated notifications",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Notification"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -13196,7 +13451,19 @@
                 "operationId": "4701a7c80c1116621d551b78d31823a7",
                 "responses": {
                     "200": {
-                        "description": "Unread count"
+                        "description": "Unread count",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -13229,7 +13496,19 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The notification"
+                        "description": "The notification",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Notification"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "description": "Addressed to somebody else"
@@ -13254,7 +13533,19 @@
                 "operationId": "2082bd6a5cef26ad25adebbd9e2f0202",
                 "responses": {
                     "200": {
-                        "description": "How many were marked"
+                        "description": "How many were marked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "marked": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Unauthenticated"
@@ -13403,6 +13694,79 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/api/v1/public/waitlist": {
+            "post": {
+                "tags": [
+                    "Waitlist"
+                ],
+                "summary": "Join the beta waitlist",
+                "operationId": "6a31227b1feb642dcff0bab40016dfad",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "locale"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "locale": {
+                                        "type": "string",
+                                        "enum": [
+                                            "cs",
+                                            "sk",
+                                            "en"
+                                        ]
+                                    },
+                                    "page_variant": {
+                                        "type": "string",
+                                        "example": "cz-invoicing-vida",
+                                        "nullable": true,
+                                        "maxLength": 50
+                                    },
+                                    "honeypot": {
+                                        "description": "Anti-spam trap field — must stay empty",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "turnstile_token": {
+                                        "description": "Cloudflare Turnstile response token — required only when services.turnstile.enabled is on",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Signup accepted (idempotent — also returned for an address already on the list)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed, or captcha verification failed"
+                    }
+                }
             }
         },
         "/api/v1/contributions": {
@@ -15054,6 +15418,9 @@
                     "is_current": {
                         "type": "boolean"
                     },
+                    "has_push_token": {
+                        "type": "boolean"
+                    },
                     "last_used_at": {
                         "type": "string",
                         "format": "date-time",
@@ -15272,6 +15639,11 @@
                         "type": "boolean",
                         "example": true
                     },
+                    "phone_verified": {
+                        "description": "Whether the account has proved it holds `phone` by SMS. On the SaaS edition this is what releases a pending trial.",
+                        "type": "boolean",
+                        "example": false
+                    },
                     "terms_accepted_at": {
                         "type": "string",
                         "format": "date-time",
@@ -15327,18 +15699,39 @@
                         "nullable": true
                     },
                     "trial": {
-                        "description": "Card-free trial state; null when not on one (and always null in the core edition)",
+                        "description": "Card-free trial state; null when there is neither a running nor a pending trial (and always null in the core edition). `status=active` means a trial is running — `ends_at` and `days_left` are set. `status=pending_verification` means the account is entitled to a trial but has not verified a phone number yet — `eligible_until` is set and `days_left` counts days left to *claim* it, not days of trial.",
                         "properties": {
+                            "status": {
+                                "type": "string",
+                                "enum": [
+                                    "active",
+                                    "pending_verification"
+                                ]
+                            },
                             "ends_at": {
                                 "type": "string",
-                                "format": "date-time"
+                                "format": "date-time",
+                                "nullable": true
                             },
                             "days_left": {
                                 "type": "integer"
+                            },
+                            "eligible_until": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
                             }
                         },
                         "type": "object",
                         "nullable": true
+                    },
+                    "disabled_features": {
+                        "description": "Feature slugs currently killed platform-wide (saas.disabled_features), always [] in the core edition",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "example": "logbook"
+                        }
                     },
                     "created_at": {
                         "type": "string",
@@ -17638,6 +18031,10 @@
             "description": "Authentication"
         },
         {
+            "name": "Auth",
+            "description": "Auth"
+        },
+        {
             "name": "Profile",
             "description": "Profile"
         },
@@ -17648,6 +18045,10 @@
         {
             "name": "Expenses",
             "description": "Expenses"
+        },
+        {
+            "name": "Waitlist",
+            "description": "Waitlist"
         }
     ],
     "security": [

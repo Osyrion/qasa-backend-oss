@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
 
 /*
  * The BYOK case: an account pastes its own Anthropic key, the key stops

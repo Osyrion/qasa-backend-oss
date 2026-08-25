@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientPortalDirectory;
+use App\Modules\Clients\Domain\ValueObjects\PortalClient;
 use App\Modules\Invoicing\Application\Services\InvoicePdfService;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\QuoteStatus;
@@ -41,6 +42,7 @@ class ClientPortalController extends Controller
 {
     public function __construct(
         private readonly InvoicePdfService $pdfService,
+        private readonly ClientPortalDirectory $clients,
     ) {}
 
     #[OA\Get(
@@ -65,11 +67,11 @@ class ClientPortalController extends Controller
 
         return response()->json([
             'client' => [
-                'name' => $client->company_name ?? trim(($client->name ?? '').' '.($client->surname ?? '')),
-                'email' => $client->email,
+                'name' => $client->profile->name,
+                'email' => $client->profile->email,
             ],
             'supplier' => [
-                'name' => $client->user?->supplierName(),
+                'name' => $client->supplier?->name,
             ],
             'summary' => [
                 'invoice_count' => $invoices->count(),
@@ -202,15 +204,15 @@ class ClientPortalController extends Controller
         ]);
     }
 
-    private function clientFor(string $token): Client
+    private function clientFor(string $token): PortalClient
     {
-        return Client::withoutGlobalScope('user')->where('portal_token', $token)->firstOrFail();
+        return $this->clients->requireByToken($token);
     }
 
     /**
      * @return Builder<Invoice>
      */
-    private function visibleInvoices(Client $client): Builder
+    private function visibleInvoices(PortalClient $client): Builder
     {
         // Drafts have no number and were never sent — showing them would be
         // showing the client something that does not exist yet.

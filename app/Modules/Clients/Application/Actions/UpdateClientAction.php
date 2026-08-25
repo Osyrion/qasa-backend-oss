@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
 use App\Modules\Clients\Application\Services\ClientUsageGuard;
 use App\Modules\Clients\Domain\Events\ClientUpdated;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -25,7 +26,7 @@ readonly class UpdateClientAction
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Client $client, ClientData $data, User $owner): Client
+    public function execute(Client $client, ClientData $data, Account&ProvidesPlanEntitlements $owner): Client
     {
         $this->usageGuard->ensureUsable($client);
         $this->validate($data);
@@ -96,7 +97,7 @@ readonly class UpdateClientAction
      *
      * @throws DomainException
      */
-    private function validateRoleLimits(Client $client, ClientData $data, User $owner): void
+    private function validateRoleLimits(Client $client, ClientData $data, Account&ProvidesPlanEntitlements $owner): void
     {
         if ($data->is_customer && ! $client->is_customer) {
             $customers = Client::forUser($owner->accountOwnerId())

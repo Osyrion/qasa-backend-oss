@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz\Rates;
 
+use App\Modules\Taxation\Domain\Contracts\CzRateTable;
 use App\Modules\Taxation\Domain\Models\CzTaxRateParameterSet;
 
 /**

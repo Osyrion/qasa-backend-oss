@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
+use App\Modules\Invoicing\Domain\ValueObjects\PublicInvoice;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Support\Decimal;
 use App\Modules\Shared\Traits\HasUserScope;
@@ -80,7 +80,6 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, InvoicePayment> $payments
  * @property-read int|null $payments_count
  * @property-read Invoice|null $settledInvoice
- * @property-read User|null $user
  *
  * @method static Builder<static>|Invoice draft()
  * @method static InvoiceFactory factory($count = null, $state = [])
@@ -384,14 +383,6 @@ class Invoice extends Model
     // ── Relations ─────────────────────────────────────────────────────────────
 
     /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
      * @return BelongsTo<Client, $this>
      */
     public function client(): BelongsTo
@@ -442,6 +433,28 @@ class Invoice extends Model
     public function hasPublicLink(): bool
     {
         return $this->public_token !== null;
+    }
+
+    /**
+     * How the online-payment path is allowed to read this document — see
+     * {@see PublicInvoice} for why that is a different value from the summary
+     * the account's own screens get.
+     */
+    public function publicView(): PublicInvoice
+    {
+        return new PublicInvoice(
+            id: $this->id,
+            ownerId: $this->user_id,
+            number: $this->invoice_number,
+            paymentDescription: trim($this->type->label().' '.($this->invoice_number ?? '')),
+            status: $this->status,
+            currency: $this->currency,
+            total: (float) $this->total,
+            balance: $this->balance(),
+            publicUrl: $this->publicUrl(),
+            isCancelled: $this->isCancelled(),
+            isCreditNote: $this->isCreditNote(),
+        );
     }
 
     public function publicUrl(): ?string

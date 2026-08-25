@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
@@ -30,10 +31,10 @@ final readonly class OverviewStatisticsService
     /**
      * @return array<string, mixed>
      */
-    public function getStatistics(User $user): array
+    public function getStatistics(Account&ProvidesSupplierProfile $user): array
     {
         $ownerId = $user->accountOwnerId();
-        $currency = $user->default_currency->value;
+        $currency = $user->supplierProfile()->defaultCurrency->value;
         $today = Carbon::now()->toDateString();
 
         return Cache::remember(
@@ -46,7 +47,7 @@ final readonly class OverviewStatisticsService
     /**
      * @return array<string, mixed>
      */
-    private function compute(User $user): array
+    private function compute(Account&ProvidesSupplierProfile $user): array
     {
         $periods = new StatisticsPeriods;
 
@@ -69,7 +70,7 @@ final readonly class OverviewStatisticsService
         [$monthlyTrend, $profitChart] = $this->charts($user, $periods, $prevYtd);
 
         return [
-            'currency' => $user->default_currency->value,
+            'currency' => $user->supplierProfile()->defaultCurrency->value,
             'kpi' => [
                 'revenue' => $this->kpiBlock($thisMonth, $lastMonth, $rolling12, $prevRolling12, $ytd, $prevYtd, $thisMonthRange, $rolling12Range, $ytdRange, 'revenue'),
                 'costs' => $this->kpiBlock($thisMonth, $lastMonth, $rolling12, $prevRolling12, $ytd, $prevYtd, $thisMonthRange, $rolling12Range, $ytdRange, 'costs'),
@@ -95,7 +96,7 @@ final readonly class OverviewStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array{revenue: float, costs: float, profit: float}
      */
-    private function periodTotals(User $user, array $range): array
+    private function periodTotals(Account&ProvidesSupplierProfile $user, array $range): array
     {
         $revenue = $this->aggregator->revenueBetween($user, $range['from'], $range['to']);
         $costs = $this->aggregator->costsBetween($user, $range['from'], $range['to']);
@@ -175,7 +176,7 @@ final readonly class OverviewStatisticsService
      * @param  array{revenue: float, costs: float, profit: float}  $prevYtd
      * @return array{0: list<array<string, mixed>>, 1: array<string, mixed>}
      */
-    private function charts(User $user, StatisticsPeriods $periods, array $prevYtd): array
+    private function charts(Account&ProvidesSupplierProfile $user, StatisticsPeriods $periods, array $prevYtd): array
     {
         $today = $periods->today();
         $start = $today->copy()->subMonthsNoOverflow(23)->startOfMonth()->toDateString();

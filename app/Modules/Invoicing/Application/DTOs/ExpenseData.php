@@ -28,7 +28,7 @@ class ExpenseData extends Data
     public static function rules(): array
     {
         return [
-            'amount' => ['numeric', 'min:0.01'],
+            'amount' => ['numeric', 'min:0.01', 'decimal:0,2'],
             'date' => ['date'],
         ];
     }

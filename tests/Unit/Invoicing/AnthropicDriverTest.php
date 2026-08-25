@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
 use App\Modules\Invoicing\Infrastructure\Ocr\Providers\AnthropicDriver;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\Client\ConnectionException;

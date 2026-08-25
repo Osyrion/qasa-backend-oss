@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Invoicing\Application\DTOs\QuoteData;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Shared\Exceptions\DomainException;
@@ -13,6 +13,8 @@ use Throwable;
 
 readonly class UpdateQuoteAction
 {
+    public function __construct(private ClientDirectory $clients) {}
+
     /**
      * @throws DomainException
      * @throws Throwable
@@ -25,7 +27,7 @@ readonly class UpdateQuoteAction
 
         return DB::transaction(function () use ($quote, $data): Quote {
             $ownerId = $quote->user_id;
-            Client::forUser($ownerId)->findOrFail($data->client_id);
+            $this->clients->requireOwnedProfile($data->client_id, $ownerId);
 
             $quote->fill([
                 'client_id' => $data->client_id,

@@ -59,6 +59,12 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'two_factor_enabled', type: 'boolean', example: false),
         new OA\Property(property: 'uses_flat_rate', type: 'boolean', example: false),
         new OA\Property(property: 'email_verified', type: 'boolean', example: true),
+        new OA\Property(
+            property: 'phone_verified',
+            description: 'Whether the account has proved it holds `phone` by SMS. On the SaaS edition this is what releases a pending trial.',
+            type: 'boolean',
+            example: false,
+        ),
         new OA\Property(property: 'terms_accepted_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'terms_acceptance_required', type: 'boolean', example: false, description: 'True when never accepted, or accepted an older version than config(\'gdpr.terms_version\') — prompt POST /profile/accept-terms'),
         new OA\Property(property: 'role', type: 'string', enum: ['owner', 'admin', 'member', 'viewer'], nullable: true),
@@ -78,13 +84,24 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'plan', type: 'string', example: 'pro', nullable: true),
         new OA\Property(
             property: 'trial',
-            description: 'Card-free trial state; null when not on one (and always null in the core edition)',
+            description: 'Card-free trial state; null when there is neither a running nor a pending trial (and always null in the core edition). '
+                .'`status=active` means a trial is running — `ends_at` and `days_left` are set. '
+                .'`status=pending_verification` means the account is entitled to a trial but has not verified a phone number yet — '
+                .'`eligible_until` is set and `days_left` counts days left to *claim* it, not days of trial.',
             properties: [
-                new OA\Property(property: 'ends_at', type: 'string', format: 'date-time'),
+                new OA\Property(property: 'status', type: 'string', enum: ['active', 'pending_verification']),
+                new OA\Property(property: 'ends_at', type: 'string', format: 'date-time', nullable: true),
                 new OA\Property(property: 'days_left', type: 'integer'),
+                new OA\Property(property: 'eligible_until', type: 'string', format: 'date-time', nullable: true),
             ],
             type: 'object',
             nullable: true,
+        ),
+        new OA\Property(
+            property: 'disabled_features',
+            description: 'Feature slugs currently killed platform-wide (saas.disabled_features), always [] in the core edition',
+            type: 'array',
+            items: new OA\Items(type: 'string', example: 'logbook'),
         ),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
     ]
@@ -140,6 +157,7 @@ class UserResource extends JsonResource
             'two_factor_enabled' => $this->resource->hasTwoFactorEnabled(),
             'uses_flat_rate' => $this->resource->usesFlatRate(),
             'email_verified' => $this->resource->email_verified_at !== null,
+            'phone_verified' => $this->resource->phone_verified_at !== null,
             'terms_accepted_at' => $this->resource->terms_accepted_at?->toISOString(),
             'terms_acceptance_required' => $this->resource->termsAcceptanceRequired(),
 
@@ -157,6 +175,11 @@ class UserResource extends JsonResource
             // Always present, unlike `plan`: the front end counts down on it
             // and needs to distinguish "no trial" from "not loaded".
             'trial' => $this->resource->trialMeta(),
+
+            // Always present (empty in the core edition and whenever nothing
+            // is disabled) — lets the front end hide a nav entry instead of
+            // waiting on a 403 from the route itself.
+            'disabled_features' => $this->resource->disabledFeatures(),
 
             'created_at' => $this->resource->created_at?->toISOString(),
         ];

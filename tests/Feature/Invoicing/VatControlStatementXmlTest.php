@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementSummaryRowData;
 use App\Modules\Taxation\Infrastructure\Cz\DphKh1XmlBuilder;
 use App\Modules\Taxation\Infrastructure\Sk\KvDphXmlBuilder;
 use Illuminate\Support\Carbon;
@@ -237,12 +237,18 @@ it('builds a byte-identical golden SK KVDPH_2025 XML — payer + domestic RC + d
         assumptions: [],
     );
 
-    $output = app(KvDphXmlBuilder::class)->build($report, $user);
+    $output = app(KvDphXmlBuilder::class)->build($report, $user->supplierProfile());
 
     expect($output)->toBe((string) file_get_contents(base_path('tests/Fixtures/golden/kv_dph.xml')));
 });
 
 it('builds a byte-identical golden CZ DPHKH1 XML — payer + domestic RC', function (): void {
+    // Pinned, not inherited: nazevSW is config('app.name'), which differs
+    // between a developer's .env (Flok) and .env.example (Laravel) — so a
+    // byte-identical assertion against it passed in CI and failed locally,
+    // depending on nothing but which env file happened to load.
+    config(['app.name' => 'Flok']);
+
     $user = User::factory()->make([
         'title' => null, 'name' => 'Petr', 'surname' => 'Svoboda',
         'email' => 'petr.svoboda@example.cz', 'phone' => null,
@@ -286,7 +292,7 @@ it('builds a byte-identical golden CZ DPHKH1 XML — payer + domestic RC', funct
         assumptions: [],
     );
 
-    $output = app(DphKh1XmlBuilder::class)->build($report, $user);
+    $output = app(DphKh1XmlBuilder::class)->build($report, $user->supplierProfile());
 
     expect($output)->toBe((string) file_get_contents(base_path('tests/Fixtures/golden/dph_kh1.xml')));
 });

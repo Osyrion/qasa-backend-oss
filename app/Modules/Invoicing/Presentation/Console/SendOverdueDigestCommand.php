@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Console;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Mail\OverdueInvoicesDigestMail;
 use App\Modules\Invoicing\Application\Notifications\OverdueInvoicesDigestNotification;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceOverdue;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Presentation\Mail\OverdueInvoicesDigestMail;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
 use App\Modules\Shared\Support\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 /**
@@ -33,7 +34,7 @@ class SendOverdueDigestCommand extends Command
 
     protected $description = "Detect invoices newly past due and email the account owner a digest, per the owner's overdue_digest_enabled setting";
 
-    public function handle(): int
+    public function handle(AccountLocator $accounts): int
     {
         /** @var string|null $dateOption */
         $dateOption = $this->option('date');
@@ -50,20 +51,20 @@ class SendOverdueDigestCommand extends Command
         // nothing. users is tenant-scoped too now (phase 7), so the
         // candidate list itself has to come from forEachAccount() rather
         // than a direct scan — it walks the account ids via a definer
-        // function and binds each in turn, which is what makes User::find()
+        // function and binds each in turn, which is what makes the lookup
         // below see the row at all. Team members fall out on their own:
         // their id never owns an invoice, so the query below is empty for
         // them and forEachAccount() already dedupes each account to its
         // owner regardless.
-        TenantContext::forEachAccount(function (string $accountId) use ($today, &$detected, &$digestsSent, &$failures): void {
-            $user = User::find($accountId);
+        TenantContext::forEachAccount(function (string $accountId) use ($accounts, $today, &$detected, &$digestsSent, &$failures): void {
+            $user = $accounts->find($accountId);
 
             if ($user === null) {
                 return;
             }
 
             $invoices = Invoice::withoutGlobalScope('user')
-                ->where('user_id', $user->id)
+                ->where('user_id', $user->accountOwnerId())
                 ->whereIn('status', [InvoiceStatus::Sent->value, InvoiceStatus::Reminded->value])
                 ->where('due_at', '<', $today)
                 ->whereNull('overdue_notified_at')
@@ -83,32 +84,39 @@ class SendOverdueDigestCommand extends Command
                 $newlyOverdue->push($invoice);
             }
 
-            if (! $user->overdue_digest_enabled) {
+            if (! $user->overdueDigestEnabled()) {
                 return;
             }
 
+            $email = $user->supplierProfile()->email;
+            $locale = $user->preferredLocale() ?? (string) config('app.locale');
+
             try {
-                Mail::to($user->email)->queue(
-                    (new OverdueInvoicesDigestMail($newlyOverdue))->locale($user->locale)
+                Mail::to($email)->queue(
+                    (new OverdueInvoicesDigestMail($newlyOverdue))->locale($locale)
                 );
 
                 // Same message, second channel. Sent separately rather than
                 // as another via() of one notification — see the class
                 // docblock for why wrapping the Mailable costs more than it
                 // saves.
-                $user->notify(
-                    (new OverdueInvoicesDigestNotification($newlyOverdue))->locale($user->locale)
+                // Notification::send() rather than $user->notify(): notify()
+                // comes from the Notifiable trait, which no contract
+                // publishes.
+                Notification::send(
+                    $user,
+                    (new OverdueInvoicesDigestNotification($newlyOverdue))->locale($locale)
                 );
                 $digestsSent++;
-                $this->line("Owner {$user->email}: overdue digest sent for {$newlyOverdue->count()} invoice(s).");
+                $this->line("Owner {$email}: overdue digest sent for {$newlyOverdue->count()} invoice(s).");
             } catch (Throwable $e) {
                 $failures++;
                 report($e);
                 Log::error('Overdue invoices digest failed', [
-                    'user_id' => $user->id,
+                    'user_id' => $user->accountOwnerId(),
                     'exception' => $e->getMessage(),
                 ]);
-                $this->error("Owner {$user->email}: overdue digest failed: {$e->getMessage()}");
+                $this->error("Owner {$email}: overdue digest failed: {$e->getMessage()}");
             }
         });
 

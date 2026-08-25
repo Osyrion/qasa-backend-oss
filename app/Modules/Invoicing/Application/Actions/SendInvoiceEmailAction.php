@@ -53,7 +53,7 @@ readonly class SendInvoiceEmailAction implements SendInvoiceEmailActionInterface
             $invoice = $this->updateStatusAction->execute($invoice, InvoiceStatus::Sent);
         }
 
-        $locale = $invoice->client->locale ?? $invoice->user->locale ?? (string) config('app.locale');
+        $locale = $invoice->client->locale ?? $invoice->user?->preferredLocale() ?? (string) config('app.locale');
 
         $publicUrl = null;
 

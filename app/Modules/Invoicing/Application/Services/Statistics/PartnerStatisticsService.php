@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -32,12 +33,13 @@ final readonly class PartnerStatisticsService
 
     public function __construct(
         private StatisticsCurrencyConverter $currencyConverter,
+        private ClientDirectory $clients,
     ) {}
 
     /**
      * @return array<string, mixed>
      */
-    public function getStatistics(User $user, int $limit): array
+    public function getStatistics(Account&ProvidesSupplierProfile $user, int $limit): array
     {
         $periods = new StatisticsPeriods;
         $rolling12 = $periods->rolling12();
@@ -53,10 +55,10 @@ final readonly class PartnerStatisticsService
      * @param  array{from: string, to: string}  $range
      * @return array<string, list<array<string, mixed>>>
      */
-    private function topPartners(User $user, array $range, int $limit, bool $revenue): array
+    private function topPartners(Account&ProvidesSupplierProfile $user, array $range, int $limit, bool $revenue): array
     {
         $userId = $user->accountOwnerId();
-        $amountColumn = $user->is_vat_payer ? 'subtotal' : 'total';
+        $amountColumn = $user->supplierProfile()->vatStatus->isVatPayer() ? 'subtotal' : 'total';
 
         $grouped = ($revenue
             ? Invoice::withoutGlobalScope('user')
@@ -86,11 +88,7 @@ final readonly class PartnerStatisticsService
             ->orderBy('rn')
             ->get();
 
-        $clients = Client::withoutGlobalScope('user')
-            ->withTrashed()
-            ->whereIn('id', $rows->pluck('client_id')->unique()->values())
-            ->get()
-            ->keyBy('id');
+        $clients = $this->clients->profilesIncludingDeleted($rows->pluck('client_id')->unique()->values());
 
         $result = [];
         foreach ($rows as $row) {
@@ -99,7 +97,7 @@ final readonly class PartnerStatisticsService
 
             $result[(string) $row->currency][] = [
                 'client_id' => $row->client_id,
-                'name' => $clients->get($row->client_id)?->display_name,
+                'name' => $clients[$row->client_id]->name ?? null,
                 'amount' => round($amount, 2),
                 'percent_share' => $total > 0.0 ? round($amount / $total * 100, 1) : null,
             ];
@@ -111,7 +109,7 @@ final readonly class PartnerStatisticsService
     /**
      * @return list<array<string, mixed>>
      */
-    private function churnRisk(User $user, StatisticsPeriods $periods): array
+    private function churnRisk(Account&ProvidesSupplierProfile $user, StatisticsPeriods $periods): array
     {
         $userId = $user->accountOwnerId();
         $cutoff = $periods->today()->copy()->subDays(self::CHURN_DAYS)->toDateString();
@@ -147,11 +145,7 @@ final readonly class PartnerStatisticsService
 
         $lifetimeCzkByClient = $this->lifetimeRevenueInCzk($user, array_values($lastInvoiceRows->pluck('client_id')->all()));
 
-        $clients = Client::withoutGlobalScope('user')
-            ->withTrashed()
-            ->whereIn('id', $lastInvoiceRows->pluck('client_id'))
-            ->get()
-            ->keyBy('id');
+        $clients = $this->clients->profilesIncludingDeleted($lastInvoiceRows->pluck('client_id'));
 
         $today = $periods->today();
 
@@ -162,11 +156,11 @@ final readonly class PartnerStatisticsService
 
                 return [
                     'client_id' => $row->client_id,
-                    'name' => $clients->get($row->client_id)?->display_name,
+                    'name' => $clients[$row->client_id]->name ?? null,
                     'last_invoice_at' => $lastInvoiceAt->toDateString(),
                     'days_since_last_invoice' => (int) $lastInvoiceAt->diffInDays($today),
                     'lifetime_revenue' => round($this->currencyConverter->czkToDefault($lifetimeCzk, $user), 2),
-                    'currency' => $user->default_currency->value,
+                    'currency' => $user->supplierProfile()->defaultCurrency->value,
                 ];
             })
             ->values()
@@ -177,11 +171,11 @@ final readonly class PartnerStatisticsService
      * @param  list<string>  $clientIds
      * @return array<string, float>
      */
-    private function lifetimeRevenueInCzk(User $user, array $clientIds): array
+    private function lifetimeRevenueInCzk(Account&ProvidesSupplierProfile $user, array $clientIds): array
     {
         $userId = $user->accountOwnerId();
         $czkSum = $this->currencyConverter->czkSum(
-            $user->is_vat_payer ? 'subtotal' : 'total',
+            $user->supplierProfile()->vatStatus->isVatPayer() ? 'subtotal' : 'total',
             'exchange_rate_snapshot',
             $userId,
         );

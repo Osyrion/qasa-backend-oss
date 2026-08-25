@@ -100,6 +100,10 @@ final readonly class PurgeDeletedAccountsAction
                 'email' => "deleted-{$user->id}@invalid",
                 'title' => null,
                 'phone' => null,
+                // Cleared with the number it attested to. Left behind it
+                // would be a row claiming a verified phone it no longer has,
+                // and account_for_phone() would be reading a fossil.
+                'phone_verified_at' => null,
                 'address' => null,
                 'city' => null,
                 'postal_code' => null,

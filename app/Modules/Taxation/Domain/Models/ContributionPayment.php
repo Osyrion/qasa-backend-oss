@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
 use App\Modules\Taxation\Domain\Enums\ContributionType;
@@ -14,7 +13,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -31,7 +29,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read User|null $user
  *
  * @method static ContributionPaymentFactory factory($count = null, $state = [])
  * @method static Builder<static>|ContributionPayment forUser($userId = null)
@@ -74,13 +71,5 @@ class ContributionPayment extends Model
             'currency' => Currency::class,
             'paid_at' => 'date',
         ];
-    }
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

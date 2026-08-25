@@ -81,6 +81,31 @@ it('summarises what the client still owes', function (): void {
         ->and($response->json('summary.outstanding_total'))->not->toBeNull();
 });
 
+it('names the client the way the rest of the app does, and names the supplier', function (): void {
+    $owner = createUser(['company_name' => 'Supplier s.r.o.']);
+
+    // A self-employed client is where the portal's own hand-rolled name
+    // ("company_name, or first+last") disagreed with Client::display_name,
+    // which every other screen prints.
+    $client = Client::factory()->create([
+        'user_id' => $owner->id,
+        'client_type' => 'self_employed',
+        'company_name' => 'Jan Novák - IT',
+        'name' => 'Jan',
+        'surname' => 'Novák',
+        'email' => 'jan@example.test',
+    ]);
+
+    $token = issuePortalLink($owner, $client);
+
+    $response = $this->getJson("/api/v1/portal/{$token}")->assertOk();
+
+    expect($response->json('client.name'))->toBe($client->display_name)
+        ->and($response->json('client.name'))->toBe('Jan Novák - IT (Jan Novák)')
+        ->and($response->json('client.email'))->toBe('jan@example.test')
+        ->and($response->json('supplier.name'))->toBe($owner->supplierProfile()->name);
+});
+
 it('refuses a PDF belonging to another client of the same account', function (): void {
     $owner = createUser();
 

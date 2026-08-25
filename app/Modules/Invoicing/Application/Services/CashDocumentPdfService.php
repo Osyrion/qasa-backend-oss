@@ -47,19 +47,8 @@ class CashDocumentPdfService
      */
     private function supplier(CashDocument $document): array
     {
-        $user = $document->user;
-
-        if ($user === null) {
-            return [];
-        }
-
-        return [
-            'name' => $user->supplierName(),
-            'ico' => $user->ico,
-            'vat_id' => $user->vat_id,
-            'address' => $user->address,
-            'city' => $user->city,
-            'postal_code' => $user->postal_code,
-        ];
+        // The slip prints a subset (name, address, IČO, IČ DPH); the rest of
+        // the snapshot is inert here and not worth a second shape.
+        return $document->user?->supplierProfile()->toSnapshot() ?? [];
     }
 }

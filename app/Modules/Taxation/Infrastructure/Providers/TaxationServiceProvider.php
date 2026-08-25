@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Providers;
 
+use App\Modules\Taxation\Application\Contracts\EffectiveRateTables;
+use App\Modules\Taxation\Application\Contracts\RateTableOverrides;
+use App\Modules\Taxation\Application\Contracts\TaxFilingArchive;
+use App\Modules\Taxation\Application\Contracts\TaxIncomeAggregatorInterface;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
+use App\Modules\Taxation\Application\Services\EloquentRateTableOverrides;
+use App\Modules\Taxation\Application\Services\EloquentTaxFilingArchive;
+use App\Modules\Taxation\Application\Services\TaxIncomeAggregator;
 use App\Modules\Taxation\Application\Services\TaxSystemResolver;
+use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use App\Modules\Taxation\Domain\Models\ContributionPayment;
 use App\Modules\Taxation\Domain\Models\TaxFiling;
 use App\Modules\Taxation\Infrastructure\Cz\CzTaxSystem;
+use App\Modules\Taxation\Infrastructure\Rates\ConfiguredRateTables;
 use App\Modules\Taxation\Infrastructure\Sk\SkTaxSystem;
 use App\Modules\Taxation\Presentation\Policies\ContributionPaymentPolicy;
 use App\Modules\Taxation\Presentation\Policies\TaxFilingPolicy;
@@ -22,7 +31,21 @@ class TaxationServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(TaxSystemResolverInterface::class, TaxSystemResolver::class);
+        $this->app->bind(TaxIncomeAggregatorInterface::class, TaxIncomeAggregator::class);
+        // The residency → TaxSystem map lives here, not in the resolver: this
+        // is the composition root, and it is the only layer allowed to name
+        // both the contract and the concrete systems behind it.
+        $this->app->bind(TaxSystemResolverInterface::class, fn ($app): TaxSystemResolver => new TaxSystemResolver([
+            TaxResidency::Sk->value => $app->make(SkTaxSystem::class),
+            TaxResidency::Cz->value => $app->make(CzTaxSystem::class),
+        ]));
+
+        // One place decides which rate table a year resolves to — the
+        // calculators and Admin's parameter editor used to each hold their own
+        // copy of the fallback.
+        $this->app->bind(EffectiveRateTables::class, ConfiguredRateTables::class);
+        $this->app->bind(RateTableOverrides::class, EloquentRateTableOverrides::class);
+        $this->app->bind(TaxFilingArchive::class, EloquentTaxFilingArchive::class);
 
         // CzTaxSystem/SkTaxSystem never name an accounting-export builder
         // directly — they pull whatever is tagged under

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementSummaryRowData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use DOMDocument;
 use DOMElement;
 
@@ -30,7 +30,7 @@ final class DphKh1XmlBuilder
 
     private const REVERSE_CHARGE_CODE_PLACEHOLDER = '1';
 
-    public function build(VatControlStatementReportData $report, User $user): string
+    public function build(VatControlStatementReportData $report, SupplierProfile $supplier): string
     {
         $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
@@ -40,7 +40,7 @@ final class DphKh1XmlBuilder
 
         $dphkh1 = $dom->createElement('DPHKH1');
         $dphkh1->appendChild($this->buildVetaD($dom, $report));
-        $dphkh1->appendChild($this->buildVetaP($dom, $user));
+        $dphkh1->appendChild($this->buildVetaP($dom, $supplier));
 
         foreach ($this->groupByDocument($report->rowSections['A1'] ?? []) as $group) {
             $dphkh1->appendChild($this->buildVetaA1($dom, $group));
@@ -179,28 +179,28 @@ final class DphKh1XmlBuilder
      * track a legal-form field on the user profile, and freelancers/SZČO are
      * the primary target audience.
      */
-    private function buildVetaP(DOMDocument $dom, User $user): DOMElement
+    private function buildVetaP(DOMDocument $dom, SupplierProfile $supplier): DOMElement
     {
         $el = $dom->createElement('VetaP');
         $el->setAttribute('c_ufo', self::TAX_OFFICE_PLACEHOLDER);
-        $el->setAttribute('dic', $this->digitsOnly($user->dic ?? $user->vat_id));
+        $el->setAttribute('dic', $this->digitsOnly($supplier->dic ?? $supplier->vatId));
         $el->setAttribute('typ_ds', 'F');
-        $el->setAttribute('jmeno', (string) $user->name);
-        $el->setAttribute('prijmeni', (string) ($user->surname ?? ''));
+        $el->setAttribute('jmeno', $supplier->firstName);
+        $el->setAttribute('prijmeni', $supplier->lastName);
 
-        if ($user->address !== null) {
-            $el->setAttribute('ulice', $user->address);
+        if ($supplier->address !== null) {
+            $el->setAttribute('ulice', $supplier->address);
         }
 
-        if ($user->city !== null) {
-            $el->setAttribute('naz_obce', $user->city);
+        if ($supplier->city !== null) {
+            $el->setAttribute('naz_obce', $supplier->city);
         }
 
-        if ($user->postal_code !== null) {
-            $el->setAttribute('psc', $user->postal_code);
+        if ($supplier->postalCode !== null) {
+            $el->setAttribute('psc', $supplier->postalCode);
         }
 
-        $el->setAttribute('email', $user->email);
+        $el->setAttribute('email', $supplier->email);
 
         return $el;
     }

@@ -47,7 +47,7 @@ readonly class UpdateSupplierInvoiceAction
         $owner = $supplierInvoice->user;
         assert($owner !== null);
 
-        if ($data->vat_regime !== SupplierVatRegime::Domestic && $owner->accountOwner()->vat_status === VatStatus::NonPayer) {
+        if ($data->vat_regime !== SupplierVatRegime::Domestic && $owner->supplierProfile()->vatStatus === VatStatus::NonPayer) {
             throw DomainException::because(__('invoicing.supplier_invoice.self_assessment_requires_vat_status'));
         }
 

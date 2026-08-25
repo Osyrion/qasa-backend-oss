@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -23,7 +24,7 @@ function maskScope(array $userOverrides = []): array
  * @param  array<string, mixed>  $overrides
  * @return TestResponse<Response>
  */
-function postInvoice(object $test, User $user, Client $client, array $overrides = []): TestResponse
+function postInvoice(TestCase $test, User $user, Client $client, array $overrides = []): TestResponse
 {
     return $test->actingAs($user)->postJson('/api/v1/invoices', [
         'client_id' => $client->id,
@@ -41,7 +42,7 @@ function postInvoice(object $test, User $user, Client $client, array $overrides 
  * @param  array<string, mixed>  $overrides
  * @return TestResponse<Response>
  */
-function postAndIssueInvoice(object $test, User $user, Client $client, array $overrides = []): TestResponse
+function postAndIssueInvoice(TestCase $test, User $user, Client $client, array $overrides = []): TestResponse
 {
     $draft = postInvoice($test, $user, $client, $overrides);
     $draft->assertCreated();

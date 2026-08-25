@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +26,7 @@ use Illuminate\Support\Carbon;
  *                                     row exists to hold the key, the response has not been produced yet
  * @property array<string, mixed>|null $response_body
  * @property Carbon|null $created_at
- * @property-read User|null $user
+ * @property-read Account|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|IdempotencyKey newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|IdempotencyKey newQuery()
@@ -61,10 +65,13 @@ class IdempotencyKey extends Model
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile, $this>
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        /** @var class-string<Model&Account&MustVerifyEmail&HasLocalePreference&ProvidesInvoiceNumbering&ProvidesSupplierProfile> $account */
+        $account = config('auth.providers.users.model');
+
+        return $this->belongsTo($account);
     }
 }

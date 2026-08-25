@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\DTOs;
 
 use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Domain\Rules\ValidInvoiceNumberMask;
+use App\Modules\Shared\Domain\Rules\ValidInvoiceNumberMask;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Taxation\Domain\Enums\VatFilingFrequency;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Application\Notifications;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\DTOs\NotificationPayload;
+use App\Modules\Shared\Domain\Contracts\ProvidesNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -41,7 +41,7 @@ abstract class InAppNotification extends Notification implements ShouldQueue
      */
     public function via(object $notifiable): array
     {
-        if ($notifiable instanceof User && ! $notifiable->wantsNotificationCategory($this->payload($notifiable)->category)) {
+        if ($notifiable instanceof ProvidesNotificationPreferences && ! $notifiable->wantsNotificationCategory($this->payload($notifiable)->category)) {
             return [];
         }
 

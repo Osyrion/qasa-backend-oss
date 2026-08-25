@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
+use App\Modules\Invoicing\Application\Contracts\EuSalesListSourceInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * intra-EU reverse-charged invoices for a period. Grouping/row-shaping is
  * Taxation's Sk/CzEuSalesListBuilder; this class only queries.
  */
-class EuSalesListService
+class EuSalesListService implements EuSalesListSourceInterface
 {
     /**
      * @param  list<string>  $months  "Y-m" months in scope

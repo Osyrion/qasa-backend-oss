@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Invoicing\Domain\Banking\BankAccountIdentity;
 use App\Modules\Invoicing\Domain\Banking\Contracts\PaymentQrScheme;
 use App\Modules\Invoicing\Domain\Banking\PaymentQrRequest;
 use App\Modules\Invoicing\Domain\Banking\PaymentSchemeRegistry;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QRGdImagePNG;
 use chillerlan\QRCode\Output\QRImagick;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -104,16 +105,29 @@ class PaymentQrService
 
         $bank = $this->bankDetails($invoice) ?? [];
 
-        return $scheme->payload(new PaymentQrRequest(
-            iban: (string) ($bank['iban'] ?? ''),
-            bic: isset($bank['bic']) && $bank['bic'] !== '' ? (string) $bank['bic'] : null,
-            amount: $amountOverride ?? (float) $invoice->total,
-            currency: $invoice->currency,
-            variableSymbol: $invoice->variable_symbol,
-            beneficiaryName: $this->supplierName($invoice),
-            message: trim($invoice->invoice_number.' VS '.($invoice->variable_symbol ?? '')),
-            dueDate: $invoice->due_at,
-        ));
+        try {
+            return $scheme->payload(new PaymentQrRequest(
+                iban: (string) ($bank['iban'] ?? ''),
+                bic: isset($bank['bic']) && $bank['bic'] !== '' ? (string) $bank['bic'] : null,
+                amount: $amountOverride ?? (float) $invoice->total,
+                currency: $invoice->currency,
+                variableSymbol: $invoice->variable_symbol,
+                beneficiaryName: $this->supplierName($invoice),
+                message: trim($invoice->invoice_number.' VS '.($invoice->variable_symbol ?? '')),
+                dueDate: $invoice->due_at,
+            ));
+        } catch (Throwable $e) {
+            // PayBySquareBuilder shells out to `xz` and throws when it is
+            // missing or fails; the QR is decoration on the PDF, the invoice
+            // is not. Degrade to no QR and leave a trace, never a 500.
+            Log::warning('Payment QR payload could not be built', [
+                'invoice_id' => $invoice->getKey(),
+                'scheme' => $scheme->name(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -183,6 +197,6 @@ class PaymentQrService
             return (string) $snapshot['name'];
         }
 
-        return $invoice->user?->supplierName() ?? '';
+        return $invoice->user?->supplierProfile()->name ?? '';
     }
 }

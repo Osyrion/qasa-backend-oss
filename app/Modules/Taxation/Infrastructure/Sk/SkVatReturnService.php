@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatReturnReportData;
-use App\Modules\Invoicing\Application\Services\VatReturnAggregationService;
+use App\Modules\Invoicing\Application\Contracts\VatReturnAggregatorInterface;
+use App\Modules\Invoicing\Domain\ValueObjects\VatReturnReportData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use App\Modules\Taxation\Domain\Contracts\VatReturnBuilder;
 
 /**
@@ -17,7 +17,7 @@ use App\Modules\Taxation\Domain\Contracts\VatReturnBuilder;
 final class SkVatReturnService implements VatReturnBuilder
 {
     public function __construct(
-        private readonly VatReturnAggregationService $aggregationService,
+        private readonly VatReturnAggregatorInterface $aggregationService,
         private readonly DphXmlBuilder $xmlBuilder,
     ) {}
 
@@ -44,9 +44,9 @@ final class SkVatReturnService implements VatReturnBuilder
         );
     }
 
-    public function toXml(VatReturnReportData $report, User $user): string
+    public function toXml(VatReturnReportData $report, SupplierProfile $supplier): string
     {
-        return $this->xmlBuilder->build($report, $user);
+        return $this->xmlBuilder->build($report, $supplier);
     }
 
     public function assumptions(): array

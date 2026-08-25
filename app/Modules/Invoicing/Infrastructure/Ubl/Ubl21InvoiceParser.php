@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Infrastructure\Ubl;
 
+use App\Modules\Invoicing\Application\Contracts\UblInvoiceParserInterface;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -26,7 +27,7 @@ use DOMXPath;
  * CrpdphApiClient, tightened because that one only ever talks to a known
  * endpoint and this accepts uploads).
  */
-final class Ubl21InvoiceParser
+final class Ubl21InvoiceParser implements UblInvoiceParserInterface
 {
     private const NS_CAC = 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
 

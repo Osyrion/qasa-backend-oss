@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Orders\Application\Services;
 
 use App\Modules\Orders\Application\Contracts\OrderRateRecorderInterface;
-use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Domain\ValueObjects\OrderRateChange;
 
 /**
  * OSS core default: the order's rate column already carries the current
@@ -13,7 +13,7 @@ use App\Modules\Orders\Domain\Models\Order;
  */
 final class NullOrderRateRecorder implements OrderRateRecorderInterface
 {
-    public function record(Order $order, ?float $rate): void
+    public function record(OrderRateChange $change): void
     {
         //
     }

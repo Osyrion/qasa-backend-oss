@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Domain\Contracts;
 
-use App\Modules\Clients\Domain\Models\Client;
-use App\Modules\Invoicing\Domain\Services\InvoiceVatRegimeDecision;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceVatRegimeDecision;
+use App\Modules\Shared\Domain\ValueObjects\PartyProfile;
 use App\Modules\Shared\Enums\VatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -21,7 +21,7 @@ interface VatRegimeResolver
      */
     public function resolve(
         VatStatus $supplierStatus,
-        Client $client,
+        PartyProfile $client,
         bool $requestReverseCharge,
     ): InvoiceVatRegimeDecision;
 }

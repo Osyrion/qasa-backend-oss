@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Traits\HasUserScope;
 use Eloquent;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Carbon;
 
@@ -31,7 +29,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $read_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read User|null $user
  *
  * @method static Builder<static> forUser($userId = null)
  * @method static Builder<static>|AccountNotification newModelQuery()
@@ -56,14 +53,6 @@ class AccountNotification extends DatabaseNotification
         'data',
         'read_at',
     ];
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * Notifications addressed to one specific recipient inside the account.

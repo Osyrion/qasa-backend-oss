@@ -14,6 +14,7 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
 use App\Modules\Shared\Enums\Provenance;
 use App\Modules\Shared\Exceptions\DomainException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -33,28 +34,33 @@ readonly class RecordPaymentAction implements RecordPaymentActionInterface
      * is currently free-tier read-only locked — see Q2 in
      * docs/plans/STRIPE_INVOICE_PAYMENTS_PLAN.md.
      *
+     * @throws ModelNotFoundException
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Invoice $invoice, PaymentData $data, bool $enforceUsageGuard = true, Provenance $provenance = Provenance::Manual): InvoicePayment
+    public function execute(string $invoiceId, PaymentData $data, bool $enforceUsageGuard = true, Provenance $provenance = Provenance::Manual): InvoicePayment
     {
-        if ($enforceUsageGuard && $invoice->client !== null) {
-            $this->usageGuard->ensureUsable($invoice->client);
-        }
+        return DB::transaction(function () use ($invoiceId, $data, $enforceUsageGuard, $provenance): InvoicePayment {
+            // Read under a row lock before deciding anything. This action is
+            // reached from the Stripe webhook, the bank matcher and a person
+            // clicking "mark paid", so a document read a moment ago can
+            // already be stale: its status may have been settled or cancelled
+            // since, and the balance below has to be computed against payments
+            // nobody else is inserting concurrently. Same reasoning, same
+            // shape as UpdateInvoiceStatusAction.
+            //
+            // Every check below is against this row rather than against
+            // whatever the caller last saw — which is the whole reason the
+            // contract takes an id.
+            $locked = Invoice::query()->lockForUpdate()->whereKey($invoiceId)->firstOrFail();
 
-        if ($invoice->isCreditNote()) {
-            throw DomainException::because(__('invoicing.payment_not_for_credit_note'));
-        }
+            if ($enforceUsageGuard && $locked->client !== null) {
+                $this->usageGuard->ensureUsable($locked->client);
+            }
 
-        return DB::transaction(function () use ($invoice, $data, $provenance): InvoicePayment {
-            // Re-read under a row lock before deciding anything. This action
-            // is reached from the Stripe webhook, the bank matcher and a
-            // person clicking "mark paid", so $invoice can already be stale:
-            // its status may have been settled or cancelled since, and the
-            // balance below has to be computed against payments nobody else
-            // is inserting concurrently. Same reasoning, same shape as
-            // UpdateInvoiceStatusAction.
-            $locked = Invoice::query()->lockForUpdate()->whereKey($invoice->getKey())->firstOrFail();
+            if ($locked->isCreditNote()) {
+                throw DomainException::because(__('invoicing.payment_not_for_credit_note'));
+            }
 
             if (! $locked->statusEnum()->isOpen() && ! $locked->isPaid()) {
                 throw DomainException::because(
@@ -81,12 +87,6 @@ readonly class RecordPaymentAction implements RecordPaymentActionInterface
             }
 
             event(new PaymentRecorded($locked, $payment));
-
-            // The caller still holds the pre-lock instance and goes on to
-            // serialise it — hand it the state the transaction settled on
-            // rather than the one it read before.
-            $invoice->setRawAttributes($locked->getAttributes(), true);
-            $invoice->unsetRelation('payments')->forgetPaymentsAggregate();
 
             return $payment;
         });

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Auth\Presentation\Resources\UserResource;
-use App\Modules\Clients\Application\Actions\FetchCompanyDataAction;
+use App\Modules\Auth\Application\Contracts\AccountRepresentation;
+use App\Modules\Clients\Application\Contracts\CompanyRegistryLookup;
 use App\Modules\Clients\Application\DTOs\CompanyRegistryData;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Application\Actions\CompleteResidencyAction;
 use App\Modules\Taxation\Application\DTOs\CompleteResidencyData;
 use App\Modules\Taxation\Application\DTOs\RegistryLookupData;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -22,7 +24,8 @@ class ResidencyController extends Controller
 {
     public function __construct(
         private readonly CompleteResidencyAction $completeResidencyAction,
-        private readonly FetchCompanyDataAction $fetchCompanyData,
+        private readonly CompanyRegistryLookup $fetchCompanyData,
+        private readonly AccountRepresentation $accountRepresentation,
     ) {}
 
     /**
@@ -65,18 +68,18 @@ class ResidencyController extends Controller
     )]
     public function complete(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&Model&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $data = CompleteResidencyData::validateAndCreate($request->all());
 
         try {
-            $user = $this->completeResidencyAction->execute($user, $data);
+            $this->completeResidencyAction->execute($user, $data);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return UserResource::make($user)->response();
+        return response()->json(['data' => $this->accountRepresentation->forAccount($user)]);
     }
 
     #[OA\Get(

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Auth\Application\DTOs;
 
 use App\Modules\Auth\Domain\Rules\EmailAvailable;
+use App\Modules\Shared\Domain\Rules\DisposableEmailBlocked;
 use App\Modules\Shared\Enums\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,7 +42,23 @@ class RegisterUserData extends Data
         public readonly ?string $title = null,
         public readonly Currency $default_currency = Currency::EUR,
         public readonly string $locale = 'sk',
+
+        // Cloudflare Turnstile, same field the waitlist form posts. Nullable
+        // because the check is a no-op when services.turnstile.enabled is
+        // off — a deployment without Turnstile configured keeps working.
+        public readonly ?string $turnstile_token = null,
     ) {}
+
+    /**
+     * No phone field, deliberately.
+     *
+     * Verifying a number is a step *after* registration
+     * (POST /auth/phone/send-code), for two reasons that both point the same
+     * way: a number already verified elsewhere would have to fail the
+     * request, which is the one thing this feature must never do to
+     * registration — and validating it here would turn a public endpoint
+     * into an oracle for which numbers hold accounts.
+     */
 
     /**
      * @return array<string, mixed>
@@ -51,13 +68,19 @@ class RegisterUserData extends Data
         return [
             'name' => ['required', 'string', 'max:100'],
             'surname' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:255', new EmailAvailable],
+            'email' => ['required', 'email', 'max:255', new DisposableEmailBlocked, new EmailAvailable],
             'password' => ['required', 'string', 'max:255', Password::defaults()],
             'accepted_terms' => ['required', 'accepted'],
             'title' => ['nullable', 'string', 'max:100'],
             'default_currency' => ['sometimes', Rule::enum(Currency::class)],
             'locale' => ['sometimes', 'string', 'max:5'],
             'device_name' => ['nullable', 'string', 'max:255'],
+            'turnstile_token' => ['nullable', 'string'],
+            // Read straight off the request by AuthController::register
+            // rather than carried on this DTO — it decides whether the
+            // endpoint answers at all, which is settled before any of
+            // these fields matter.
+            'invitation_token' => ['nullable', 'string'],
         ];
     }
 
@@ -72,6 +95,7 @@ class RegisterUserData extends Data
             title: $request->filled('title') ? $request->string('title')->toString() : null,
             default_currency: Currency::from($request->string('default_currency', 'EUR')->toString()),
             locale: $request->string('locale', self::preferredLocale($request))->toString(),
+            turnstile_token: $request->filled('turnstile_token') ? $request->string('turnstile_token')->toString() : null,
         );
     }
 

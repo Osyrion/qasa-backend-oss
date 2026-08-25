@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Invoicing\Domain\Banking\BankAccountIdentity;
-use App\Modules\Invoicing\Domain\Banking\CzechIbanConverter;
 use App\Modules\Invoicing\Domain\Banking\PaymentQrRequest;
 use App\Modules\Invoicing\Domain\Banking\PaymentSchemeRegistry;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use App\Modules\Shared\Exceptions\DomainException;
+use App\Modules\Shared\Support\CzechIbanConverter;
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QRMarkupSVG;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -71,16 +72,30 @@ class SupplierPaymentQrService
             ]));
         }
 
-        return $scheme->payload(new PaymentQrRequest(
-            iban: $iban,
-            bic: $supplierInvoice->vendor_bic,
-            amount: (float) $supplierInvoice->total,
-            currency: $supplierInvoice->currency,
-            variableSymbol: $supplierInvoice->variable_symbol,
-            beneficiaryName: $this->vendorName($supplierInvoice),
-            message: trim($supplierInvoice->supplier_invoice_number.' VS '.($supplierInvoice->variable_symbol ?? '')),
-            dueDate: $supplierInvoice->due_at,
-        ));
+        try {
+            return $scheme->payload(new PaymentQrRequest(
+                iban: $iban,
+                bic: $supplierInvoice->vendor_bic,
+                amount: (float) $supplierInvoice->total,
+                currency: $supplierInvoice->currency,
+                variableSymbol: $supplierInvoice->variable_symbol,
+                beneficiaryName: $this->vendorName($supplierInvoice),
+                message: trim($supplierInvoice->supplier_invoice_number.' VS '.($supplierInvoice->variable_symbol ?? '')),
+                dueDate: $supplierInvoice->due_at,
+            ));
+        } catch (Throwable $e) {
+            // PayBySquareBuilder shells out to `xz` and throws when it is
+            // missing or fails. Every other failure here is a DomainException
+            // the controller turns into a readable 4xx; a RuntimeException
+            // escaping past it would be a 500 instead.
+            Log::warning('Supplier payment QR payload could not be built', [
+                'supplier_invoice_id' => $supplierInvoice->getKey(),
+                'scheme' => $scheme->name(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            throw DomainException::because(__('invoicing.payment_qr_unavailable'));
+        }
     }
 
     private function resolveIban(SupplierInvoice $supplierInvoice): ?string

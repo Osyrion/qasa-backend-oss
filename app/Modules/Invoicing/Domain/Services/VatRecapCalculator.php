@@ -8,6 +8,7 @@ use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\Models\QuoteItem;
+use App\Modules\Invoicing\Domain\ValueObjects\VatRecapRow;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Support\Decimal;
 use Brick\Math\BigDecimal;

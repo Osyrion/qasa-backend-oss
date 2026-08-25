@@ -54,9 +54,9 @@ class OrderData extends Data
         return [
             'client_id' => ['nullable', 'uuid', 'exists:clients,id'],
             'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'rate' => ['nullable', 'numeric', 'min:0'],
-            'estimated_hours' => ['nullable', 'numeric', 'min:0'],
-            'estimated_price' => ['nullable', 'numeric', 'min:0'],
+            'rate' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'estimated_hours' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
+            'estimated_price' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
             'deadline' => ['nullable', 'date'],
             'status' => ['in:active,paused,completed,archived'],
         ];

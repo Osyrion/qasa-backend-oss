@@ -45,7 +45,7 @@ readonly class SendQuoteEmailAction
 
         $publicUrl = $this->createPublicLinkAction->execute($quote)->publicUrl();
 
-        $locale = $quote->client->locale ?? $quote->user->locale ?? (string) config('app.locale');
+        $locale = $quote->client->locale ?? $quote->user?->preferredLocale() ?? (string) config('app.locale');
 
         Mail::to($recipient)->queue(
             (new QuoteEmail($quote, $data?->message, $publicUrl))->locale($locale)

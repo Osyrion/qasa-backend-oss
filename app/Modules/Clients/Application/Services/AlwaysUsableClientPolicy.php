@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Application\Services;
 
 use App\Modules\Clients\Application\Contracts\ClientUsagePolicyInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Domain\ValueObjects\ClientUsageSubject;
 
 /**
  * Core default: no client locking. The SaaS edition rebinds
@@ -13,7 +13,7 @@ use App\Modules\Clients\Domain\Models\Client;
  */
 final class AlwaysUsableClientPolicy implements ClientUsagePolicyInterface
 {
-    public function isUsable(Client $client): bool
+    public function isUsable(ClientUsageSubject $client): bool
     {
         return true;
     }

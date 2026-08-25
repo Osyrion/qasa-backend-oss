@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\DTOs\CashDocumentData;
 use App\Modules\Invoicing\Application\Services\CashDocumentNumberGenerator;
 use App\Modules\Invoicing\Domain\Models\CashDocument;
 use App\Modules\Invoicing\Domain\Models\Expense;
 use App\Modules\Invoicing\Domain\Models\InvoicePayment;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Carbon\CarbonImmutable;
 
@@ -22,7 +22,7 @@ readonly class CreateCashDocumentAction
     /**
      * @throws DomainException
      */
-    public function execute(User $owner, CashDocumentData $data): CashDocument
+    public function execute(Account $owner, CashDocumentData $data): CashDocument
     {
         $ownerId = $owner->accountOwnerId();
         $issuedAt = CarbonImmutable::parse($data->issued_at);

@@ -27,6 +27,17 @@
 <li>Přihlásit se dá i přes Google účet — v tom případě heslo nepotřebuješ vůbec a adresa je ověřená hned (Google ji už ověřil za tebe). I tady platí, že založení nového účtu přes Google se počítá jako odsouhlasení podmínek.</li>
 </ol>
 <p>Pokud se podmínky používání nebo ochrana osobních údajů později změní, aplikace tě při dalším přihlášení požádá o jejich opětovné odsouhlasení — staré přijetí se automaticky nepřenáší na novou verzi.</p>
+<h2>Ověření telefonního čísla a zkušební období</h2>
+<p>Registrace telefonní číslo nevyžaduje a bez něj účet normálně funguje. Číslo se ověřuje až v aplikaci, v <strong>Nastavení → Zabezpečení → Telefonní číslo</strong>: zadáš číslo v mezinárodním tvaru (např. <code>+420777123456</code>), přijde ti SMS se šestimístným kódem a ten přepíšeš do políčka.</p>
+<p><strong>Ověřením čísla se spouští bezplatné 14denní zkušební období.</strong> Do té doby účet běží na bezplatné úrovni. Zkušební období se počítá <strong>od okamžiku ověření</strong>, ne od registrace — nic tedy neztratíš tím, že si číslo ověříš až za pár dní. Na uplatnění máš 14 dní od registrace; pokud je necháš uplynout, zkušební období už nedostaneš. Aplikace ti to připomene e-mailem i pruhem v horní části obrazovky.</p>
+<p>Praktické poznámky:</p>
+<ul>
+<li><strong>Jedno číslo, jeden účet.</strong> Číslo, které je už ověřené na jiném účtu, ověřit nelze — a platí to i během 30 dnů po smazání toho účtu. Neověřené číslo v profilu nikoho neblokuje.</li>
+<li><strong>Zkušební období dostaneš jednou.</strong> Platí dvojí pravidlo: jednou za účet (i kdybys později ověřil úplně jiné číslo) a jednou za číslo (smazat účet a zaregistrovat se znovu se stejným mobilem tedy nepomůže).</li>
+<li><strong>Číslo si můžeš změnit</strong> ve stejném nastavení — po ověření nového se původní uvolní. Mezi změnami je odstup několika dnů, protože každé ověření stojí odeslanou SMS.</li>
+<li><strong>Nový kód</strong> si můžeš vyžádat po minutě. Kód platí 10 minut a po pěti nesprávných pokusech přestane platit — tehdy si jednoduše vyžádej nový.</li>
+<li><strong>Když SMS nepřijde</strong>, zkontroluj tvar čísla (musí začínat <code>+</code> a předvolbou země). Pokud se kód nepodaří odeslat, aplikace to řekne přímo — registrace ani používání účtu tím nejsou nijak omezené, ověření zkusíš později.</li>
+</ul>
 <h2>Krok 2: daňová rezidence</h2>
 <p>Hned po registraci tě aplikace požádá o <strong>doplnění daňové rezidence</strong> — Slovensko nebo Česko. Tato volba je <strong>nezměnitelná</strong> po jejím potvrzení, protože se od ní odvíjí:</p>
 <ul>
@@ -47,7 +58,7 @@
 <li><strong>Výchozí měna</strong> — CZK pro CZ, EUR pro SK; dá se změnit, pokud fakturuješ převážně v jiné měně.</li>
 </ul>
 <h2>Zkušební období</h2>
-<p>Po registraci máš <strong>14 dní zdarma a naplno</strong> — všechny funkce plánu Standard, bez zadávání platební karty. Nemusíš nic aktivovat, běží to od prvního přihlášení.</p>
+<p>Po <strong>ověření telefonního čísla</strong> máš <strong>14 dní zdarma a naplno</strong> — všechny funkce plánu Standard, bez zadávání platební karty. Ověření je jediné, co je potřeba udělat (viz sekce výše); do té doby účet běží na bezplatné úrovni. Období se počítá od ověření, ne od registrace.</p>
 <p>V profilu (a v hlavičce aplikace) vidíš, kolik dní ti zbývá. Tři dny před koncem ti přijde upozornění e-mailem i do zvonečku, a další v den, kdy období skončí.</p>
 <p><strong>Co se stane, když zkušební období skončí a nepředplatíš si:</strong></p>
 <ul>
@@ -89,6 +100,11 @@ zatím nepřenášejí — je třeba je nastavit znovu přímo v Qase.</p>
 <p>Pokud s tebou administrativu řeší i někdo další (účetní, kolega), můžeš ho pozvat do týmu s omezenými právy — viz kapitola <a href="07-tim.html">Tým</a>. Bezplatný plán omezuje počet členů týmu; rozšíření je součástí vyšších plánů.</p>
 <h2>Bezpečnost účtu</h2>
 <p>Doporučujeme zapnout <strong>dvoufaktorové ověření</strong> (2FA) v <strong>Nastavení → Bezpečnost</strong> — při každém přihlášení z nového zařízení bude aplikace kromě hesla vyžadovat i kód z autentifikační aplikace (např. Google Authenticator). Zapnutí 2FA vygeneruje i sadu záložních kódů pro případ ztráty telefonu — ulož si je na bezpečné místo, zobrazí se jen jednou.</p>
+<p>Pokud máš tým, můžeš 2FA <strong>vyžadovat po všech jeho členech</strong> — viz <a href="07_tim.md">kapitolu Tým</a>.</p>
+<h3>Když se heslo nedaří trefit</h3>
+<p>Po pěti neúspěšných pokusech o přihlášení tě aplikace požádá chvíli počkat — nejprve 2 minuty, a s každým dalším omylem se čekání zdvojnásobí, nejvýše však na hodinu. Je to ochrana proti tomu, aby někdo cizí zkoušel hesla k tvému účtu dokola.</p>
+<p><strong>Účet se tím nezamkne.</strong> Čekání se počítá zvlášť pro každé zařízení a připojení, takže pokud se někdo cizí pokouší dostat do tvého účtu, tebe to nijak neomezí — přihlásíš se normálně. Jakmile zadáš heslo správně, počítadlo se vynuluje; samo od sebe se vynuluje po 24 hodinách. Pokud si heslo nevzpomeneš, nečekej a použij <strong>Zapomenuté heslo</strong> — reset funguje i během čekání.</p>
+<p>Pokud se někdo o tvůj účet pokouší vytrvale z více míst najednou, přihlašovací formulář si navíc vyžádá potvrzení <strong>„nejsem robot&quot;</strong>. Je to jen jedno kliknutí a slouží k tomu, aby hesla nešlo zkoušet automaticky — tebe to zdrží jednou, útočníkovi to celý postup znefunkční. Po úspěšném přihlášení se už nezobrazuje.</p>
 <h3>Moje zařízení</h3>
 <p><strong>Nastavení → Bezpečnost → Moje zařízení</strong> zobrazuje každé zařízení/prohlížeč, ze kterého jsi momentálně přihlášený — s IP adresou a časem posledního použití. Aktuální zařízení je označené. Zařízení, které už neznáš nebo nepoužíváš, můžeš jednotlivě odhlásit; tlačítko <strong>Odhlásit všechna ostatní zařízení</strong> udělá totéž najednou pro vše kromě toho, ze kterého právě pracuješ. Aktuální zařízení tímto způsobem odhlásit nelze — na to slouží běžné tlačítko Odhlásit se.</p>
 <blockquote>

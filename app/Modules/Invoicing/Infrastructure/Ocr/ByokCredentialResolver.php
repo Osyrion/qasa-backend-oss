@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Infrastructure\Ocr;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Contracts\ByokCredentialResolverInterface;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
 use App\Modules\Invoicing\Domain\Models\AiCredential;
+use App\Modules\Shared\Domain\Contracts\Account;
 
 /**
  * Resolves which BYOK credential (if any) an account should extract
@@ -19,11 +20,14 @@ use App\Modules\Invoicing\Domain\Models\AiCredential;
  * Feature-gating (ai_byok) and the platform-key fallback are the caller's
  * (FieldExtractorFactory's) concern, not this resolver's.
  */
-final class ByokCredentialResolver
+final class ByokCredentialResolver implements ByokCredentialResolverInterface
 {
-    public function forOwner(User $owner): ?AiCredential
+    public function forOwner(Account $owner): ?AiCredential
     {
-        $account = $owner->accountOwner();
+        // accountOwnerId(), not accountOwner()->id: for a team member whose
+        // owner row will not load the latter silently falls back to the
+        // member itself, which would look up the wrong account's credential.
+        $accountId = $owner->accountOwnerId();
 
         /** @var list<string> $priority */
         $priority = (array) config('invoicing.inbox.extraction.provider_priority', ['anthropic']);
@@ -36,7 +40,7 @@ final class ByokCredentialResolver
             }
 
             $credential = AiCredential::query()
-                ->where('user_id', $account->id)
+                ->where('user_id', $accountId)
                 ->where('provider', $provider->value)
                 ->first();
 

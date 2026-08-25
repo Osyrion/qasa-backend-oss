@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Infrastructure\Notifications;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Notifications\Channels\DatabaseChannel;
 use Illuminate\Notifications\Notification;
 use RuntimeException;
@@ -34,7 +34,7 @@ class AccountDatabaseChannel extends DatabaseChannel
         /** @var array<string, mixed> $payload */
         $payload = parent::buildPayload($notifiable, $notification);
 
-        if (! $notifiable instanceof User) {
+        if (! $notifiable instanceof Account) {
             // Fail with the reason rather than as a NOT NULL violation three
             // frames down: nothing but a tenant user can own an in-app
             // notification, so this is a wiring mistake, not bad data.

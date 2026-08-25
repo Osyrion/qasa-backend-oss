@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk\Rates;
 
+use App\Modules\Taxation\Domain\Contracts\SkRateTable;
+
 /**
  * SK personal income tax + odvody parameters for 2026.
  *

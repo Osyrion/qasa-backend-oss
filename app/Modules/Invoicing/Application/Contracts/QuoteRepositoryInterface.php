@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Contracts;
 
 use App\Modules\Invoicing\Domain\Models\Quote;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 interface QuoteRepositoryInterface

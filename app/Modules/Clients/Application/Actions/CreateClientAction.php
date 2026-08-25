@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Application\Contracts\CreateClientActionInterface;
 use App\Modules\Clients\Application\DTOs\ClientData;
 use App\Modules\Clients\Domain\Events\ClientCreated;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -19,6 +20,11 @@ readonly class CreateClientAction implements CreateClientActionInterface
     public function __construct(
         private ClientRepositoryInterface $repository,
     ) {}
+
+    public function create(ClientData $data, Account&ProvidesPlanEntitlements $owner, bool $enforceLimit = true): string
+    {
+        return $this->execute($data, $owner, $enforceLimit)->id;
+    }
 
     /**
      * $enforceLimit is false only for competitor migration imports — a
@@ -30,8 +36,9 @@ readonly class CreateClientAction implements CreateClientActionInterface
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(ClientData $data, User $owner, bool $enforceLimit = true): Client
+    public function execute(ClientData $data, Account&ProvidesPlanEntitlements $owner, bool $enforceLimit = true): Client
     {
+
         $this->validate($data);
 
         if ($enforceLimit) {
@@ -40,7 +47,7 @@ readonly class CreateClientAction implements CreateClientActionInterface
 
         return DB::transaction(function () use ($data, $owner): Client {
             $client = $this->repository->create([
-                'user_id' => $owner->id,
+                'user_id' => $owner->accountOwnerId(),
                 'client_type' => $data->client_type->value,
                 'title' => $data->title,
                 'name' => $data->name,
@@ -105,7 +112,7 @@ readonly class CreateClientAction implements CreateClientActionInterface
      *
      * @throws DomainException
      */
-    private function validateLimit(ClientData $data, User $owner): void
+    private function validateLimit(ClientData $data, Account&ProvidesPlanEntitlements $owner): void
     {
         $count = Client::forUser($owner->accountOwnerId())->active()->count();
 

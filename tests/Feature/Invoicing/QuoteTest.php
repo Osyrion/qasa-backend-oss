@@ -7,6 +7,7 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Mail\QuoteEmail;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use App\Modules\Invoicing\Domain\Models\Quote;
+use App\Modules\Shared\Enums\VatStatus;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -186,6 +187,25 @@ function emailableQuote(array $quoteAttributes = [], array $clientAttributes = [
 
     return [$user, $quote, $client];
 }
+
+it('freezes the supplier vat_status on the quote snapshot, not just is_vat_payer', function (): void {
+    Mail::fake();
+
+    // An identified person holds a VAT ID but is not a payer, so the
+    // deprecated is_vat_payer boolean cannot tell it apart from a non-payer.
+    // The quote snapshot used to store only that boolean, and QuotePdfService
+    // then reconstructed the status with VatStatus::fromLegacyBool() — which
+    // printed an identified supplier as a plain non-payer.
+    [$user, $quote] = emailableQuote();
+    $user->forceFill(['vat_status' => VatStatus::Identified->value, 'is_vat_payer' => false])->save();
+
+    $this->actingAs($user)->postJson("/api/v1/quotes/{$quote->id}/email")->assertOk();
+
+    $snapshot = $quote->refresh()->supplier_snapshot;
+
+    expect($snapshot['vat_status'] ?? null)->toBe(VatStatus::Identified->value)
+        ->and($snapshot['is_vat_payer'] ?? null)->toBeFalse();
+});
 
 it('sends a draft quote and freezes the snapshot on draft -> sent', function (): void {
     Mail::fake();

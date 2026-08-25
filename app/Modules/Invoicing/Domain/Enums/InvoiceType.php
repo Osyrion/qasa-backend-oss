@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Enums;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Domain\ValueObjects\InvoiceNumberingProfile;
 
 enum InvoiceType: string
 {
@@ -39,18 +39,19 @@ enum InvoiceType: string
     }
 
     /**
-     * The user's numbering mask for this document type, with a type prefix
+     * The account's numbering mask for this document type, with a type prefix
      * ("PF-", "DB-", "ST-") inserted before it so each type gets its own
      * sequence. Falls back to the legacy "{prefix}-{YYYY}-{NNN}" format when
-     * the user has not configured a mask, keeping existing output identical.
+     * the account has not configured a mask, keeping existing output
+     * identical.
      */
-    public function numberMask(User $user): InvoiceNumberMask
+    public function numberMask(InvoiceNumberingProfile $numbering): InvoiceNumberMask
     {
-        $mask = $user->accountOwner()->invoice_number_mask;
+        $mask = $numbering->mask;
 
         if ($mask === null || $mask === '') {
             return new InvoiceNumberMask(
-                $this->numberPrefix($user->accountOwner()->invoice_prefix).'-{YYYY}-{NNN}'
+                $this->numberPrefix($numbering->prefix).'-{YYYY}-{NNN}'
             );
         }
 

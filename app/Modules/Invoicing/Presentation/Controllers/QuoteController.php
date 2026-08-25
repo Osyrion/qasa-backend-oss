@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\AddQuoteItemAction;
 use App\Modules\Invoicing\Application\Actions\ConvertQuoteToInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\ConvertQuoteToOrderAction;
@@ -26,8 +25,13 @@ use App\Modules\Invoicing\Domain\Models\QuoteItem;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
 use App\Modules\Invoicing\Presentation\Resources\QuoteItemResource;
 use App\Modules\Invoicing\Presentation\Resources\QuoteResource;
-use App\Modules\Orders\Domain\Models\Order;
-use App\Modules\Orders\Presentation\Resources\OrderResource;
+use App\Modules\Orders\Application\Contracts\OrderAuthorization;
+use App\Modules\Orders\Application\Contracts\OrderRepresentation;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\Actor;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Shared\Support\Pagination;
@@ -61,6 +65,8 @@ class QuoteController extends Controller
         private readonly RevokeQuotePublicLinkAction $revokePublicLinkAction,
         private readonly ConvertQuoteToInvoiceAction $convertToInvoiceAction,
         private readonly ConvertQuoteToOrderAction $convertToOrderAction,
+        private readonly OrderAuthorization $orderAuthorization,
+        private readonly OrderRepresentation $orderRepresentation,
         private readonly QuotePdfService $pdfService,
     ) {
         $this->authorizeResource(Quote::class, 'quote');
@@ -157,7 +163,7 @@ class QuoteController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -251,7 +257,7 @@ class QuoteController extends Controller
     )]
     public function update(Request $request, Quote $quote): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -333,11 +339,11 @@ class QuoteController extends Controller
     {
         $this->authorize('update', $quote);
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate(
-            QuoteItemData::rules($user->accountOwnerId(), $user->accountOwner()->country, $quote->issued_at->toDateString()),
+            QuoteItemData::rules($user->accountOwnerId(), $user->supplierProfile()->country, $quote->issued_at->toDateString()),
         );
 
         try {
@@ -649,14 +655,21 @@ class QuoteController extends Controller
     public function convertToOrder(Quote $quote): JsonResponse
     {
         $this->authorize('convert', $quote);
+
         // Converting produces an Order, so it also needs the orders.manage gate
-        // — 'convert' alone only asserts invoices.manage.
-        $this->authorize('create', Order::class);
+        // — 'convert' alone only asserts invoices.manage. Asked through Orders'
+        // own contract, because the Gate keys on a class we must not name.
+        $actor = request()->user();
+        assert($actor instanceof Actor);
+        abort_unless($this->orderAuthorization->allowsCreate($actor), 403);
 
         try {
-            $order = $this->convertToOrderAction->execute($quote);
+            $orderId = $this->convertToOrderAction->execute($quote);
 
-            return OrderResource::make($order->load('items'))->response()->setStatusCode(201);
+            return response()->json(
+                ['data' => $this->orderRepresentation->forOrder($orderId)],
+                201,
+            );
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

@@ -1,4 +1,4 @@
-.PHONY: help up down build restart shell composer artisan tinker test phpstan psalm fresh logs
+.PHONY: help up down build restart shell composer artisan tinker test phpstan psalm deptrac fresh logs
 
 # Default target
 help:
@@ -22,6 +22,7 @@ help:
 	@echo "    make test        - Run Pest tests"
 	@echo "    make test-cover  - Run tests with coverage"
 	@echo "    make phpstan     - Run PHPStan analysis"
+	@echo "    make deptrac     - Check module boundaries and layer direction"
 	@echo "    make psalm       - Run Psalm analysis"
 	@echo "    make analyse     - Run all static analysis"
 
@@ -83,6 +84,12 @@ phpstan:
 
 psalm:
 	docker compose exec app ./vendor/bin/psalm
+
+# Architecture: layer direction (deptrac.layers.php) and module isolation
+# (deptrac.modules.php). Also runs inside `php artisan test` — see
+# tests/Architecture/DeptracTest.php.
+deptrac:
+	docker compose exec app composer deptrac
 
 analyse: phpstan psalm
 	@echo "Static analysis complete!"

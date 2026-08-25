@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
 use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Enums\RecurringTemplateStatus;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -18,24 +18,20 @@ use Throwable;
 readonly class CreateRecurringTemplateAction
 {
     public function __construct(
+        private ClientDirectory $clients,
         private RecurringInvoiceTemplateRepositoryInterface $repository,
-        private ClientUsageGuardInterface $usageGuard,
     ) {}
 
     /**
      * @throws Throwable
      */
-    public function execute(RecurringTemplateData $data, User $user): RecurringInvoiceTemplate
+    public function execute(RecurringTemplateData $data, Account&ProvidesSupplierProfile $user): RecurringInvoiceTemplate
     {
-        if (! $user->accountOwner()->vat_status->canChargeVat() && $data->items !== [] && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+        if (! $user->supplierProfile()->vatStatus->canChargeVat() && $data->items !== [] && array_any($data->items, fn ($item): bool => (float) $item->vat_rate > 0.0)) {
             throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
         }
 
-        $client = Client::query()->find($data->client_id);
-
-        if ($client !== null) {
-            $this->usageGuard->ensureUsable($client);
-        }
+        $this->clients->assertWithinPlanLimits($data->client_id);
 
         return DB::transaction(function () use ($data, $user): RecurringInvoiceTemplate {
             $template = $this->repository->create([

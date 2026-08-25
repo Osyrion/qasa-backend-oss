@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
-use App\Modules\Invoicing\Application\Services\VatControlStatementService;
+use App\Modules\Invoicing\Application\Contracts\VatControlStatementSourceInterface;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
-use App\Modules\Invoicing\Domain\Models\SupplierInvoiceVatLine;
-use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
-use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementSummaryRowData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Support\Decimal;
 use App\Modules\Taxation\Domain\Contracts\ControlStatementBuilder;
@@ -29,8 +26,7 @@ final class CzControlStatementService implements ControlStatementBuilder
     private const float THRESHOLD_CZK = 10000.0;
 
     public function __construct(
-        private readonly VatControlStatementService $collector,
-        private readonly VatRecapCalculator $recapCalculator,
+        private readonly VatControlStatementSourceInterface $collector,
         private readonly DphKh1XmlBuilder $xmlBuilder,
     ) {}
 
@@ -62,9 +58,9 @@ final class CzControlStatementService implements ControlStatementBuilder
         );
     }
 
-    public function toXml(VatControlStatementReportData $report, User $user): string
+    public function toXml(VatControlStatementReportData $report, SupplierProfile $supplier): string
     {
-        return $this->xmlBuilder->build($report, $user);
+        return $this->xmlBuilder->build($report, $supplier);
     }
 
     public function assumptions(): array
@@ -80,46 +76,31 @@ final class CzControlStatementService implements ControlStatementBuilder
      */
     private function classifyIssuedInvoices(string $userId, array $months, array &$rowSections, array &$summaryBuckets, array &$assumptions): void
     {
-        $invoices = $this->collector->collectIssuedInvoices($userId, $months);
-
-        foreach ($invoices as $invoice) {
-            if ($invoice->reverse_charge_mode === ReverseChargeMode::Eu) {
+        foreach ($this->collector->collectIssuedDocuments($userId, $months) as $document) {
+            if ($document->reverseChargeMode === ReverseChargeMode::Eu) {
                 $assumptions[] = 'Faktury s přenesením daňové povinnosti v rámci EU nejsou součástí této sestavy — patří do souhrnného hlášení (EU sales list).';
 
                 continue;
             }
 
-            $date = $invoice->taxable_supply_at ?? $invoice->issued_at;
-            $documentNumber = (string) $invoice->invoice_number;
-            $dateStr = $date->format('Y-m-d');
-            $partnerName = (string) ($invoice->client_snapshot['name'] ?? '');
-            $partnerTaxId = $this->partnerTaxId($invoice->client_snapshot ?? []);
-            $recap = $this->recapCalculator->recap($invoice);
-
-            if ($invoice->reverse_charge_mode === ReverseChargeMode::Domestic) {
-                foreach ($recap as $row) {
+            if ($document->reverseChargeMode === ReverseChargeMode::Domestic) {
+                foreach ($document->rows as $row) {
                     if ($row->base === 0.0 && $row->vat === 0.0) {
                         continue;
                     }
 
-                    $rowSections['A1'][] = new VatControlStatementRowData(
-                        $documentNumber, $dateStr, $partnerName, $partnerTaxId, $row->rate, $row->base, $row->vat,
-                    );
+                    $rowSections['A1'][] = $row;
                 }
 
                 continue;
             }
 
-            $grossCzk = $this->grossInCzk((float) $invoice->total, $invoice->currency, $invoice->exchange_rate_snapshot !== null ? (float) $invoice->exchange_rate_snapshot : null);
+            $grossCzk = $this->grossInCzk($document->grossTotal, $document->currency, $document->exchangeRate);
 
             if (abs($grossCzk) >= self::THRESHOLD_CZK) {
-                foreach ($recap as $row) {
-                    $rowSections['A4'][] = new VatControlStatementRowData(
-                        $documentNumber, $dateStr, $partnerName, $partnerTaxId, $row->rate, $row->base, $row->vat,
-                    );
-                }
+                array_push($rowSections['A4'], ...$document->rows);
             } else {
-                $summaryBuckets['A5'] = $this->mergeRecapIntoSummary($summaryBuckets['A5'], $recap);
+                $summaryBuckets['A5'] = $this->mergeRowsIntoSummary($summaryBuckets['A5'], $document->rows, skipZeroRows: true);
             }
         }
     }
@@ -131,63 +112,39 @@ final class CzControlStatementService implements ControlStatementBuilder
      */
     private function classifyReceivedInvoices(string $userId, array $months, array &$rowSections, array &$summaryBuckets): void
     {
-        $invoices = $this->collector->collectReceivedInvoices($userId, $months);
-
-        foreach ($invoices as $invoice) {
-            $date = $invoice->taxable_supply_at ?? $invoice->issued_at;
-            $documentNumber = $invoice->supplier_invoice_number;
-            $dateStr = $date->format('Y-m-d');
-            $partnerName = (string) ($invoice->vendor_snapshot['name'] ?? '');
-            $partnerTaxId = $this->partnerTaxId($invoice->vendor_snapshot ?? []);
-
-            /** @var list<VatControlStatementRowData> $rows */
-            $rows = array_values($invoice->vatLines->map(fn (SupplierInvoiceVatLine $line): VatControlStatementRowData => new VatControlStatementRowData(
-                $documentNumber, $dateStr, $partnerName, $partnerTaxId,
-                (float) $line->vat_rate, (float) $line->base, (float) $line->vat_amount,
-            ))->all());
-
-            if ($invoice->vat_regime->isSelfAssessed()) {
-                array_push($rowSections['B1'], ...$rows);
+        foreach ($this->collector->collectReceivedDocuments($userId, $months) as $document) {
+            if ($document->selfAssessed) {
+                array_push($rowSections['B1'], ...$document->rows);
 
                 continue;
             }
 
-            $grossCzk = $this->grossInCzk((float) $invoice->total, $invoice->currency, $invoice->exchange_rate !== null ? (float) $invoice->exchange_rate : null);
+            $grossCzk = $this->grossInCzk($document->grossTotal, $document->currency, $document->exchangeRate);
 
             if (abs($grossCzk) >= self::THRESHOLD_CZK) {
-                array_push($rowSections['B2'], ...$rows);
+                array_push($rowSections['B2'], ...$document->rows);
             } else {
-                $summaryBuckets['B3'] = $this->mergeRowsIntoSummary($summaryBuckets['B3'], $rows);
+                $summaryBuckets['B3'] = $this->mergeRowsIntoSummary($summaryBuckets['B3'], $document->rows);
             }
         }
-    }
-
-    /**
-     * @param  list<VatControlStatementSummaryRowData>  $summary
-     * @param  list<VatRecapRow>  $recap
-     * @return list<VatControlStatementSummaryRowData>
-     */
-    private function mergeRecapIntoSummary(array $summary, array $recap): array
-    {
-        foreach ($recap as $row) {
-            if ($row->base === 0.0 && $row->vat === 0.0) {
-                continue;
-            }
-
-            $summary = $this->addRateToSummary($summary, $row->rate, $row->base, $row->vat);
-        }
-
-        return $summary;
     }
 
     /**
      * @param  list<VatControlStatementSummaryRowData>  $summary
      * @param  list<VatControlStatementRowData>  $rows
+     * @param  bool  $skipZeroRows  A.5 drops an all-zero rate bucket, B.3 keeps
+     *                              what the supplier actually recorded — the
+     *                              asymmetry predates this refactor and is
+     *                              preserved rather than tidied.
      * @return list<VatControlStatementSummaryRowData>
      */
-    private function mergeRowsIntoSummary(array $summary, array $rows): array
+    private function mergeRowsIntoSummary(array $summary, array $rows, bool $skipZeroRows = false): array
     {
         foreach ($rows as $row) {
+            if ($skipZeroRows && $row->base === 0.0 && $row->vat === 0.0) {
+                continue;
+            }
+
             $summary = $this->addRateToSummary($summary, $row->rate, $row->base, $row->vat);
         }
 
@@ -226,17 +183,5 @@ final class CzControlStatementService implements ControlStatementBuilder
         return $rateToCzk !== null
             ? (float) Decimal::money(Decimal::of($total)->multipliedBy(Decimal::of($rateToCzk)))
             : $total;
-    }
-
-    /**
-     * @param  array<string, mixed>  $snapshot
-     */
-    private function partnerTaxId(array $snapshot): ?string
-    {
-        if (($snapshot['is_vat_payer'] ?? false) && ! empty($snapshot['vat_id'])) {
-            return (string) $snapshot['vat_id'];
-        }
-
-        return ! empty($snapshot['dic']) ? (string) $snapshot['dic'] : null;
     }
 }

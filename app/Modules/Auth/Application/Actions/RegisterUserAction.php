@@ -8,17 +8,31 @@ use App\Modules\Auth\Application\DTOs\RegisterUserData;
 use App\Modules\Auth\Domain\Events\TermsAccepted;
 use App\Modules\Auth\Domain\Events\UserRegistered;
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Application\Contracts\CaptchaVerifierInterface;
+use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class RegisterUserAction
 {
+    public function __construct(
+        private readonly CaptchaVerifierInterface $captchaVerifier,
+    ) {}
+
     /**
      * @throws Throwable
      */
-    public function execute(RegisterUserData $data): User
+    public function execute(RegisterUserData $data, ?string $remoteIp = null): User
     {
+        // Before the transaction, and before anything is written: the same
+        // call the waitlist form makes. TurnstileVerifier returns true
+        // outright when services.turnstile.enabled is off, so a deployment
+        // that has not configured Turnstile is unaffected by this.
+        if (! $this->captchaVerifier->verify($data->turnstile_token, $remoteIp)) {
+            throw DomainException::validation(__('shared.waitlist.captcha_failed'));
+        }
+
         $user = DB::transaction(function () use ($data): User {
             /** @var class-string<User> $model */
             $model = config('auth.providers.users.model', User::class);

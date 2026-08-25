@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Invoicing\Application\Services;
 
 use App\Modules\Invoicing\Application\Contracts\TrackedWorkLinkInterface;
-use App\Modules\Invoicing\Domain\Models\InvoiceItem;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Contracts\Database\Query\Builder;
 
 /**
  * OSS core default: nothing tracks work, so no invoice line is linked to an
@@ -14,11 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 final class NoTrackedWorkLink implements TrackedWorkLinkInterface
 {
-    /**
-     * @param  Builder<InvoiceItem>  $query
-     */
-    public function orWhereLinkedToOrder(Builder $query, string $orderId): void
+    public function workIdsForOrder(string $orderId): ?Builder
     {
-        //
+        return null;
     }
 }

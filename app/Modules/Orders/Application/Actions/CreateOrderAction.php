@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Clients\Application\Contracts\ClientUsageGuardInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Application\Contracts\ClientDirectory;
 use App\Modules\Orders\Application\Contracts\CreateOrderActionInterface;
 use App\Modules\Orders\Application\Contracts\OrderRateRecorderInterface;
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
@@ -14,6 +12,11 @@ use App\Modules\Orders\Application\DTOs\OrderData;
 use App\Modules\Orders\Domain\Enums\OrderStatus;
 use App\Modules\Orders\Domain\Events\OrderCreated;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Orders\Domain\ValueObjects\OrderItemDraft;
+use App\Modules\Orders\Domain\ValueObjects\OrderRateChange;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -23,34 +26,68 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
     public function __construct(
         private OrderRepositoryInterface $repository,
         private OrderRateRecorderInterface $rateRecorder,
-        private ClientUsageGuardInterface $usageGuard,
+        private ClientDirectory $clients,
     ) {}
+
+    /**
+     * @param  list<OrderItemDraft>  $items
+     *
+     * @throws DomainException
+     * @throws Throwable
+     */
+    public function create(
+        OrderData $data,
+        Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $owner,
+        array $items = [],
+    ): string {
+        // One transaction over both halves: an order that came into being with
+        // lines must not be able to exist without them. execute()'s own
+        // transaction nests into this as a savepoint.
+        return DB::transaction(function () use ($data, $owner, $items): string {
+            $order = $this->execute($data, $owner);
+
+            $this->addItems($order, $items);
+
+            return $order->id;
+        });
+    }
+
+    /**
+     * @param  list<OrderItemDraft>  $items
+     */
+    private function addItems(Order $order, array $items): void
+    {
+        foreach ($items as $draft) {
+            $item = $order->items()->make([
+                'type' => $draft->type,
+                'description' => $draft->description,
+                'quantity' => $draft->quantity,
+                'unit' => $draft->unit,
+                'unit_price' => $draft->unitPrice,
+                'vat_rate' => $draft->vatRate,
+                'sort_order' => $draft->sortOrder,
+            ]);
+            $item->recalculate();
+            $item->save();
+        }
+    }
 
     /**
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(OrderData $data, User $owner): Order
+    public function execute(OrderData $data, Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $owner): Order
     {
+
         $this->validate($data);
         $this->validateLimit($owner);
-        $this->validateCurrency($data, $owner->accountOwner());
+        $this->validateCurrency($data, $owner);
 
-        if ($data->client_id !== null) {
-            $client = Client::query()->find($data->client_id);
-
-            if ($client !== null) {
-                if ($client->isArchived()) {
-                    throw DomainException::because(__('clients.archived'));
-                }
-
-                $this->usageGuard->ensureUsable($client);
-            }
-        }
+        $this->clients->assertUsableForNewRecord($data->client_id);
 
         return DB::transaction(function () use ($data, $owner): Order {
             $order = $this->repository->create([
-                'user_id' => $owner->id,
+                'user_id' => $owner->accountOwnerId(),
                 'client_id' => $data->client_id,
                 'name' => $data->name,
                 'color' => $data->color,
@@ -65,7 +102,12 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
             ]);
 
             if ($data->rate !== null) {
-                $this->rateRecorder->record($order, $data->rate);
+                $this->rateRecorder->record(new OrderRateChange(
+                    orderId: $order->id,
+                    ownerId: $order->user_id,
+                    currency: $order->currency,
+                    rate: $data->rate,
+                ));
             }
 
             event(new OrderCreated($order));
@@ -106,7 +148,7 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
      *
      * @throws DomainException
      */
-    private function validateLimit(User $owner): void
+    private function validateLimit(Account&ProvidesPlanEntitlements $owner): void
     {
         $count = Order::forUser($owner->accountOwnerId())
             ->where('status', '!=', OrderStatus::Archived->value)
@@ -120,10 +162,10 @@ readonly class CreateOrderAction implements CreateOrderActionInterface
     /**
      * @throws DomainException
      */
-    private function validateCurrency(OrderData $data, User $owner): void
+    private function validateCurrency(OrderData $data, Account&ProvidesPlanEntitlements&ProvidesSupplierProfile $owner): void
     {
         if ($data->currency !== null
-            && $data->currency !== $owner->default_currency
+            && $data->currency !== $owner->supplierProfile()->defaultCurrency
             && ! $owner->hasFeature('multi_currency')
         ) {
             throw DomainException::because(__('subscriptions.multi_currency_required'));

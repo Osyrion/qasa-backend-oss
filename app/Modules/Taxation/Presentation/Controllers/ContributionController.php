@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Support\Pagination;
 use App\Modules\Taxation\Application\DTOs\ContributionPaymentData;
 use App\Modules\Taxation\Domain\Enums\ContributionType;
@@ -181,7 +181,7 @@ class ContributionController extends Controller
 
         $data = ContributionPaymentData::validateAndCreate($request->all());
 
-        /** @var User $user */
+        /** @var Account $user */
         $user = $request->user();
 
         $payment = ContributionPayment::query()->create([

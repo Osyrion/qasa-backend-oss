@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Clients\Application\Contracts;
 
-use App\Modules\Clients\Domain\Models\Client;
-
 /**
  * Lets a module clear its own columns when a client is anonymised, without
  * Clients knowing they exist. Implementations are tagged 'client.anonymize'
@@ -24,5 +22,5 @@ interface ClientAnonymizationContributor
      * Clear this module's identifying columns on the client. Runs inside the
      * anonymisation transaction, after the core columns are cleared.
      */
-    public function anonymize(Client $client): void;
+    public function anonymize(string $clientId): void;
 }

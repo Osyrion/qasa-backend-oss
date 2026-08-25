@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\EuSalesListRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\EuSalesListRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementSummaryRowData;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\ContentDisposition;
-use App\Modules\Taxation\Application\Services\TaxSystemResolver;
+use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Domain\Contracts\ControlStatementBuilder;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +28,7 @@ use OpenApi\Attributes as OA;
 class VatReportController extends Controller
 {
     public function __construct(
-        private readonly TaxSystemResolver $taxSystemResolver,
+        private readonly TaxSystemResolverInterface $taxSystemResolver,
     ) {}
 
     #[OA\Get(
@@ -70,10 +71,10 @@ class VatReportController extends Controller
             'month' => ['nullable', 'integer', 'between:1,12'],
         ]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        $rows = $this->taxSystemResolver->forUser($user)->euSalesListBuilder()->build(
+        $rows = $this->taxSystemResolver->forSupplier($user->supplierProfile())->euSalesListBuilder()->build(
             userId: $user->accountOwnerId(),
             year: $request->integer('year'),
             quarter: $request->filled('quarter') ? $request->integer('quarter') : null,
@@ -139,7 +140,7 @@ class VatReportController extends Controller
             'month' => ['nullable', 'integer', 'between:1,12'],
         ]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
         $residency = TaxResidency::from(strtoupper((string) $request->string('country')));
         $builder = $this->taxSystemResolver->forResidency($residency)->controlStatementBuilder();
@@ -175,7 +176,7 @@ class VatReportController extends Controller
             'month' => ['nullable', 'integer', 'between:1,12'],
         ]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
         $residency = TaxResidency::from(strtoupper((string) $request->string('country')));
 
@@ -185,7 +186,7 @@ class VatReportController extends Controller
 
         $builder = $this->taxSystemResolver->forResidency($residency)->controlStatementBuilder();
         $report = $this->buildVatControlStatement($request, $user, $builder);
-        $body = $builder->toXml($report, $user);
+        $body = $builder->toXml($report, $user->supplierProfile());
 
         $periodSuffix = $report->month !== null ? sprintf('m%02d', $report->month) : sprintf('q%d', $report->quarter);
         $filename = sprintf('%s-%d-%s.xml', $residency === TaxResidency::Cz ? 'dphkh1' : 'kvdph', $report->year, $periodSuffix);
@@ -196,9 +197,9 @@ class VatReportController extends Controller
         ]);
     }
 
-    private function buildVatControlStatement(Request $request, User $user, ControlStatementBuilder $builder): VatControlStatementReportData
+    private function buildVatControlStatement(Request $request, Account&ProvidesSupplierProfile $user, ControlStatementBuilder $builder): VatControlStatementReportData
     {
-        if (! $user->vat_status->isVatPayer()) {
+        if (! $user->supplierProfile()->vatStatus->isVatPayer()) {
             throw DomainException::because(__('invoicing.vat_report_payer_only'));
         }
 

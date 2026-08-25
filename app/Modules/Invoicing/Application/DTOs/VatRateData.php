@@ -48,7 +48,7 @@ class VatRateData extends Data
                 ] : []),
             ],
             'country' => ['required', 'string', 'regex:/^[A-Z]{2}$/'],
-            'rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'rate' => ['required', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
             'label' => ['nullable', 'string', 'max:255'],
             'is_default' => ['sometimes', 'boolean'],
             'valid_from' => ['nullable', 'date'],

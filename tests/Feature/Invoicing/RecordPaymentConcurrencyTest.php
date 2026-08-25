@@ -16,13 +16,15 @@ use Illuminate\Support\Facades\Event;
 /**
  * RecordPaymentAction is reached from three places at once — the Stripe
  * webhook, the bank statement matcher, and a person clicking "mark paid" —
- * so the model it is handed can be stale by the time the transaction opens.
- * UpdateInvoiceStatusAction already re-reads under a row lock for exactly
- * this reason; this one did not.
+ * so whatever the caller last read can be stale by the time the transaction
+ * opens. UpdateInvoiceStatusAction already re-reads under a row lock for
+ * exactly this reason; this one did not.
  *
  * Real threads are out of reach inside RefreshDatabase, so these commit the
- * competing write first and hand the action the model from before it, which
- * is the same state a concurrent request would have been holding.
+ * competing write first and then call the action, which is the same state a
+ * concurrent request would have raced into. Since the action started taking
+ * an id it has no choice but to read that state — which is the point, and
+ * these keep the guards that act on it honest.
  */
 function invoiceForPayment(): Invoice
 {
@@ -57,13 +59,13 @@ it('does not fire InvoicePaid twice when another request settled the invoice fir
 
     Event::fake([InvoicePaid::class]);
 
-    // $stale still believes the invoice is 'sent' — the state this request
-    // read before the other one committed.
-    app(RecordPaymentAction::class)->execute($stale, paymentOf(0.01));
+    // The caller read 'sent' before the other request committed; the action
+    // reads 'paid'.
+    app(RecordPaymentAction::class)->execute($stale->id, paymentOf(0.01));
 
-    // Without re-reading under a lock, the stale 'sent' passes the
-    // `! isPaid()` guard and the customer gets a second "payment received"
-    // e-mail for an invoice that was already settled.
+    // Deciding on the caller's 'sent' instead, the `! isPaid()` guard passes
+    // and the customer gets a second "payment received" e-mail for an invoice
+    // that was already settled.
     Event::assertNotDispatched(InvoicePaid::class);
 });
 
@@ -72,7 +74,7 @@ it('refuses a payment against an invoice another request has cancelled', functio
 
     Invoice::query()->whereKey($stale->id)->update(['status' => InvoiceStatus::Cancelled->value]);
 
-    expect(fn () => app(RecordPaymentAction::class)->execute($stale, paymentOf(100)))
+    expect(fn () => app(RecordPaymentAction::class)->execute($stale->id, paymentOf(100)))
         ->toThrow(DomainException::class);
 
     expect(InvoicePayment::query()->where('invoice_id', $stale->id)->count())->toBe(0);
@@ -83,7 +85,7 @@ it('still settles an invoice that is genuinely covered', function (): void {
 
     Event::fake([InvoicePaid::class]);
 
-    app(RecordPaymentAction::class)->execute($invoice, paymentOf(100));
+    app(RecordPaymentAction::class)->execute($invoice->id, paymentOf(100));
 
     Event::assertDispatched(InvoicePaid::class);
     expect($invoice->refresh()->status)->toBe(InvoiceStatus::Paid->value);

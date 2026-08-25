@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\ExpenseFactory;
@@ -13,7 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -34,7 +32,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
- * @property-read User|null $user
  *
  * @method static ExpenseFactory factory($count = null, $state = [])
  * @method static Builder<static>|Expense forUser($userId = null)
@@ -97,15 +94,5 @@ class Expense extends Model
     public function hasAttachment(): bool
     {
         return $this->attachment_path !== null;
-    }
-
-    // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
     }
 }

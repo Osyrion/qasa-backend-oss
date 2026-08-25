@@ -43,6 +43,14 @@ Schedule::command('qasa:notifications:purge')
     ->withoutOverlapping()
     ->onOneServer();
 
+// Every minute, and deliberately without ->onOneServer(): the file it writes
+// describes the machine it runs on, so on a second app server the second file
+// is the point, not a duplicate. Its own timestamp is what the "scheduler is
+// dead" alert watches — see ExportOperationalMetricsCommand.
+Schedule::command('qasa:metrics:export')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 Schedule::command('qasa:idempotency-keys:purge')
     ->hourly()
     ->withoutOverlapping()

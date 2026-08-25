@@ -26,6 +26,18 @@ readonly class UpdateInvoiceStatusAction implements UpdateInvoiceStatusActionInt
      * @throws DomainException
      * @throws Throwable
      */
+    public function transition(string $invoiceId, InvoiceStatus $newStatus): void
+    {
+        /** @var Invoice $invoice */
+        $invoice = Invoice::query()->findOrFail($invoiceId);
+
+        $this->execute($invoice, $newStatus);
+    }
+
+    /**
+     * @throws DomainException
+     * @throws Throwable
+     */
     public function execute(Invoice $invoice, InvoiceStatus $newStatus): Invoice
     {
         $currentStatus = InvoiceStatus::from($invoice->status);

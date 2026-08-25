@@ -10,6 +10,7 @@ use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -26,6 +27,7 @@ class PasswordResetController extends Controller
                 required: ['email'],
                 properties: [
                     new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jan@example.com'),
+                    new OA\Property(property: 'platform', type: 'string', enum: ['web', 'mobile'], default: 'web', description: 'web (default) e-mails a link to the SPA; mobile e-mails the app\'s deep link'),
                 ]
             )
         ),
@@ -43,7 +45,12 @@ class PasswordResetController extends Controller
     )]
     public function sendResetLink(Request $request): JsonResponse
     {
-        $request->validate(['email' => ['required', 'email', 'max:255']]);
+        $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'platform' => ['sometimes', 'string', 'in:web,mobile'],
+        ]);
+
+        $email = $request->string('email')->toString();
 
         // The broker reads `users` through Laravel's own EloquentUserProvider,
         // and `users` is tenant-scoped (phase 7,
@@ -52,7 +59,18 @@ class PasswordResetController extends Controller
         // LoginAction does it. Without this the broker returns INVALID_USER
         // and the generic response below reports success while no mail is
         // ever sent.
-        AccountLookup::bindByEmail($request->string('email')->toString());
+        AccountLookup::bindByEmail($email);
+
+        // Read once by AuthServiceProvider's ResetPassword::createUrlUsing()
+        // closure, which has no other way to see this request's `platform` —
+        // see the comment there. The notification itself is not queued (no
+        // ShouldQueue on Illuminate\Auth\Notifications\ResetPassword here),
+        // so the closure normally runs within the same request — the 10
+        // minute TTL is only a margin against outbound mail being slow, not
+        // something this depends on to be short.
+        if ($request->string('platform', 'web')->toString() === 'mobile') {
+            Cache::put('password_reset_platform:'.$email, 'mobile', now()->addMinutes(10));
+        }
 
         Password::sendResetLink($request->only('email'));
 

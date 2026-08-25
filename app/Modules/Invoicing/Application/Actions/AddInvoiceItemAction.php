@@ -37,7 +37,7 @@ class AddInvoiceItemAction implements AddInvoiceItemActionInterface
         $invoice->loadMissing('user');
         $vatRate = $invoice->reverse_charge ? 0.0 : $data->vat_rate;
 
-        if ($vatRate > 0.0 && ! $invoice->user?->vat_status->canChargeVat()) {
+        if ($vatRate > 0.0 && ! $invoice->user?->supplierProfile()->vatStatus->canChargeVat()) {
             throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
         }
 

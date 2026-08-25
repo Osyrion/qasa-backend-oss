@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
+use App\Modules\Invoicing\Application\Contracts\GenerateInvoiceFromTemplateActionInterface;
 use App\Modules\Invoicing\Application\DTOs\InvoiceData;
 use App\Modules\Invoicing\Domain\Enums\RecurringTemplateStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
@@ -22,7 +23,7 @@ use Throwable;
  * a single transaction — that atomicity is the idempotency guarantee (a
  * second run the same day finds nothing due).
  */
-readonly class GenerateInvoiceFromTemplateAction
+readonly class GenerateInvoiceFromTemplateAction implements GenerateInvoiceFromTemplateActionInterface
 {
     public function __construct(
         private CreateInvoiceAction $createInvoice,
@@ -87,7 +88,7 @@ readonly class GenerateInvoiceFromTemplateAction
             // generation, not just at template create/update time.
             if (! $invoice->reverse_charge) {
                 foreach ($template->items as $item) {
-                    $this->assertRateInCatalog($owner->accountOwnerId(), (string) $owner->country, $item, $issuedAt->toDateString());
+                    $this->assertRateInCatalog($owner->accountOwnerId(), (string) $owner->supplierProfile()->country, $item, $issuedAt->toDateString());
                 }
             }
 

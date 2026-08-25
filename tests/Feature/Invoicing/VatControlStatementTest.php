@@ -7,13 +7,14 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * @param  array<string, mixed>  $query
  * @return TestResponse<Response>
  */
-function vcsRequest(object $test, User $user, array $query): TestResponse
+function vcsRequest(TestCase $test, User $user, array $query): TestResponse
 {
     return $test->actingAs($user)->getJson('/api/v1/reports/vat-control-statement?'.http_build_query($query));
 }

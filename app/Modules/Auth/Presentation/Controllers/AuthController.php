@@ -15,13 +15,17 @@ use App\Modules\Auth\Application\DTOs\RegisterUserData;
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Application\Services\AccountExportService;
 use App\Modules\Auth\Domain\Events\UserLoggedOut;
+use App\Modules\Auth\Domain\Exceptions\CaptchaRequiredException;
+use App\Modules\Auth\Domain\Exceptions\TooManyLoginAttemptsException;
 use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Auth\Presentation\Resources\UserResource;
+use App\Modules\Shared\Application\Services\WaitlistInvitations;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -36,6 +40,7 @@ class AuthController extends Controller
         private readonly AccountExportService $exportService,
         private readonly DeleteAccountAction $deleteAccountAction,
         private readonly AcceptTermsAction $acceptTermsAction,
+        private readonly WaitlistInvitations $waitlistInvitations,
     ) {}
 
     /**
@@ -58,6 +63,7 @@ class AuthController extends Controller
                     new OA\Property(property: 'default_currency', type: 'string', example: 'EUR', enum: ['CZK', 'EUR', 'USD']),
                     new OA\Property(property: 'locale', type: 'string', example: 'sk'),
                     new OA\Property(property: 'device_name', type: 'string', example: 'mobile-app'),
+                    new OA\Property(property: 'invitation_token', type: 'string', nullable: true, description: 'Beta waitlist invitation. Required while public registration is closed, and must match the address the invitation was sent to.'),
                 ]
             )
         ),
@@ -84,15 +90,33 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         // Public registration is a SaaS feature; the OSS edition creates
-        // users via `php artisan qasa:user`.
-        abort_unless((bool) config('qasa.features.registration'), 404);
+        // users via `php artisan qasa:user`. During the closed beta it is off
+        // here too, and an invitation off the waitlist is the way in.
+        $invitation = $this->waitlistInvitations->findUsable(
+            $request->filled('invitation_token') ? $request->string('invitation_token')->toString() : null
+        );
+
+        abort_unless((bool) config('qasa.features.registration') || $invitation !== null, 404);
 
         $request->validate(RegisterUserData::rules(), [
             'accepted_terms.accepted' => __('auth.terms_must_be_accepted'),
         ]);
 
         $data = RegisterUserData::fromRequest($request);
-        $user = $this->registerAction->execute($data);
+
+        // An invitation is for the address it was sent to. Without this the
+        // token is a skeleton key: forward the mail to anyone and the closed
+        // beta is open, and the funnel can no longer say which signup became
+        // which account.
+        if ($invitation !== null && Str::lower($data->email) !== Str::lower($invitation->email)) {
+            throw DomainException::because(__('auth.invitation_email_mismatch'));
+        }
+
+        $user = $this->registerAction->execute($data, $request->ip());
+
+        if ($invitation !== null) {
+            $this->waitlistInvitations->markRegistered($invitation);
+        }
 
         $token = $user->createSessionToken(
             $request->input('device_name', 'api-token'),
@@ -118,6 +142,7 @@ class AuthController extends Controller
                     new OA\Property(property: 'password', type: 'string', example: 'password123', maxLength: 255),
                     new OA\Property(property: 'remember', type: 'boolean', example: false),
                     new OA\Property(property: 'device_name', type: 'string', example: 'mobile-app'),
+                    new OA\Property(property: 'turnstile_token', type: 'string', nullable: true, description: 'Cloudflare Turnstile token. Only needed after a 422 carrying captcha_required — an account under attack must answer a challenge before its credentials are looked at.'),
                 ]
             )
         ),
@@ -135,9 +160,17 @@ class AuthController extends Controller
             ),
             new OA\Response(
                 response: 422,
-                description: 'Invalid credentials',
+                description: 'Invalid credentials, or a captcha challenge when the account has taken enough failures to trip the gate',
                 content: new OA\JsonContent(properties: [
                     new OA\Property(property: 'message', type: 'string', example: 'Nesprávny email alebo heslo.'),
+                    new OA\Property(property: 'captcha_required', type: 'boolean', nullable: true, description: 'Present and true when the caller must resubmit with turnstile_token. Credentials were not checked.'),
+                ])
+            ),
+            new OA\Response(
+                response: 429,
+                description: 'Too many failed attempts from this address for this account — progressive backoff. Retry-After carries the wait in seconds.',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'message', type: 'string', example: 'Príliš veľa neúspešných pokusov o prihlásenie. Skúste to znova o 2 min.'),
                 ])
             ),
         ]
@@ -162,6 +195,21 @@ class AuthController extends Controller
                 'token' => $result->token,
                 'user' => UserResource::make($result->user),
             ]);
+        } catch (CaptchaRequiredException $e) {
+            // The module's usual 422, plus the one flag the client needs to
+            // tell "wrong password" from "prove you are a person" and render
+            // the widget instead of an error.
+            return response()->json([
+                'message' => $e->getMessage(),
+                'captcha_required' => true,
+            ], 422);
+        } catch (TooManyLoginAttemptsException $e) {
+            // Caught ahead of its parent: a backoff is a wait, not a wrong
+            // password, and the client needs both the status and the header
+            // to tell the difference and say so.
+            return response()
+                ->json(['message' => $e->getMessage()], 429)
+                ->header('Retry-After', (string) $e->retryAfterSeconds);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

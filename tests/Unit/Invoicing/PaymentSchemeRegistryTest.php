@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Domain\Banking\BankAccountIdentity;
 use App\Modules\Invoicing\Domain\Banking\EpcQrBuilder;
 use App\Modules\Invoicing\Domain\Banking\PayBySquareBuilder;
 use App\Modules\Invoicing\Domain\Banking\PaymentSchemeRegistry;
 use App\Modules\Invoicing\Domain\Banking\SpaydBuilder;
+use App\Modules\Invoicing\Domain\ValueObjects\BankAccountIdentity;
 use App\Modules\Shared\Enums\Currency;
 
 function schemeRegistry(): PaymentSchemeRegistry

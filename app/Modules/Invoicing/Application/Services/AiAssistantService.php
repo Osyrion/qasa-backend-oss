@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\AiAssistantServiceInterface;
+use App\Modules\Invoicing\Application\Contracts\ByokCredentialResolverInterface;
 use App\Modules\Invoicing\Application\Contracts\UsageQuotaInterface;
 use App\Modules\Invoicing\Application\DTOs\AiCompletionResult;
 use App\Modules\Invoicing\Domain\Contracts\LlmProviderDriver;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
-use App\Modules\Invoicing\Infrastructure\Ocr\ByokCredentialResolver;
-use App\Modules\Invoicing\Infrastructure\Ocr\LlmExtractionException;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * Phase 3 Part C (docs/plans/MCP_AI_ASSISTANT_EXPANSION_PLAN.md) — the
@@ -40,20 +41,18 @@ final readonly class AiAssistantService implements AiAssistantServiceInterface
     ];
 
     public function __construct(
-        private ByokCredentialResolver $byokCredentials,
+        private ByokCredentialResolverInterface $byokCredentials,
         private LlmProviderRegistry $providers,
         private UsageQuotaInterface $usageQuota,
     ) {}
 
-    public function complete(User $owner, string $prompt): AiCompletionResult
+    public function complete(Account&ProvidesPlanEntitlements $owner, string $prompt): AiCompletionResult
     {
         if ((bool) config('qasa.ai.disabled', false)) {
             return AiCompletionResult::disabled();
         }
 
-        $account = $owner->accountOwner();
-
-        if ($account->hasFeature('ai_byok')) {
+        if ($owner->hasFeature('ai_byok')) {
             $credential = $this->byokCredentials->forOwner($owner);
 
             if ($credential !== null) {

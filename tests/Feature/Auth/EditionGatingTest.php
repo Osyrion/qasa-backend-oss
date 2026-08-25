@@ -104,3 +104,26 @@ it('rejects an invalid IČO in the qasa:user command', function (): void {
         '--ico' => '00000001',
     ])->assertFailed();
 });
+
+/**
+ * The residency picks the checksum rule, and the two markets disagree about
+ * which numbers are well-formed — '10000071' passes the CZ weighted-modulus
+ * check and fails the SK one. Both directions are asserted, because the
+ * command no longer maps country to rule itself: it asks TaxSystemResolver,
+ * and a resolver wired to the wrong system would still look right on one
+ * market alone.
+ */
+it('validates the IČO against the residency the command was given', function (): void {
+    $attempt = fn (string $country, string $ico, string $email) => $this->artisan('qasa:user', [
+        '--name' => 'Cli',
+        '--surname' => 'User',
+        '--email' => $email,
+        '--password' => 'super-secret-1',
+        '--country' => $country,
+        '--ico' => $ico,
+    ]);
+
+    $attempt('CZ', '10000071', 'cz-ico@example.com')->assertSuccessful();
+    $attempt('SK', '10000071', 'sk-rejects@example.com')->assertFailed();
+    $attempt('CZ', '11000000', 'cz-rejects@example.com')->assertFailed();
+});

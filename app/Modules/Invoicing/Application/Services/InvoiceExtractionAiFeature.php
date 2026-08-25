@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Shared\Application\Contracts\AiFeatureDescriptor;
 use App\Modules\Shared\Application\DTOs\AiFeatureDisclosure;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesAiPreferences;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
 
 /**
  * The transparency entry for inbox OCR extraction — the one AI capability
@@ -23,13 +25,11 @@ use App\Modules\Shared\Application\DTOs\AiFeatureDisclosure;
  */
 final readonly class InvoiceExtractionAiFeature implements AiFeatureDescriptor
 {
-    public function disclosureFor(User $owner): AiFeatureDisclosure
+    public function disclosureFor(Account&ProvidesAiPreferences&ProvidesPlanEntitlements $owner): AiFeatureDisclosure
     {
-        $account = $owner->accountOwner();
-
         $enabled = (string) config('invoicing.inbox.extraction.driver', 'regex') !== 'regex'
-            && $account->ai_extraction_enabled
-            && ($account->hasFeature('ai_extraction') || $account->hasFeature('ai_byok'));
+            && $owner->aiExtractionEnabled()
+            && ($owner->hasFeature('ai_extraction') || $owner->hasFeature('ai_byok'));
 
         return new AiFeatureDisclosure(
             key: 'invoice_extraction',

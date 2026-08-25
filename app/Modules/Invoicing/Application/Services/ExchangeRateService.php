@@ -10,6 +10,8 @@ use App\Modules\Invoicing\Domain\Enums\ExchangeRateSource;
 use App\Modules\Invoicing\Domain\Models\ExchangeRate;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Support\Decimal;
+use Brick\Math\RoundingMode;
+use Illuminate\Support\Facades\DB;
 
 class ExchangeRateService implements ExchangeRateServiceInterface
 {
@@ -92,20 +94,39 @@ class ExchangeRateService implements ExchangeRateServiceInterface
             return $this->getRate($base, Currency::CZK, $userId, $date);
         }
 
-        ExchangeRate::withoutGlobalScope('user')->updateOrCreate(
-            [
-                'user_id' => null,
-                'base_currency' => $base->value,
-                'target_currency' => Currency::CZK->value,
-                'date' => $date,
-            ],
-            [
-                'rate' => $fetched,
-                'source' => ExchangeRateSource::Cnb,
-            ],
-        );
+        $this->storeSystemRate($base, Currency::CZK, $date, $fetched);
 
         return $fetched;
+    }
+
+    /**
+     * Store a system (account-less) rate.
+     *
+     * Not an Eloquent write: `exchange_rates` mixes per-account rows with
+     * shared ones, and since
+     * 2026_08_19_000002_restrict_system_exchange_rate_writes the RLS policy
+     * lets a tenant connection *read* the shared rows but not write them —
+     * the global ČNB fixing is what every account's foreign-currency invoice
+     * is converted with, and no tenant request has any business overwriting
+     * it. upsert_system_exchange_rate() is the one narrow way through: a
+     * SECURITY DEFINER function that writes this row shape and nothing else.
+     *
+     * The upsert also settles the race it replaced. Two accounts issuing on
+     * the same day both miss the cache and both arrive here;
+     * unique_system_rate_per_day makes the second one an ON CONFLICT update
+     * of the first, so the race costs a redundant fetch, never a failed
+     * issuance or a duplicate row. Both wrote the same day's fixing anyway.
+     */
+    private function storeSystemRate(Currency $base, Currency $target, string $date, float $rate): void
+    {
+        DB::select('SELECT public.upsert_system_exchange_rate(?, ?, ?, ?, ?, ?)', [
+            (new ExchangeRate)->newUniqueId(),
+            $base->value,
+            $target->value,
+            $date,
+            (string) Decimal::of($rate)->toScale(6, RoundingMode::HalfUp),
+            ExchangeRateSource::Cnb->value,
+        ]);
     }
 
     /**

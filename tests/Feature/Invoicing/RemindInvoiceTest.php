@@ -3,8 +3,8 @@
 declare(strict_types=1);
 
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Invoicing\Application\Mail\InvoiceReminderMail;
 use App\Modules\Invoicing\Domain\Models\Invoice;
-use App\Modules\Invoicing\Presentation\Mail\InvoiceReminderMail;
 use Illuminate\Support\Facades\Mail;
 
 it('sends a reminder for an overdue invoice and enforces the cooldown', function (): void {

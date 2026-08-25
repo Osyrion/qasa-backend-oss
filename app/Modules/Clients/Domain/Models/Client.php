@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Domain\Models;
 
 use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Clients\Domain\ValueObjects\ClientUsageSubject;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Shared\Domain\Contracts\ProvidesPartyProfile;
+use App\Modules\Shared\Domain\ValueObjects\PartyProfile;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Clients\Domain\Models\ClientFactory;
@@ -17,7 +20,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -69,7 +71,6 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $orders_count
  * @property-read Collection<int, ContactPerson> $primaryContactPerson
  * @property-read int|null $primary_contact_person_count
- * @property-read User|null $user
  *
  * @method static Builder<static>|Client active()
  * @method static Builder<static>|Client archived()
@@ -110,7 +111,7 @@ use Illuminate\Support\Carbon;
  *
  * @mixin Eloquent
  */
-class Client extends Model
+class Client extends Model implements ProvidesPartyProfile
 {
     /** @use HasFactory<ClientFactory> */
     use HasFactory;
@@ -232,6 +233,48 @@ class Client extends Model
         return $this->is_vendor;
     }
 
+    /**
+     * The client as it appears on a document — name, contact, tax identifiers,
+     * address. Handing this to another module instead of `$this` is what keeps
+     * Invoicing, Taxation and the reports off the Clients aggregate; see
+     * PartyProfile.
+     */
+    public function profile(): PartyProfile
+    {
+        return new PartyProfile(
+            name: $this->display_name,
+            email: $this->email,
+            phone: $this->phone,
+            ico: $this->ico,
+            dic: $this->dic,
+            vatId: $this->vat_id,
+            // Cast rather than read straight through: both flags carry a
+            // database default, so an instance that has not been saved yet
+            // (a factory ->make(), an import staging row) holds null.
+            isVatPayer: (bool) $this->is_vat_payer,
+            address: $this->address,
+            city: $this->city,
+            postalCode: $this->postal_code,
+            country: (string) $this->country,
+            currency: $this->currency,
+            reverseChargeAllowed: (bool) $this->reverse_charge_allowed,
+        );
+    }
+
+    /**
+     * The client as a plan limit sees it — see ClientUsageSubject for why
+     * that is a different value from profile().
+     */
+    public function usageSubject(): ClientUsageSubject
+    {
+        return new ClientUsageSubject(
+            id: $this->id,
+            ownerId: $this->user_id,
+            isCustomer: (bool) $this->is_customer,
+            isVendor: (bool) $this->is_vendor,
+        );
+    }
+
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
@@ -258,14 +301,6 @@ class Client extends Model
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * @return HasMany<ContactPerson, $this>

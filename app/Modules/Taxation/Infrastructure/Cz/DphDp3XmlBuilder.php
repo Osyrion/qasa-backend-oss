@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Cz;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatReturnReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatReturnReportData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use DOMDocument;
 use DOMElement;
 use LogicException;
@@ -38,7 +38,7 @@ final class DphDp3XmlBuilder
 {
     private const string TAX_OFFICE_PLACEHOLDER = '000';
 
-    public function build(VatReturnReportData $report, User $user): string
+    public function build(VatReturnReportData $report, SupplierProfile $supplier): string
     {
         if ($report->month === null && $report->quarter === null) {
             throw new LogicException('DPH3 requires either a month or a quarter — an annual-scope report cannot be filed.');
@@ -54,7 +54,7 @@ final class DphDp3XmlBuilder
 
         $dphdp3 = $dom->createElement('DPHDP3');
         $dphdp3->appendChild($this->buildVetaD($dom, $report, $rows));
-        $dphdp3->appendChild($this->buildVetaP($dom, $user));
+        $dphdp3->appendChild($this->buildVetaP($dom, $supplier));
         $dphdp3->appendChild($this->buildVeta1($dom, $report));
         $dphdp3->appendChild($this->buildVeta4($dom, $report));
         $dphdp3->appendChild($this->buildVeta6($dom, $rows));
@@ -112,28 +112,28 @@ final class DphDp3XmlBuilder
      * DphKh1XmlBuilder::buildVetaP(): no legal-form field on the profile,
      * freelancers/SZČO are the primary audience.
      */
-    private function buildVetaP(DOMDocument $dom, User $user): DOMElement
+    private function buildVetaP(DOMDocument $dom, SupplierProfile $supplier): DOMElement
     {
         $el = $dom->createElement('VetaP');
         $el->setAttribute('c_ufo', self::TAX_OFFICE_PLACEHOLDER);
-        $el->setAttribute('dic', $this->digitsOnly($user->dic ?? $user->vat_id));
+        $el->setAttribute('dic', $this->digitsOnly($supplier->dic ?? $supplier->vatId));
         $el->setAttribute('typ_ds', 'F');
-        $el->setAttribute('jmeno', (string) $user->name);
-        $el->setAttribute('prijmeni', (string) ($user->surname ?? ''));
+        $el->setAttribute('jmeno', $supplier->firstName);
+        $el->setAttribute('prijmeni', $supplier->lastName);
 
-        if ($user->address !== null) {
-            $el->setAttribute('ulice', $user->address);
+        if ($supplier->address !== null) {
+            $el->setAttribute('ulice', $supplier->address);
         }
 
-        if ($user->city !== null) {
-            $el->setAttribute('naz_obce', $user->city);
+        if ($supplier->city !== null) {
+            $el->setAttribute('naz_obce', $supplier->city);
         }
 
-        if ($user->postal_code !== null) {
-            $el->setAttribute('psc', $user->postal_code);
+        if ($supplier->postalCode !== null) {
+            $el->setAttribute('psc', $supplier->postalCode);
         }
 
-        $el->setAttribute('email', $user->email);
+        $el->setAttribute('email', $supplier->email);
 
         return $el;
     }

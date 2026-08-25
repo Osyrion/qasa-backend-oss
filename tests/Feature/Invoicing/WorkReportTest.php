@@ -61,6 +61,29 @@ it('lists work report lines', function (): void {
         ->assertJsonCount(1, 'data');
 });
 
+it('keeps hand-entered lines when there is no tracked work to prefill from', function (): void {
+    [$user, $invoice] = workReportScope();
+
+    $invoice->workReportLines()->create([
+        'work_date' => today()->toDateString(),
+        'description' => 'Typed by hand',
+        'hours' => 3,
+        'sort_order' => 0,
+    ]);
+
+    // No invoice item is billed from tracked work, so there is nothing to
+    // prefill from. Wiping the line to replace it with none would lose work
+    // somebody entered — the OSS core, where nothing tracks work at all,
+    // takes the same path on every invoice.
+    $response = $this->actingAs($user)
+        ->postJson("/api/v1/invoices/{$invoice->id}/work-report/generate")
+        ->assertOk();
+
+    expect($response->json('data'))->toHaveCount(1)
+        ->and($response->json('data.0.description'))->toBe('Typed by hand')
+        ->and($invoice->workReportLines()->count())->toBe(1);
+});
+
 it('rejects editing the work report of a non-draft invoice', function (): void {
     [$user, $invoice] = workReportScope('sent');
 

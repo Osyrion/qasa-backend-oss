@@ -48,11 +48,11 @@ class CashDocumentData extends Data
             'issued_at' => ['required', 'date'],
             // Direction is the type's job; a negative amount would be a
             // second, contradictory way to say the same thing.
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2'],
             'currency' => ['required', Rule::enum(Currency::class)],
             'description' => ['required', 'string', 'max:255'],
-            'vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'vat_amount' => ['nullable', 'numeric', 'min:0'],
+            'vat_rate' => ['nullable', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
+            'vat_amount' => ['nullable', 'numeric', 'min:0', 'decimal:0,2'],
             'counterparty' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string', 'max:2000'],
             // At most one link: a document either papers over an existing

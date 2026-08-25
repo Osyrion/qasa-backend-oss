@@ -10,6 +10,7 @@ use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Services\ViesPreconditionService;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Invoicing\Domain\ValueObjects\DocumentParty;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Exceptions\DomainException;
 
@@ -67,57 +68,34 @@ readonly class IssueInvoiceAction
         // (created before this action owned assignment, or issued once
         // already) keep it. This is the single point where a number is born.
         if ($invoice->invoice_number === null) {
+            $numbering = $user->invoiceNumbering();
+
             $invoice->invoice_number = $this->repository->nextInvoiceNumber(
                 userId: $invoice->user_id,
-                mask: $invoice->type->numberMask($user),
-                start: $user->accountOwner()->invoice_number_start ?? 1,
+                mask: $invoice->type->numberMask($numbering),
+                start: $numbering->start,
             );
         }
 
         if ($invoice->reverse_charge_mode === ReverseChargeMode::Eu) {
             assert($client !== null);
-            $this->viesPrecondition->ensureVerified($client);
+            $this->viesPrecondition->ensureVerified($client->id, $invoice->user_id);
         }
 
-        if (! $user->vat_status->canChargeVat() && $invoice->items->contains(fn ($item): bool => (float) $item->vat_rate > 0.0)) {
+        $supplier = $user->supplierProfile();
+
+        if (! $supplier->vatStatus->canChargeVat() && $invoice->items->contains(fn ($item): bool => (float) $item->vat_rate > 0.0)) {
             throw DomainException::because(__('invoicing.non_payer_cannot_charge_vat'));
         }
 
-        $invoice->supplier_snapshot = [
-            'name' => $user->supplierName(),
-            'ico' => $user->ico,
-            'dic' => $user->dic,
-            'vat_id' => $user->vat_id,
-            'is_vat_payer' => $user->is_vat_payer,
-            'vat_status' => $user->vat_status->value,
-            'address' => $user->address,
-            'city' => $user->city,
-            'postal_code' => $user->postal_code,
-            'country' => $user->country,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'website' => $user->website,
-            'logo_path' => $user->logo_path,
-            'invoice_footer_text' => $user->invoice_footer_text,
-        ];
+        $invoice->supplier_snapshot = $supplier->toSnapshot();
 
-        $invoice->client_snapshot = $client === null ? null : [
-            'name' => $client->display_name,
-            'ico' => $client->ico,
-            'dic' => $client->dic,
-            'vat_id' => $client->vat_id,
-            // Frozen with the rest: the address the document declares must
-            // stay what it was when issued, even if the client later
-            // re-registers with a different access point.
-            'peppol_id' => $client->peppol_id,
-            'is_vat_payer' => $client->is_vat_payer,
-            'address' => $client->address,
-            'city' => $client->city,
-            'postal_code' => $client->postal_code,
-            'country' => $client->country,
-            'email' => $client->email,
-            'phone' => $client->phone,
-        ];
+        // The Peppol id is frozen with the rest: the address the document
+        // declares must stay what it was when issued, even if the client
+        // later re-registers with a different access point.
+        $invoice->client_snapshot = $client === null
+            ? null
+            : DocumentParty::fromProfile($client->profile(), $client->peppol_id)->toSnapshot();
 
         $invoice->bank_account_snapshot = $invoice->bankAccount?->toSnapshot();
 

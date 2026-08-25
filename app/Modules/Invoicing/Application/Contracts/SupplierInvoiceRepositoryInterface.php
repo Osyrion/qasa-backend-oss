@@ -6,7 +6,7 @@ namespace App\Modules\Invoicing\Application\Contracts;
 
 use App\Modules\Invoicing\Application\DTOs\SupplierInvoiceExportData;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
-use App\Modules\Invoicing\Domain\Services\InvoiceNumberMask;
+use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 

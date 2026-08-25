@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatReturnReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatReturnReportData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use DOMDocument;
 use DOMElement;
 use LogicException;
@@ -43,7 +43,7 @@ final class DphXmlBuilder
         ['rate' => '5', 'base' => 'r03', 'vat' => 'r04'],
     ];
 
-    public function build(VatReturnReportData $report, User $user): string
+    public function build(VatReturnReportData $report, SupplierProfile $supplier): string
     {
         if ($report->month === null && $report->quarter === null) {
             throw new LogicException('DPH return requires either a month or a quarter — an annual-scope report cannot be filed.');
@@ -53,7 +53,7 @@ final class DphXmlBuilder
         $dom->formatOutput = true;
 
         $root = $dom->createElement('dokument');
-        $root->appendChild($this->buildHlavicka($dom, $report, $user));
+        $root->appendChild($this->buildHlavicka($dom, $report, $supplier));
         $root->appendChild($this->buildTelo($dom, $report));
 
         $dom->appendChild($root);
@@ -81,16 +81,16 @@ final class DphXmlBuilder
         ];
     }
 
-    private function buildHlavicka(DOMDocument $dom, VatReturnReportData $report, User $user): DOMElement
+    private function buildHlavicka(DOMDocument $dom, VatReturnReportData $report, SupplierProfile $supplier): DOMElement
     {
         $el = $dom->createElement('hlavicka');
 
         $identifikacneCislo = $dom->createElement('identifikacneCislo');
         $identifikacneCislo->appendChild($this->textEl($dom, 'kodStatu', 'SK'));
-        $identifikacneCislo->appendChild($this->textEl($dom, 'cislo', (string) ($user->ico ?? '')));
+        $identifikacneCislo->appendChild($this->textEl($dom, 'cislo', (string) ($supplier->ico ?? '')));
         $el->appendChild($identifikacneCislo);
 
-        $el->appendChild($this->textEl($dom, 'dic', (string) ($user->dic ?? '')));
+        $el->appendChild($this->textEl($dom, 'dic', (string) ($supplier->dic ?? '')));
         $el->appendChild($this->textEl($dom, 'danovyUrad', ''));
         $el->appendChild($this->textEl($dom, 'nevzniklaPov', '0'));
 
@@ -117,22 +117,22 @@ final class DphXmlBuilder
         $el->appendChild($zdanObd);
 
         $meno = $dom->createElement('meno');
-        $meno->appendChild($this->textEl($dom, 'riadok', $user->supplierName()));
+        $meno->appendChild($this->textEl($dom, 'riadok', $supplier->name));
         $el->appendChild($meno);
 
         $adresa = $dom->createElement('adresa');
-        $adresa->appendChild($this->textEl($dom, 'ulica', (string) ($user->address ?? '')));
+        $adresa->appendChild($this->textEl($dom, 'ulica', (string) ($supplier->address ?? '')));
         $adresa->appendChild($this->textEl($dom, 'cislo', ''));
-        $adresa->appendChild($this->textEl($dom, 'psc', (string) ($user->postal_code ?? '')));
-        $adresa->appendChild($this->textEl($dom, 'obec', (string) ($user->city ?? '')));
-        $adresa->appendChild($this->textEl($dom, 'telefon', (string) ($user->phone ?? '')));
-        $adresa->appendChild($this->textEl($dom, 'email', $user->email));
+        $adresa->appendChild($this->textEl($dom, 'psc', (string) ($supplier->postalCode ?? '')));
+        $adresa->appendChild($this->textEl($dom, 'obec', (string) ($supplier->city ?? '')));
+        $adresa->appendChild($this->textEl($dom, 'telefon', (string) ($supplier->phone ?? '')));
+        $adresa->appendChild($this->textEl($dom, 'email', $supplier->email));
         $el->appendChild($adresa);
 
         $opravnenaOsoba = $dom->createElement('opravnenaOsoba');
-        $opravnenaOsoba->appendChild($this->textEl($dom, 'menoPriezvisko', $user->supplierName()));
-        $opravnenaOsoba->appendChild($this->textEl($dom, 'telefon', (string) ($user->phone ?? '')));
-        $opravnenaOsoba->appendChild($this->textEl($dom, 'email', $user->email));
+        $opravnenaOsoba->appendChild($this->textEl($dom, 'menoPriezvisko', $supplier->name));
+        $opravnenaOsoba->appendChild($this->textEl($dom, 'telefon', (string) ($supplier->phone ?? '')));
+        $opravnenaOsoba->appendChild($this->textEl($dom, 'email', $supplier->email));
         $el->appendChild($opravnenaOsoba);
 
         $el->appendChild($this->textEl($dom, 'datumVyhlasenia', now()->format('j.n.Y')));

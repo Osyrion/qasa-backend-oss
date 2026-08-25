@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Infrastructure\Sk;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementReportData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementRowData;
-use App\Modules\Invoicing\Application\DTOs\VatControlStatementSummaryRowData;
-use App\Modules\Invoicing\Application\Services\VatControlStatementService;
-use App\Modules\Invoicing\Domain\Enums\InvoiceType;
+use App\Modules\Invoicing\Application\Contracts\VatControlStatementSourceInterface;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
-use App\Modules\Invoicing\Domain\Models\SupplierInvoiceVatLine;
-use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementReportData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\VatControlStatementSummaryRowData;
+use App\Modules\Shared\Domain\ValueObjects\SupplierProfile;
 use App\Modules\Taxation\Domain\Contracts\ControlStatementBuilder;
 
 /**
@@ -26,8 +23,7 @@ use App\Modules\Taxation\Domain\Contracts\ControlStatementBuilder;
 final class SkControlStatementService implements ControlStatementBuilder
 {
     public function __construct(
-        private readonly VatControlStatementService $collector,
-        private readonly VatRecapCalculator $recapCalculator,
+        private readonly VatControlStatementSourceInterface $collector,
         private readonly KvDphXmlBuilder $xmlBuilder,
     ) {}
 
@@ -60,9 +56,9 @@ final class SkControlStatementService implements ControlStatementBuilder
         );
     }
 
-    public function toXml(VatControlStatementReportData $report, User $user): string
+    public function toXml(VatControlStatementReportData $report, SupplierProfile $supplier): string
     {
-        return $this->xmlBuilder->build($report, $user);
+        return $this->xmlBuilder->build($report, $supplier);
     }
 
     public function assumptions(): array
@@ -77,55 +73,50 @@ final class SkControlStatementService implements ControlStatementBuilder
      */
     private function classifyIssuedInvoices(string $userId, array $months, array &$rowSections, array &$assumptions): void
     {
-        $invoices = $this->collector->collectIssuedInvoices($userId, $months);
-
-        foreach ($invoices as $invoice) {
-            if ($invoice->reverse_charge_mode === ReverseChargeMode::Eu) {
+        foreach ($this->collector->collectIssuedDocuments($userId, $months) as $document) {
+            if ($document->reverseChargeMode === ReverseChargeMode::Eu) {
                 $assumptions[] = 'Faktúry s prenesením daňovej povinnosti v rámci EÚ nie sú súčasťou tejto zostavy — patria do súhrnného výkazu (EU sales list).';
 
                 continue;
             }
 
-            $date = $invoice->taxable_supply_at ?? $invoice->issued_at;
-            $documentNumber = (string) $invoice->invoice_number;
-            $dateStr = $date->format('Y-m-d');
-            $partnerName = (string) ($invoice->client_snapshot['name'] ?? '');
-            $partnerTaxId = $this->partnerTaxId($invoice->client_snapshot ?? []);
-            $recap = $this->recapCalculator->recap($invoice);
-
-            if ($invoice->reverse_charge_mode === ReverseChargeMode::Domestic) {
-                foreach ($recap as $row) {
+            if ($document->reverseChargeMode === ReverseChargeMode::Domestic) {
+                foreach ($document->rows as $row) {
                     if ($row->base === 0.0 && $row->vat === 0.0) {
                         continue;
                     }
 
-                    $rowSections['A2'][] = new VatControlStatementRowData(
-                        $documentNumber, $dateStr, $partnerName, $partnerTaxId, $row->rate, $row->base, $row->vat,
-                    );
+                    $rowSections['A2'][] = $row;
                 }
 
                 continue;
             }
 
-            if ($invoice->type === InvoiceType::CreditNote) {
-                $relatedDocumentNumber = $invoice->relatedInvoice?->invoice_number;
-
-                foreach ($recap as $row) {
-                    $rowSections['C1'][] = new VatControlStatementRowData(
-                        $documentNumber, $dateStr, $partnerName, $partnerTaxId, $row->rate, $row->base, $row->vat,
-                        relatedDocumentNumber: $relatedDocumentNumber,
-                    );
+            if ($document->isCreditNote) {
+                foreach ($document->rows as $row) {
+                    // Rebuilt rather than pushed through: the corrected
+                    // document's number is a property of the credit note, and
+                    // C.1 is the only section that prints it — the CZ
+                    // statement has no such column, so the source leaves it off
+                    // the row rather than filling in a field one reader would
+                    // then have to ignore.
+                    $rowSections['C1'][] = $this->withRelatedDocument($row, $document->relatedDocumentNumber);
                 }
 
                 continue;
             }
 
-            foreach ($recap as $row) {
-                $rowSections['A1'][] = new VatControlStatementRowData(
-                    $documentNumber, $dateStr, $partnerName, $partnerTaxId, $row->rate, $row->base, $row->vat,
-                );
-            }
+            array_push($rowSections['A1'], ...$document->rows);
         }
+    }
+
+    private function withRelatedDocument(VatControlStatementRowData $row, ?string $relatedDocumentNumber): VatControlStatementRowData
+    {
+        return new VatControlStatementRowData(
+            $row->documentNumber, $row->date, $row->partnerName, $row->partnerTaxId,
+            $row->rate, $row->base, $row->vat,
+            relatedDocumentNumber: $relatedDocumentNumber,
+        );
     }
 
     /**
@@ -134,40 +125,10 @@ final class SkControlStatementService implements ControlStatementBuilder
      */
     private function classifyReceivedInvoices(string $userId, array $months, array &$rowSections): void
     {
-        $invoices = $this->collector->collectReceivedInvoices($userId, $months);
+        foreach ($this->collector->collectReceivedDocuments($userId, $months) as $document) {
+            $section = $document->selfAssessed ? 'B1' : 'B2';
 
-        foreach ($invoices as $invoice) {
-            $date = $invoice->taxable_supply_at ?? $invoice->issued_at;
-            $documentNumber = $invoice->supplier_invoice_number;
-            $dateStr = $date->format('Y-m-d');
-            $partnerName = (string) ($invoice->vendor_snapshot['name'] ?? '');
-            $partnerTaxId = $this->partnerTaxId($invoice->vendor_snapshot ?? []);
-
-            /** @var list<VatControlStatementRowData> $rows */
-            $rows = array_values($invoice->vatLines->map(fn (SupplierInvoiceVatLine $line): VatControlStatementRowData => new VatControlStatementRowData(
-                $documentNumber, $dateStr, $partnerName, $partnerTaxId,
-                (float) $line->vat_rate, (float) $line->base, (float) $line->vat_amount,
-            ))->all());
-
-            if ($invoice->vat_regime->isSelfAssessed()) {
-                array_push($rowSections['B1'], ...$rows);
-
-                continue;
-            }
-
-            array_push($rowSections['B2'], ...$rows);
+            array_push($rowSections[$section], ...$document->rows);
         }
-    }
-
-    /**
-     * @param  array<string, mixed>  $snapshot
-     */
-    private function partnerTaxId(array $snapshot): ?string
-    {
-        if (($snapshot['is_vat_payer'] ?? false) && ! empty($snapshot['vat_id'])) {
-            return (string) $snapshot['vat_id'];
-        }
-
-        return ! empty($snapshot['dic']) ? (string) $snapshot['dic'] : null;
     }
 }

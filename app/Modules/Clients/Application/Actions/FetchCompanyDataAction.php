@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Application\Actions;
 
 use App\Modules\Clients\Application\Contracts\CompanyRegistryClientInterface;
+use App\Modules\Clients\Application\Contracts\CompanyRegistryLookup;
 use App\Modules\Clients\Application\DTOs\CompanyRegistryData;
 use App\Modules\Shared\Exceptions\DomainException;
 
-readonly class FetchCompanyDataAction
+readonly class FetchCompanyDataAction implements CompanyRegistryLookup
 {
     /**
      * @param  array<string, CompanyRegistryClientInterface>  $clients  Keyed by ISO country code.

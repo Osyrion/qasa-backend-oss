@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
@@ -62,7 +61,6 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, SupplierInvoiceVatLine> $vatLines
  * @property-read int|null $vat_lines_count
  * @property-read InvoiceInboxItem|null $inboxItem
- * @property-read User|null $user
  *
  * @method static Builder<static>|SupplierInvoice draft()
  * @method static SupplierInvoiceFactory factory($count = null, $state = [])
@@ -267,14 +265,6 @@ class SupplierInvoice extends Model
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * @return BelongsTo<Client, $this>

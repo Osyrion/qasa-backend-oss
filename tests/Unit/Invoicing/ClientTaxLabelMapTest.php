@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Modules\Invoicing\Domain\Services\ClientTaxLabelMap;
 use App\Modules\Shared\Enums\VatStatus;
+use App\Modules\Shared\Support\ClientTaxLabelMap;
 
 it('prints IČ DPH for a Slovak VAT payer', function (): void {
     expect(ClientTaxLabelMap::labelsFor('SK', VatStatus::Payer))->toBe([

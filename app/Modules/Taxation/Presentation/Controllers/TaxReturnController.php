@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Support\ContentDisposition;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
-use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
 use App\Modules\Taxation\Application\DTOs\TaxReturnInputData;
 use App\Modules\Taxation\Application\Services\TaxIncomeAggregator;
 use App\Modules\Taxation\Application\Services\TaxReturnDraftStore;
 use App\Modules\Taxation\Application\Services\TaxReturnPdfService;
+use App\Modules\Taxation\Domain\ValueObjects\SystemIncomeData;
 use App\Modules\Taxation\Domain\ValueObjects\TaxReturnInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,10 +61,10 @@ class TaxReturnController extends Controller
         $request->validate(['year' => ['required', 'integer', 'min:2000', 'max:2100']]);
         $year = (int) $request->integer('year');
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        $taxSystem = $this->taxSystemResolver->forUser($user);
+        $taxSystem = $this->taxSystemResolver->forSupplier($user->supplierProfile());
         $calculator = $taxSystem->incomeTaxReturnCalculator();
 
         if (! $calculator->supportsYear($year)) {
@@ -126,10 +127,10 @@ class TaxReturnController extends Controller
     {
         $request->validate(['year' => ['required', 'integer', 'min:2000', 'max:2100']]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        $residency = $this->taxSystemResolver->forUser($user)->residency();
+        $residency = $this->taxSystemResolver->forSupplier($user->supplierProfile())->residency();
         $data = $this->aggregator->aggregate($user, (int) $request->integer('year'), $residency);
 
         return response()->json(['data' => $this->systemIncomeToArray($data)]);
@@ -164,13 +165,13 @@ class TaxReturnController extends Controller
     {
         $data = TaxReturnInputData::validateAndCreate($request->all());
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         // The validated shape, not the raw request: caching $request->all()
         // meant any extra key a caller attached was encrypted and kept for
         // seven days, unbounded and never read back by anything.
-        $this->draftStore->put($user->id, $data->year, $data->toArray());
+        $this->draftStore->put($user->accountOwnerId(), $data->year, $data->toArray());
 
         return response()->json(null, 204);
     }
@@ -209,10 +210,10 @@ class TaxReturnController extends Controller
     {
         $request->validate(['year' => ['required', 'integer', 'min:2000', 'max:2100']]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        $draft = $this->draftStore->get($user->id, (int) $request->integer('year'));
+        $draft = $this->draftStore->get($user->accountOwnerId(), (int) $request->integer('year'));
 
         if ($draft === null) {
             return response()->json(['message' => __('taxation.draft_not_found')], 404);
@@ -235,10 +236,10 @@ class TaxReturnController extends Controller
     {
         $request->validate(['year' => ['required', 'integer', 'min:2000', 'max:2100']]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        $this->draftStore->forget($user->id, (int) $request->integer('year'));
+        $this->draftStore->forget($user->accountOwnerId(), (int) $request->integer('year'));
 
         return response()->json(null, 204);
     }
@@ -300,12 +301,12 @@ class TaxReturnController extends Controller
     {
         $data = TaxReturnInputData::validateAndCreate($request->all());
 
-        /** @var User $user */
+        /** @var Account&ProvidesSupplierProfile $user */
         $user = $request->user();
 
-        Log::info('taxation.tax_return_preview', ['user_id' => $user->id, 'year' => $data->year]);
+        Log::info('taxation.tax_return_preview', ['user_id' => $user->accountOwnerId(), 'year' => $data->year]);
 
-        $taxSystem = $this->taxSystemResolver->forUser($user);
+        $taxSystem = $this->taxSystemResolver->forSupplier($user->supplierProfile());
         $systemIncome = $this->aggregator->aggregate($user, $data->year, $taxSystem->residency());
 
         $input = new TaxReturnInput(

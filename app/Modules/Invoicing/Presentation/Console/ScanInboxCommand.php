@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Console;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\ScanInboxAction;
+use App\Modules\Shared\Domain\Contracts\AccountLocator;
 use App\Modules\Shared\Support\AccountLookup;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Console\Command;
@@ -19,7 +19,7 @@ class ScanInboxCommand extends Command
 
     protected $description = 'Scan each account\'s invoice inbox folder and stage new documents for review';
 
-    public function handle(ScanInboxAction $action): int
+    public function handle(ScanInboxAction $action, AccountLocator $accounts): int
     {
         /** @var string|null $accountOption */
         $accountOption = $this->option('account');
@@ -32,11 +32,11 @@ class ScanInboxCommand extends Command
         // users is tenant-scoped too now (phase 7), so "enabled" itself has
         // to be checked after binding: forEachAccount() supplies the
         // account ids via a definer function and binds each in turn, which
-        // is what lets User::find() below see the row at all.
-        $scanIfEnabled = function (string $accountId) use ($action, &$scanned, &$failed, &$skipped, &$failures): void {
-            $account = User::query()->where('invoice_inbox_enabled', true)->find($accountId);
+        // is what lets the lookup below see the row at all.
+        $scanIfEnabled = function (string $accountId) use ($action, $accounts, &$scanned, &$failed, &$skipped, &$failures): void {
+            $account = $accounts->find($accountId);
 
-            if ($account === null) {
+            if ($account === null || ! $account->invoiceInboxEnabled()) {
                 return;
             }
 
@@ -46,15 +46,15 @@ class ScanInboxCommand extends Command
                 $failed += $counts['failed'];
                 $skipped += $counts['skipped'];
 
-                $this->line("Account {$account->id}: {$counts['scanned']} scanned, {$counts['failed']} failed, {$counts['skipped']} skipped.");
+                $this->line("Account {$account->accountOwnerId()}: {$counts['scanned']} scanned, {$counts['failed']} failed, {$counts['skipped']} skipped.");
             } catch (Throwable $e) {
                 $failures++;
                 report($e);
                 Log::error('Invoice inbox scan failed for an account', [
-                    'account_id' => $account->id,
+                    'account_id' => $account->accountOwnerId(),
                     'exception' => $e->getMessage(),
                 ]);
-                $this->error("Account {$account->id} failed: {$e->getMessage()}");
+                $this->error("Account {$account->accountOwnerId()} failed: {$e->getMessage()}");
             }
         };
 

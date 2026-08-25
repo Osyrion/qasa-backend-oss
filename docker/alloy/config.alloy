@@ -1,0 +1,407 @@
+// Grafana Alloy — telemetry agent for a single-server Flok deployment.
+//
+// What this file is for, and what it deliberately is not:
+//
+//   * It answers "is the machine alive, is the disk full, is the queue moving,
+//     did anything 5xx" — the questions Sentry cannot answer, because Sentry
+//     only ever hears from a PHP process that got far enough to throw.
+//   * It does NOT do application performance monitoring. Request traces and
+//     exceptions stay in Sentry (config/sentry.php, APLIKACIA.md kap. 30).
+//     Two tools claiming the same job is how both end up ignored.
+//
+// Everything here is read-only observation of the host, the containers and the
+// files the application already writes. Nothing in this file can change the
+// application's behaviour, and Alloy holds no credential of the application's
+// beyond a read-only Postgres monitoring role (docker/alloy/monitoring-role.sql).
+//
+// Personal data: client IP addresses never reach this agent — nginx anonymises
+// them at write time (docker/nginx/default.conf) — and the pipelines below
+// carry a second scrub as a backstop. See docs/legal/SUBPROCESSORS.md; Grafana
+// Labs is a processor and the entry there has to keep matching this file.
+//
+// Run:  docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d alloy
+// Docs: docs/plans/GRAFANA_OBSERVABILITY_PLAN.md
+
+// ---------------------------------------------------------------------------
+// Destinations
+// ---------------------------------------------------------------------------
+
+// Grafana Cloud gives one token for both signals; the URLs and usernames
+// (numeric stack ids) differ per stack and come from the stack's "Details"
+// page. All of it is injected as environment, so this file holds no secret and
+// is safe to commit.
+prometheus.remote_write "grafana_cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_PROM_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_PROM_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+
+	external_labels = {
+		instance    = sys.env("GRAFANA_INSTANCE"),
+		environment = sys.env("GRAFANA_ENVIRONMENT"),
+	}
+}
+
+loki.write "grafana_cloud" {
+	endpoint {
+		url = sys.env("GRAFANA_LOKI_URL")
+
+		basic_auth {
+			username = sys.env("GRAFANA_LOKI_USER")
+			password = sys.env("GRAFANA_CLOUD_TOKEN")
+		}
+	}
+
+	external_labels = {
+		instance    = sys.env("GRAFANA_INSTANCE"),
+		environment = sys.env("GRAFANA_ENVIRONMENT"),
+	}
+}
+
+// The free tier is capped at 10k active series, and an unfiltered cAdvisor
+// alone will spend most of that. Everything metric-shaped goes through here so
+// there is exactly one place to look when the cap is hit.
+prometheus.relabel "trim" {
+	forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+	// Per-CPU, per-interrupt and per-mountpoint-of-nothing series that no
+	// dashboard in this setup reads.
+	rule {
+		source_labels = ["__name__"]
+		regex         = "node_(cpu_guest_seconds_total|scrape_collector_.*|softnet_.*|network_(carrier|device_id|iface_.*|flags|dormant|protocol_type))"
+		action        = "drop"
+	}
+
+	rule {
+		source_labels = ["mountpoint"]
+		regex         = "/(var/lib/docker|proc|sys)/.*"
+		action        = "drop"
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Host metrics
+// ---------------------------------------------------------------------------
+
+prometheus.exporter.unix "host" {
+	// The agent is a container but the numbers have to describe the host, so
+	// every path is redirected at the read-only bind mounts declared in
+	// docker-compose.observability.yml. Without these three the panel would
+	// cheerfully show the container's own filesystem and call it the disk.
+	procfs_path = "/host/proc"
+	sysfs_path  = "/host/sys"
+	rootfs_path = "/rootfs"
+
+	// A hand-picked set rather than the defaults: the defaults include
+	// collectors that are meaningless inside a container (systemd, thermal)
+	// and expensive ones (interrupts) that would eat the series budget.
+	set_collectors = [
+		"cpu",
+		"diskstats",
+		"filesystem",
+		"loadavg",
+		"meminfo",
+		"netdev",
+		"os",
+		"stat",
+		"textfile",
+		"time",
+		"uname",
+		"vmstat",
+	]
+
+	// Written every minute by `php artisan qasa:metrics:export` (see
+	// ExportOperationalMetricsCommand). The single most important series in
+	// this whole file lives here: flok_metrics_last_export_timestamp_seconds,
+	// whose staleness means the scheduler has stopped.
+	textfile {
+		directory = "/var/lib/alloy/textfile"
+	}
+
+	filesystem {
+		fs_types_exclude = "^(autofs|binfmt_misc|cgroup.*|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+	}
+}
+
+prometheus.scrape "host" {
+	targets         = prometheus.exporter.unix.host.targets
+	forward_to      = [prometheus.relabel.trim.receiver]
+	scrape_interval = "60s"
+	job_name        = "node"
+}
+
+// ---------------------------------------------------------------------------
+// Containers
+// ---------------------------------------------------------------------------
+
+prometheus.exporter.cadvisor "containers" {
+	docker_host      = "unix:///var/run/docker.sock"
+	docker_only      = true
+	storage_duration = "5m"
+
+	// Per-container-per-CPU and per-filesystem-device breakdowns are the
+	// series-count disaster in cAdvisor. What is actually wanted is: is a
+	// container restarting, and is it near its memory limit.
+	enabled_metrics = [
+		"cpu",
+		"memory",
+		"network",
+	]
+}
+
+prometheus.scrape "containers" {
+	targets         = prometheus.exporter.cadvisor.containers.targets
+	forward_to      = [prometheus.relabel.trim.receiver]
+	scrape_interval = "60s"
+	job_name        = "cadvisor"
+}
+
+// ---------------------------------------------------------------------------
+// Postgres
+// ---------------------------------------------------------------------------
+
+// Connects as a dedicated pg_monitor role, never as the owner and never as the
+// application role — see docker/alloy/monitoring-role.sql for why that split
+// matters here specifically (RLS is invisible to the owner, and handing the
+// monitoring agent the app's credentials would give it every tenant's rows).
+prometheus.exporter.postgres "db" {
+	data_source_names = [sys.env("GRAFANA_POSTGRES_DSN")]
+}
+
+prometheus.scrape "db" {
+	targets         = prometheus.exporter.postgres.db.targets
+	forward_to      = [prometheus.relabel.trim.receiver]
+	scrape_interval = "60s"
+	job_name        = "postgres"
+}
+
+// ---------------------------------------------------------------------------
+// Uptime probe
+// ---------------------------------------------------------------------------
+
+// Laravel's own health route (bootstrap/app.php, health: '/up'). Probed from
+// the same host, so this proves "PHP-FPM answers", not "the internet can reach
+// us" — for that, add a second check from Grafana Cloud Synthetic Monitoring
+// against the public URL.
+prometheus.exporter.blackbox "probe" {
+	config_file = "/etc/alloy/blackbox.yml"
+
+	target {
+		name    = "flok_up"
+		address = "http://nginx/up"
+		module  = "http_2xx"
+	}
+}
+
+prometheus.scrape "probe" {
+	targets         = prometheus.exporter.blackbox.probe.targets
+	forward_to      = [prometheus.relabel.trim.receiver]
+	scrape_interval = "30s"
+	job_name        = "blackbox"
+}
+
+// ---------------------------------------------------------------------------
+// Alloy's own metrics — only the log-derived counters below
+// ---------------------------------------------------------------------------
+
+// Alloy exposes ~1500 internal series. Almost none are worth a slot in a 10k
+// budget, but the counters that `stage.metrics` builds out of the log stream
+// live on this same endpoint, and those are how a log-based condition becomes
+// an alert rule in the same file as everything else.
+prometheus.scrape "alloy" {
+	targets         = [{__address__ = "localhost:12345"}]
+	forward_to      = [prometheus.relabel.alloy_self.receiver]
+	scrape_interval = "60s"
+	job_name        = "alloy"
+}
+
+prometheus.relabel "alloy_self" {
+	forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+	rule {
+		source_labels = ["__name__"]
+		regex         = "(loki_process_custom_.*|alloy_build_info|alloy_component_controller_running_components)"
+		action        = "keep"
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Logs — the application's own files
+// ---------------------------------------------------------------------------
+
+// Read from disk rather than from the container's stdout, and that is not an
+// accident: the `stderr` log channel under PHP-FPM does not produce clean
+// lines. FPM intercepts what a worker writes to stderr and re-emits it wrapped
+// in "WARNING: [pool www] child N said into stderr: ...", one wrapper per line,
+// which destroys the JSON the `daily` channel took care to produce. The files
+// are already JSON (config/logging.php) and already carry request_id from the
+// RequestId middleware, so they are the better source.
+local.file_match "app" {
+	path_targets = [
+		{
+			__path__ = "/var/log/flok/laravel-*.log",
+			job      = "laravel",
+			stream   = "application",
+		},
+		{
+			__path__ = "/var/log/flok/security-*.log",
+			job      = "laravel",
+			stream   = "security",
+		},
+	]
+
+	sync_period = "1m"
+}
+
+loki.source.file "app" {
+	targets    = local.file_match.app.targets
+	forward_to = [loki.process.app.receiver]
+}
+
+loki.process "app" {
+	forward_to = [loki.write.grafana_cloud.receiver]
+
+	// Monolog's JsonFormatter shape. `context.request_id` is the same value
+	// the API returns in the X-Request-Id response header and that Sentry
+	// carries as a tag, which is what makes a Sentry event and its
+	// surrounding log lines findable from one another.
+	stage.json {
+		expressions = {
+			level      = "level_name",
+			channel    = "channel",
+			timestamp  = "datetime",
+			request_id = "context.request_id",
+		}
+	}
+
+	stage.labels {
+		values = {
+			level   = "level",
+			channel = "channel",
+		}
+	}
+
+	// request_id is high-cardinality and must never become a stream label —
+	// as structured metadata it is still searchable without multiplying
+	// streams.
+	stage.structured_metadata {
+		values = {
+			request_id = "request_id",
+		}
+	}
+
+	stage.timestamp {
+		source = "timestamp"
+		format = "RFC3339"
+	}
+
+	// Turns "the log is full of errors" into a metric, so the condition can
+	// be an alert rule in docker/alloy/rules/flok.rules.yaml alongside the
+	// infrastructure ones instead of a separate Loki rule group.
+	stage.metrics {
+		// Counted for every level, not just errors, and split by the
+		// `level` label set above. One counter with eight label values
+		// instead of one counter per severity — which also means a rule
+		// can ask about WARNING later without touching this file.
+		metric.counter {
+			name              = "log_lines"
+			description       = "Laravel log lines, by level."
+			match_all         = true
+			action            = "inc"
+			max_idle_duration = "24h"
+		}
+	}
+
+	// Backstop only. IPs are supposed to have been anonymised before they
+	// were ever written (docker/nginx/default.conf), but an application log
+	// line can carry one from anywhere, and this is the last point at which
+	// the data is still ours.
+	stage.replace {
+		expression = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})"
+		replace    = "0.0.0.0"
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Logs — containers
+// ---------------------------------------------------------------------------
+
+discovery.docker "containers" {
+	host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+	targets = discovery.docker.containers.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(.*)"
+		target_label  = "container"
+	}
+
+	// The PHP-FPM containers are dropped on purpose: their real log is the
+	// file scraped above, and keeping both would double-bill every line
+	// against the 50 GB ingest allowance for no new information.
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/(flok_app|flok_queue|flok_scheduler)"
+		action        = "drop"
+	}
+}
+
+loki.source.docker "containers" {
+	host          = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.containers.output
+	labels     = {job = "docker"}
+	forward_to = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+	forward_to = [loki.write.grafana_cloud.receiver]
+
+	// nginx writes JSON (docker/nginx/default.conf). `status` is a label
+	// because the 5xx rate is the query everything else hangs off; latency
+	// stays a field, since bucketing it as a label would explode the streams.
+	stage.match {
+		selector = "{container=\"flok_nginx\"}"
+
+		stage.json {
+			expressions = {
+				status       = "status",
+				request_time = "request_time",
+				request_id   = "request_id",
+			}
+		}
+
+		stage.labels {
+			values = {
+				status = "status",
+			}
+		}
+
+		stage.structured_metadata {
+			values = {
+				request_id = "request_id",
+			}
+		}
+
+		stage.metrics {
+			metric.counter {
+				name              = "nginx_responses"
+				description       = "nginx responses, by status code label."
+				match_all         = true
+				action            = "inc"
+				max_idle_duration = "24h"
+			}
+		}
+	}
+
+	stage.replace {
+		expression = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})"
+		replace    = "0.0.0.0"
+	}
+}

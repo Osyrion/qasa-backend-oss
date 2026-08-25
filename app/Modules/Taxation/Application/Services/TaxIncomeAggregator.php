@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Invoicing\Application\Contracts\CashBasisAnalytics;
 use App\Modules\Invoicing\Application\Contracts\ExchangeRateServiceInterface;
 use App\Modules\Invoicing\Domain\Enums\CashDocumentType;
-use App\Modules\Invoicing\Domain\Models\CashDocument;
-use App\Modules\Invoicing\Domain\Models\Expense;
-use App\Modules\Invoicing\Domain\Models\InvoicePayment;
-use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
+use App\Modules\Invoicing\Domain\ValueObjects\DatedAmount;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Enums\Currency;
+use App\Modules\Taxation\Application\Contracts\TaxIncomeAggregatorInterface;
 use App\Modules\Taxation\Application\DTOs\AggregatedAmountRow;
-use App\Modules\Taxation\Application\DTOs\SystemIncomeData;
 use App\Modules\Taxation\Domain\Enums\ContributionType;
 use App\Modules\Taxation\Domain\Enums\TaxResidency;
 use App\Modules\Taxation\Domain\Models\ContributionPayment;
-use Illuminate\Support\Carbon;
+use App\Modules\Taxation\Domain\ValueObjects\SystemIncomeData;
 use Illuminate\Support\Collection;
 
 /**
@@ -30,13 +28,14 @@ use Illuminate\Support\Collection;
  * Cash basis, not accrual: everything is bucketed by payment/paid date, not
  * issue date — see docs/plans/TAX_RETURN_OSVC_PLAN.md decision 2.
  */
-final readonly class TaxIncomeAggregator
+final readonly class TaxIncomeAggregator implements TaxIncomeAggregatorInterface
 {
     public function __construct(
         private ExchangeRateServiceInterface $exchangeRates,
+        private CashBasisAnalytics $cashBasis,
     ) {}
 
-    public function aggregate(User $user, int $year, TaxResidency $residency): SystemIncomeData
+    public function aggregate(Account $user, int $year, TaxResidency $residency): SystemIncomeData
     {
         $filingCurrency = $residency->returnCurrency();
 
@@ -45,42 +44,42 @@ final readonly class TaxIncomeAggregator
         $businessIncome = $this->sumConverted(
             $this->businessIncomeRows($user, $year)->concat($this->standaloneCashRows($user, $year, CashDocumentType::Income)),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
         $supplierInvoiceExpenses = $this->sumConverted(
             $this->supplierInvoiceRows($user, $year),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
         $otherExpenses = $this->sumConverted(
             $this->expenseRows($user, $year)->concat($this->standaloneCashRows($user, $year, CashDocumentType::Expense)),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
         $socialPaid = $this->sumConverted(
             $this->contributionRows($user, $year, ContributionType::Social),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
         $healthPaid = $this->sumConverted(
             $this->contributionRows($user, $year, ContributionType::Health),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
         $advancesPaid = $this->sumConverted(
             $this->contributionRows($user, $year, ContributionType::IncomeTaxAdvance),
             $filingCurrency,
-            $user->id,
+            $user->accountOwnerId(),
             $unconverted,
         );
 
@@ -100,91 +99,59 @@ final readonly class TaxIncomeAggregator
     /**
      * @return Collection<int, AggregatedAmountRow>
      */
-    private function businessIncomeRows(User $user, int $year): Collection
+    private function businessIncomeRows(Account $user, int $year): Collection
     {
-        return InvoicePayment::query()
-            ->join('invoices', 'invoices.id', '=', 'invoice_payments.invoice_id')
-            ->where('invoices.user_id', $user->id)
-            ->whereYear('invoice_payments.paid_at', $year)
-            ->get(['invoice_payments.amount as amount', 'invoices.currency as currency', 'invoice_payments.paid_at as date'])
-            ->map(fn ($row): AggregatedAmountRow => new AggregatedAmountRow(
-                amount: (float) $row->amount,
-                currency: (string) $row->currency,
-                date: Carbon::parse((string) $row->date)->toDateString(),
-            ));
+        return $this->fromInvoicing($this->cashBasis->collectedInYear($user->accountOwnerId(), $year));
     }
 
     /**
      * @return Collection<int, AggregatedAmountRow>
      */
-    private function supplierInvoiceRows(User $user, int $year): Collection
+    private function supplierInvoiceRows(Account $user, int $year): Collection
     {
-        return SupplierInvoice::query()
-            ->withoutGlobalScope('user')
-            ->where('user_id', $user->id)
-            ->whereNotNull('paid_at')
-            ->whereYear('paid_at', $year)
-            ->get(['total', 'currency', 'paid_at'])
-            ->map(fn (SupplierInvoice $invoice): AggregatedAmountRow => new AggregatedAmountRow(
-                amount: (float) $invoice->total,
-                currency: $invoice->currency->value,
-                date: $invoice->paid_at?->toDateString() ?? sprintf('%d-12-31', $year),
-            ));
+        return $this->fromInvoicing($this->cashBasis->supplierInvoicesPaidInYear($user->accountOwnerId(), $year));
     }
 
     /**
      * @return Collection<int, AggregatedAmountRow>
      */
-    private function expenseRows(User $user, int $year): Collection
+    private function expenseRows(Account $user, int $year): Collection
     {
-        return Expense::query()
-            ->where('user_id', $user->id)
-            ->whereYear('date', $year)
-            ->get(['amount', 'currency', 'date'])
-            ->map(fn (Expense $expense): AggregatedAmountRow => new AggregatedAmountRow(
-                amount: (float) $expense->amount,
-                currency: $expense->currency->value,
-                date: $expense->date->toDateString(),
-            ));
-    }
-
-    /**
-     * Cash documents the system would otherwise know nothing about.
-     *
-     * A receipt carrying invoice_payment_id or expense_id is a piece of
-     * paper for money already counted through that payment or expense —
-     * including it here would double every cash-paid invoice. Only the
-     * standalone ones are genuinely new information, and a reversal cancels
-     * its original because it is itself a standalone document of the
-     * opposite type.
-     *
-     * @return Collection<int, AggregatedAmountRow>
-     */
-    private function standaloneCashRows(User $user, int $year, CashDocumentType $type): Collection
-    {
-        return CashDocument::query()
-            ->withoutGlobalScope('user')
-            ->where('user_id', $user->id)
-            ->where('type', $type->value)
-            ->whereNull('invoice_payment_id')
-            ->whereNull('expense_id')
-            ->whereYear('issued_at', $year)
-            ->get(['amount', 'currency', 'issued_at'])
-            ->map(fn (CashDocument $document): AggregatedAmountRow => new AggregatedAmountRow(
-                amount: (float) $document->amount,
-                currency: $document->currency->value,
-                date: $document->issued_at->toDateString(),
-            ));
+        return $this->fromInvoicing($this->cashBasis->expensesInYear($user->accountOwnerId(), $year));
     }
 
     /**
      * @return Collection<int, AggregatedAmountRow>
      */
-    private function contributionRows(User $user, int $year, ContributionType $type): Collection
+    private function standaloneCashRows(Account $user, int $year, CashDocumentType $type): Collection
+    {
+        return $this->fromInvoicing($this->cashBasis->standaloneCashInYear($user->accountOwnerId(), $year, $type));
+    }
+
+    /**
+     * @param  list<DatedAmount>  $amounts
+     * @return Collection<int, AggregatedAmountRow>
+     */
+    private function fromInvoicing(array $amounts): Collection
+    {
+        return new Collection(array_map(
+            static fn (DatedAmount $amount): AggregatedAmountRow => new AggregatedAmountRow(
+                amount: $amount->amount,
+                currency: $amount->currency->value,
+                date: $amount->date,
+            ),
+            $amounts,
+        ));
+    }
+
+    /**
+     * @return Collection<int, AggregatedAmountRow>
+     */
+    private function contributionRows(Account $user, int $year, ContributionType $type): Collection
     {
         return ContributionPayment::query()
             ->withoutGlobalScope('user')
-            ->where('user_id', $user->id)
+            ->where('user_id', $user->accountOwnerId())
             ->where('type', $type->value)
             ->whereYear('paid_at', $year)
             ->get(['amount', 'currency', 'paid_at'])

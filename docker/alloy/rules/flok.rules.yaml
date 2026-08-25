@@ -1,0 +1,190 @@
+# Alert rules for the Flok production deployment, in Prometheus rule format.
+#
+# Loaded into Grafana Cloud's Mimir ruler by scripts/grafana-rules-sync.sh.
+# They live in the repository rather than in the Grafana UI for the same reason
+# every other configuration here does: a rule someone clicked together is a rule
+# nobody can review, diff, or restore.
+#
+# The bar for a rule in this file is that it is *actionable* — the same bar
+# bootstrap/app.php applies to what reaches Sentry. Nine alerts nobody acts on
+# train the on-call to ignore the tenth. Everything else belongs on a dashboard.
+#
+# Two rules here have no equivalent anywhere else in this repository, and they
+# are the reason the whole setup exists:
+#   * SchedulerStopped — nothing else notices when the scheduler dies, and the
+#     scheduler is what sends payment reminders and purges data under a
+#     GDPR retention promise.
+#   * DiskFillingUp — Postgres, the queue, the cache and the sessions are all
+#     the same disk, and running it out takes everything down at once.
+groups:
+  - name: flok-availability
+    interval: 1m
+    rules:
+      - alert: AppDown
+        expr: probe_success{job="blackbox"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Laravel health route is not answering"
+          description: >-
+            /up has failed for 3 minutes on {{ $labels.instance }}. PHP-FPM or
+            nginx is down, or the app cannot boot (a bad .env, a failed migration).
+
+      - alert: SchedulerStopped
+        expr: time() - flok_metrics_last_export_timestamp_seconds > 600
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The scheduler has stopped running"
+          description: >-
+            qasa:metrics:export last wrote its file
+            {{ $value | humanizeDuration }} ago; it is scheduled every minute.
+            Nothing that depends on the scheduler is running: invoice
+            reminders, overdue digests, and the retention purges that a GDPR
+            promise rests on. Check `docker logs flok_scheduler`.
+
+      - alert: MetricsFileMissing
+        expr: absent(flok_metrics_last_export_timestamp_seconds) == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No application metrics are arriving at all"
+          description: >-
+            The textfile has not been seen for 15 minutes. Either the scheduler
+            never ran since deploy, or the storage/app/metrics mount in
+            docker-compose.observability.yml is wrong.
+
+  - name: flok-resources
+    interval: 1m
+    rules:
+      - alert: DiskFillingUp
+        expr: |
+          100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+                     / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) > 85
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} is {{ $value | printf \"%.0f\" }}% full"
+          description: >-
+            Postgres, the database queue, the cache and the session store share
+            this disk. A full disk stops writes across all of them at once.
+            Usual suspects: storage/logs, storage/app documents, WAL.
+
+      - alert: MemoryPressure
+        expr: |
+          100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 92
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory is above 92%"
+          description: >-
+            Sustained memory pressure. On this host the likely cause is the OCR
+            path (pdftoppm + tesseract in ProcessInboxItemJob) or a queue worker
+            that is not being recycled.
+
+      - alert: ContainerRestartLoop
+        expr: changes(container_start_time_seconds{job="cadvisor",name!=""}[30m]) > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} keeps restarting"
+          description: >-
+            restart: unless-stopped hides a crash loop perfectly — the container
+            is always "up" a second after it died.
+
+  - name: flok-database
+    interval: 1m
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Postgres is not reachable by the monitoring agent"
+          description: >-
+            Either the database is down, or the qasa_monitor role's credentials
+            expired (docker/alloy/monitoring-role.sql). Check whether AppDown
+            also fired to tell those apart.
+
+      - alert: PostgresConnectionsHigh
+        expr: |
+          sum(pg_stat_activity_count) by (instance)
+            / on (instance) pg_settings_max_connections > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Postgres is above 80% of max_connections"
+          description: >-
+            Every request binds a tenant on its own connection
+            (Shared\Support\TenantContext), so connection exhaustion shows up as
+            500s across the whole API rather than as a slow endpoint.
+
+  - name: flok-queue
+    interval: 1m
+    rules:
+      # Depth alone is a bad signal — a bulk import legitimately queues
+      # thousands. Age is the honest one: a job that has been due for 15
+      # minutes means nothing is draining the queue.
+      - alert: QueueNotDraining
+        expr: flok_queue_oldest_pending_seconds > 900
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Queue {{ $labels.queue }} has a job due {{ $value | humanizeDuration }} ago"
+          description: >-
+            The worker is dead, stuck, or crash-looping. Nothing driven by a
+            job is happening: outbound e-mail, invoice PDFs, OCR. Check
+            `docker logs flok_queue`.
+
+      - alert: FailedJobsAppearing
+        # Already a "last hour" window computed by the exporting command, so
+        # this is a plain threshold — increase() over a gauge would be wrong.
+        expr: flok_queue_failed_jobs{window="1h"} > 5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value | printf \"%.0f\" }} jobs failed in the last hour"
+          description: >-
+            Individually these are also Sentry events; this fires on the rate,
+            which is what distinguishes one unlucky job from a broken deploy.
+
+  - name: flok-application
+    interval: 1m
+    rules:
+      - alert: ErrorLogSpike
+        expr: |
+          sum(rate(loki_process_custom_log_lines{level=~"ERROR|CRITICAL|ALERT|EMERGENCY"}[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Laravel is logging more than 30 errors a minute"
+          description: >-
+            Deliberately a rate, not a count: this repository logs expected
+            integration failures on purpose (ExpectedIntegrationFailure,
+            bootstrap/app.php), so a steady trickle is normal and a step change
+            is not.
+
+      - alert: ServerErrorRate
+        expr: |
+          sum(rate(loki_process_custom_nginx_responses{status=~"5.."}[5m]))
+            / sum(rate(loki_process_custom_nginx_responses[5m])) > 0.02
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Over 2% of responses are 5xx"
+          description: >-
+            Measured at nginx, so it counts the failures Sentry never hears
+            about — a request that died before PHP, a timeout, a 502 from a
+            worker that was killed.

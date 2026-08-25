@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
+use App\Modules\Invoicing\Application\Contracts\VatReturnAggregatorInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Enums\ReverseChargeMode;
 use App\Modules\Invoicing\Domain\Enums\SupplierVatRegime;
@@ -23,7 +24,7 @@ use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
  * (§25/§53 corrections have their own rows the country builder doesn't
  * populate yet — see SkVatReturnService's own assumptions()).
  */
-final readonly class VatReturnAggregationService
+final readonly class VatReturnAggregationService implements VatReturnAggregatorInterface
 {
     public function __construct(
         private VatControlStatementService $collector,

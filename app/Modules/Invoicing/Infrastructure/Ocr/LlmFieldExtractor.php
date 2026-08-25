@@ -9,6 +9,7 @@ use App\Modules\Invoicing\Domain\Contracts\FieldExtractionResult;
 use App\Modules\Invoicing\Domain\Contracts\InvoiceFieldExtractor;
 use App\Modules\Invoicing\Domain\Contracts\LlmProviderDriver;
 use App\Modules\Invoicing\Domain\Enums\AiProvider;
+use App\Modules\Invoicing\Domain\Exceptions\LlmExtractionException;
 
 /**
  * Extracts supplier invoice fields via a pluggable LlmProviderDriver. This

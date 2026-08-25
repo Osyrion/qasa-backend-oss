@@ -7,6 +7,7 @@ use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Application\Services\VatRateSeederService;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\TestCase;
 
 function rcOwner(string $vatStatus, string $country = 'SK'): User
 {
@@ -116,7 +117,7 @@ it('nets a reverse-charged invoice total against the discount with zero VAT', fu
 /**
  * @return array{0: User, 1: Invoice}
  */
-function euRcInvoiceReadyForIssue(object $test, ?string $vatVerifiedAt = null): array
+function euRcInvoiceReadyForIssue(TestCase $test, ?string $vatVerifiedAt = null): array
 {
     $user = rcOwner('payer');
     $client = Client::factory()->create([

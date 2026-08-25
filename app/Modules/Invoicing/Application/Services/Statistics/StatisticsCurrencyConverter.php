@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services\Statistics;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\ExchangeRateServiceInterface;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Enums\Currency;
 
 /**
@@ -90,10 +91,10 @@ final class StatisticsCurrencyConverter
      * Convert an amount already expressed in CZK into the user's default
      * currency.
      */
-    public function czkToDefault(float $amountCzk, User $user): float
+    public function czkToDefault(float $amountCzk, Account&ProvidesSupplierProfile $user): float
     {
         // Same lookup as the fallback rate, inverted: both ask what one unit
         // of a currency is worth in CZK.
-        return $amountCzk / $this->fallbackRateToCzk($user->default_currency, $user->accountOwnerId());
+        return $amountCzk / $this->fallbackRateToCzk($user->supplierProfile()->defaultCurrency, $user->accountOwnerId());
     }
 }

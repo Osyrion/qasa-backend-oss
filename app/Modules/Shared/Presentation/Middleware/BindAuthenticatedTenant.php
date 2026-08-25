@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Middleware;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -40,7 +40,7 @@ class BindAuthenticatedTenant
     {
         $user = $request->user('sanctum');
 
-        if ($user instanceof User) {
+        if ($user instanceof Account) {
             TenantContext::set($user->accountOwnerId());
         }
 

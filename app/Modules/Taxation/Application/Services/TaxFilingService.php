@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Taxation\Application\Services;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Invoicing\Application\DTOs\EuSalesListRowData;
+use App\Modules\Invoicing\Domain\ValueObjects\EuSalesListRowData;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Taxation\Application\Contracts\TaxSystemResolverInterface;
 use App\Modules\Taxation\Domain\Enums\TaxFilingStatus;
@@ -32,22 +33,22 @@ final readonly class TaxFilingService
     /**
      * @throws DomainException
      */
-    public function generate(User $user, TaxFilingType $type, int $year, ?int $quarter, ?int $month): TaxFiling
+    public function generate(Account&ProvidesSupplierProfile $user, TaxFilingType $type, int $year, ?int $quarter, ?int $month): TaxFiling
     {
-        $taxSystem = $this->taxSystemResolver->forUser($user);
+        $taxSystem = $this->taxSystemResolver->forSupplier($user->supplierProfile());
         $ownerId = $user->accountOwnerId();
 
         $content = match ($type) {
             TaxFilingType::ControlStatement => $taxSystem->controlStatementBuilder()->toXml(
                 $taxSystem->controlStatementBuilder()->classify($ownerId, $year, $quarter, $month),
-                $user,
+                $user->supplierProfile(),
             ),
             TaxFilingType::EuSalesList => $this->euSalesListJson(
                 $taxSystem->euSalesListBuilder()->build($ownerId, $year, $quarter, $month),
             ),
             TaxFilingType::VatReturn => $taxSystem->vatReturnBuilder()->toXml(
                 $taxSystem->vatReturnBuilder()->classify($ownerId, $year, $quarter, $month),
-                $user,
+                $user->supplierProfile(),
             ),
             TaxFilingType::IncomeTax => throw DomainException::because(
                 __('taxation.tax_filing_type_not_generatable')

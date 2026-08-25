@@ -11,7 +11,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Events\InvoiceViewed;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Services\VatRecapCalculator;
-use App\Modules\Invoicing\Domain\Services\VatRecapRow;
+use App\Modules\Invoicing\Domain\ValueObjects\VatRecapRow;
 use App\Modules\Shared\Support\ContentDisposition;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -230,7 +230,7 @@ class PublicInvoiceController extends Controller
             ],
             'public_status' => $this->publicStatus($invoice),
             'online_payment' => [
-                'available' => $this->onlinePaymentAvailability->isAvailableFor($invoice),
+                'available' => $this->onlinePaymentAvailability->isAvailableFor($invoice->publicView()),
             ],
         ]);
     }

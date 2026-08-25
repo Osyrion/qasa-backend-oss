@@ -29,7 +29,7 @@ class WorkReportLineData extends Data
             'lines' => ['present', 'array', 'max:200'],
             'lines.*.work_date' => ['required', 'date'],
             'lines.*.description' => ['required', 'string', 'max:255'],
-            'lines.*.hours' => ['required', 'numeric', 'min:0', 'max:1000'],
+            'lines.*.hours' => ['required', 'numeric', 'min:0', 'max:1000', 'decimal:0,2'],
             'lines.*.time_entry_id' => ['nullable', 'uuid', 'exists:time_entries,id'],
         ];
     }

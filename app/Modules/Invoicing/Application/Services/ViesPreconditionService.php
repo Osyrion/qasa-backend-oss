@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Services;
 
+use App\Modules\Clients\Application\Contracts\ClientVatVerification;
 use App\Modules\Clients\Application\Contracts\VatValidatorInterface;
-use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Clients\Domain\ValueObjects\ClientVatStatus;
 use App\Modules\Shared\Exceptions\DomainException;
 
 /**
@@ -18,17 +19,20 @@ readonly class ViesPreconditionService
 {
     public function __construct(
         private VatValidatorInterface $validator,
+        private ClientVatVerification $clients,
     ) {}
 
     /**
      * @throws DomainException
      */
-    public function ensureVerified(Client $client): void
+    public function ensureVerified(string $clientId, string $ownerId): void
     {
-        $result = $this->validator->verify($client->country, (string) $client->vat_id);
+        $status = $this->clients->requireStatus($clientId, $ownerId);
+
+        $result = $this->validator->verify($status->country, (string) $status->vatId);
 
         if ($result === null) {
-            if ($this->withinGraceWindow($client)) {
+            if ($this->withinGraceWindow($status)) {
                 return;
             }
 
@@ -39,17 +43,17 @@ readonly class ViesPreconditionService
             throw DomainException::because(__('invoicing.eu_rc_requires_vies'));
         }
 
-        $client->forceFill(['vat_verified_at' => now()])->save();
+        $this->clients->markVerified($clientId, $ownerId);
     }
 
-    private function withinGraceWindow(Client $client): bool
+    private function withinGraceWindow(ClientVatStatus $status): bool
     {
-        if ($client->vat_verified_at === null) {
+        if ($status->verifiedAt === null) {
             return false;
         }
 
         $graceDays = (int) config('qasa.vies_grace_days', 30);
 
-        return $client->vat_verified_at->greaterThan(now()->subDays($graceDays));
+        return $status->verifiedAt->greaterThan(now()->subDays($graceDays));
     }
 }

@@ -1,3 +1,29 @@
+# Local development stack.
+#
+# **Every service carries a mem_limit and they sum to exactly 2048 MiB.**
+# Docker limits are ceilings rather than reservations, so an idle container
+# costs nothing — but capping the *sum* means that even if everything spikes
+# at once the stack cannot take more than 2 GB, which is what keeps an IDE
+# usable on a 16 GB machine.
+#
+# The numbers are measured, not guessed. Read them from the kernel's own
+# high-water mark rather than by polling `docker stats`, which misses spikes
+# badly — it reported 332 MiB for a PHPStan run whose real peak was 1532:
+#
+#   docker exec flok_app sh -c 'echo $(( $(cat /sys/fs/cgroup/memory.peak) / 1048576 )) MiB'
+#
+# Peaks on this tree (2026-08-25), all inside `app`:
+#
+#   composer phpstan     896 MiB   (see phpstan.neon — the default config
+#                                   peaked at 2455 MiB and was *slower*)
+#   php artisan test     923 MiB
+#
+# `queue` gets 384M because OCR (pdftoppm + tesseract) is the one job here
+# that can spike; it idles at 62 MiB.
+#
+# Raise any of them for a single run without editing this file:
+#   APP_MEM_LIMIT=2g docker compose up -d app
+
 services:
   app:
     build:
@@ -5,6 +31,10 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: flok_app
     restart: unless-stopped
+    mem_limit: ${APP_MEM_LIMIT:-1168m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${APP_MEM_LIMIT:-1168m}
     working_dir: /var/www
     volumes:
       - .:/var/www
@@ -17,11 +47,16 @@ services:
     depends_on:
       - db
       - redis
+      - mailpit
 
   nginx:
     image: nginx:1.25-alpine
     container_name: flok_nginx
     restart: unless-stopped
+    mem_limit: ${NGINX_MEM_LIMIT:-32m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${NGINX_MEM_LIMIT:-32m}
     ports:
       - "${NGINX_PORT:-8001}:80"
     volumes:
@@ -36,6 +71,10 @@ services:
     image: postgres:17-alpine
     container_name: flok_db
     restart: unless-stopped
+    mem_limit: ${DB_MEM_LIMIT:-288m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${DB_MEM_LIMIT:-288m}
     environment:
       POSTGRES_DB: ${DB_DATABASE:-laravel}
       POSTGRES_USER: ${DB_USERNAME:-laravel}
@@ -52,10 +91,39 @@ services:
     image: redis:7.2-alpine
     container_name: flok_redis
     restart: unless-stopped
+    mem_limit: ${REDIS_MEM_LIMIT:-48m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${REDIS_MEM_LIMIT:-48m}
     ports:
       - "${REDIS_HOST_PORT:-6380}:6379"
     volumes:
       - redisdata:/data
+    networks:
+      - laravel
+
+  # Local SMTP sink. Nothing it accepts ever leaves the machine, which is the
+  # point: e-mail verification is enforced (`verified` middleware, and
+  # VerifiedSenderGuard on the scheduler path too), so a local pass through
+  # the app has to read a real verification link. MAIL_MAILER=log buries it
+  # in storage/logs/laravel.log; here it is a web UI on ${MAILPIT_UI_PORT}.
+  # Not for production — no auth, and it stores messages in memory only.
+  mailpit:
+    image: axllent/mailpit:v1.30
+    container_name: flok_mailpit
+    restart: unless-stopped
+    mem_limit: ${MAILPIT_MEM_LIMIT:-48m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${MAILPIT_MEM_LIMIT:-48m}
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+    environment:
+      # Keeps a long local run from growing without bound.
+      - MP_MAX_MESSAGES=500
+      - MP_SMTP_AUTH_ACCEPT_ANY=1
+      - MP_SMTP_AUTH_ALLOW_INSECURE=1
     networks:
       - laravel
 
@@ -70,6 +138,10 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: flok_queue
     restart: unless-stopped
+    mem_limit: ${QUEUE_MEM_LIMIT:-384m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${QUEUE_MEM_LIMIT:-384m}
     working_dir: /var/www
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
     volumes:
@@ -82,6 +154,7 @@ services:
     depends_on:
       - db
       - redis
+      - mailpit
 
   scheduler:
     build:
@@ -89,6 +162,10 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: flok_scheduler
     restart: unless-stopped
+    mem_limit: ${SCHEDULER_MEM_LIMIT:-80m}
+    # No swap beyond the limit: swapping is what turns a memory
+    # spike into a machine nobody can type on.
+    memswap_limit: ${SCHEDULER_MEM_LIMIT:-80m}
     working_dir: /var/www
     command: >
       sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
@@ -102,6 +179,7 @@ services:
     depends_on:
       - db
       - redis
+      - mailpit
 
 networks:
   laravel:

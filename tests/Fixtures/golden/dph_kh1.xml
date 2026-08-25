@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Pisemnost nazevSW="Laravel">
+<Pisemnost nazevSW="Flok">
   <DPHKH1>
     <VetaD dokument="KH1" k_uladis="DPH" mesic="3" rok="2026" khdph_forma="B"/>
     <VetaP c_ufo="000" dic="12345678" typ_ds="F" jmeno="Petr" prijmeni="Svoboda" ulice="Hlavní 1" naz_obce="Praha" psc="11000" email="petr.svoboda@example.cz"/>

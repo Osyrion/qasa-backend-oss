@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Shared\Presentation\Middleware;
 
-use App\Modules\Auth\Domain\Models\User;
-use App\Modules\Shared\Infrastructure\Sentry\SentryContext;
+use App\Modules\Shared\Application\Contracts\ErrorReportingContext;
+use App\Modules\Shared\Domain\Contracts\ProvidesAccountStatus;
 use App\Modules\Shared\Support\TenantContext;
 use Illuminate\Auth\Middleware\Authenticate as BaseAuthenticate;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Http\Request;
 
 /**
@@ -23,6 +24,13 @@ use Illuminate\Http\Request;
  */
 class Authenticate extends BaseAuthenticate
 {
+    public function __construct(
+        AuthFactory $auth,
+        private readonly ErrorReportingContext $errorContext,
+    ) {
+        parent::__construct($auth);
+    }
+
     /**
      * @param  Request  $request
      * @param  array<int, string|null>  $guards
@@ -36,13 +44,13 @@ class Authenticate extends BaseAuthenticate
         // forwarding unknown calls to guard().
         $user = $this->auth->guard()->user();
 
-        if ($user instanceof User) {
+        if ($user instanceof ProvidesAccountStatus) {
             TenantContext::set($user->accountOwnerId());
 
             // Same reason the tenant bind lives here: this is where the
             // identity is first known. An event without it cannot answer
             // whether one account is affected or every account is.
-            SentryContext::identify($user->id, $user->accountOwnerId());
+            $this->errorContext->identify((string) $user->getAuthIdentifier(), $user->accountOwnerId());
 
             // After the bind, never before: accountOwner() reads the owner's
             // row, which the users policy hides until the connection knows
@@ -59,7 +67,7 @@ class Authenticate extends BaseAuthenticate
      * A suspended account is told why, so support has something to point at.
      * 403 rather than 401: the credentials are fine, the account is not.
      */
-    private function denyIfSuspended(User $user): void
+    private function denyIfSuspended(ProvidesAccountStatus $user): void
     {
         if (! $user->isSuspended()) {
             return;

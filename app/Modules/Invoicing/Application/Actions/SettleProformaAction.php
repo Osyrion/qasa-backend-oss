@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Contracts\InvoiceRepositoryInterface;
 use App\Modules\Invoicing\Application\Contracts\SettleProformaActionInterface;
 use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
@@ -12,6 +11,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceType;
 use App\Modules\Invoicing\Domain\Events\InvoiceCreated;
 use App\Modules\Invoicing\Domain\Events\InvoicePaid;
 use App\Modules\Invoicing\Domain\Models\Invoice;
+use App\Modules\Shared\Domain\Contracts\Account;
 use App\Modules\Shared\Exceptions\DomainException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -35,7 +35,7 @@ readonly class SettleProformaAction implements SettleProformaActionInterface
      * @throws DomainException
      * @throws Throwable
      */
-    public function execute(Invoice $proforma, User $user): Invoice
+    public function execute(Invoice $proforma, Account $user): Invoice
     {
         if ($proforma->type !== InvoiceType::Proforma) {
             throw DomainException::because(__('invoicing.settle_only_proforma'));

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\AddInvoiceItemAction;
 use App\Modules\Invoicing\Application\Actions\CreateCorrectiveInvoiceAction;
 use App\Modules\Invoicing\Application\Actions\CreateInvoiceAction;
@@ -27,7 +26,13 @@ use App\Modules\Invoicing\Domain\Models\InvoiceItem;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceItemResource;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
 use App\Modules\Orders\Application\Contracts\BillableWorkProviderInterface;
-use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
+use App\Modules\Orders\Application\Contracts\OrderAuthorization;
+use App\Modules\Orders\Application\Contracts\OrderLookup;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\Actor;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Enums\Currency;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
@@ -53,7 +58,8 @@ class InvoiceController extends Controller
     public function __construct(
         private readonly BillableWorkProviderInterface $billableWork,
         private readonly InvoiceRepositoryInterface $invoiceRepository,
-        private readonly OrderRepositoryInterface $orderRepository,
+        private readonly OrderLookup $orders,
+        private readonly OrderAuthorization $orderAuthorization,
         private readonly CreateInvoiceAction $createAction,
         private readonly UpdateInvoiceAction $updateAction,
         private readonly AddInvoiceItemAction $addItemAction,
@@ -244,7 +250,7 @@ class InvoiceController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -364,7 +370,7 @@ class InvoiceController extends Controller
     )]
     public function update(Request $request, Invoice $invoice): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
@@ -461,7 +467,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
         $ownerId = $user->accountOwnerId();
 
@@ -470,7 +476,7 @@ class InvoiceController extends Controller
         // their parent (orders / price_lists) so a caller cannot pin a foreign
         // account's record onto their own invoice item.
         $request->validate([
-            ...InvoiceItemData::rules($ownerId, $user->accountOwner()->country, $invoice->issued_at->toDateString()),
+            ...InvoiceItemData::rules($ownerId, $user->supplierProfile()->country, $invoice->issued_at->toDateString()),
             'time_entry_id' => [
                 'nullable', 'uuid',
                 Rule::exists('time_entries', 'id')->where('user_id', $ownerId),
@@ -595,26 +601,31 @@ class InvoiceController extends Controller
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $order = $this->orderRepository->findByIdOrFail($request->input('order_id'));
+        $orderId = (string) $request->input('order_id');
+        $order = $this->orders->summary($orderId);
+
+        // 404 before 403: the account scope makes a foreign order invisible.
+        abort_if($order === null, 404);
+
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
+        $user = $request->user();
+        assert($user instanceof Actor);
 
         // Generating an invoice is an invoice-side write, so it needs the same
         // invoices.manage gate as every other creation path (store,
         // createCorrective) — not just read access to the source order.
-        $this->authorize('view', $order);
+        abort_unless($this->orderAuthorization->allowsRead($user, $orderId), 403);
         $this->authorize('create', Invoice::class);
-
-        /** @var User $user */
-        $user = $request->user();
 
         try {
             // The invoice is always billed to the order's client.
             $data = new InvoiceData(
-                client_id: (string) $order->client_id,
+                client_id: (string) $order->clientId,
                 issued_at: $request->string('issued_at')->toString(),
                 due_at: $request->string('due_at')->toString(),
                 currency: $request->filled('currency')
                     ? Currency::from($request->string('currency')->toString())
-                    : $order->effectiveCurrency(),
+                    : $order->currency,
                 note: $request->filled('note') ? $request->string('note')->toString() : null,
             );
 
@@ -838,7 +849,7 @@ class InvoiceController extends Controller
             'type' => ['required', 'in:credit_note,storno'],
         ]);
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         try {
@@ -879,7 +890,7 @@ class InvoiceController extends Controller
     {
         $this->authorize('settle', $invoice);
 
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         try {

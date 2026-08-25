@@ -6,6 +6,7 @@ use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Response;
 
 /** @return array{0: User, 1: Client} */
@@ -21,7 +22,7 @@ function documentScope(): array
  * @param  array<string, mixed>  $overrides
  * @return TestResponse<Response>
  */
-function createDocument(object $test, User $user, Client $client, array $overrides = []): TestResponse
+function createDocument(TestCase $test, User $user, Client $client, array $overrides = []): TestResponse
 {
     return $test->actingAs($user)->postJson('/api/v1/invoices', [
         'client_id' => $client->id,
@@ -59,7 +60,7 @@ function issuedInvoiceWithItem(User $user, Client $client): Invoice
 }
 
 /** @return TestResponse<Response> */
-function issueDocument(object $test, User $user, string $invoiceId): TestResponse
+function issueDocument(TestCase $test, User $user, string $invoiceId): TestResponse
 {
     return $test->actingAs($user)->postJson("/api/v1/invoices/{$invoiceId}/status", [
         'status' => 'issued',

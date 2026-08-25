@@ -41,7 +41,7 @@ class PaymentData extends Data
     public static function rules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'gt:0', 'max:99999999'],
+            'amount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:99999999'],
             'paid_at' => ['required', 'date'],
             // Rule::enum, not a hand-written in: list — a new payment
             // method should not need somebody to find every place the values

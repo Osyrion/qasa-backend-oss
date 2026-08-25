@@ -14,6 +14,14 @@ return [
     |
     */
 
+    // The domain the per-account inbox addresses live on
+    // (`{token}@in.<domain>`). Neutral rather than under 'postmark' because it
+    // is a product fact the settings screen shows a customer, not a provider
+    // credential — the ESP behind it can change without the address changing.
+    'email_inbox' => [
+        'domain' => env('MAIL_INBOUND_DOMAIN', env('POSTMARK_INBOUND_DOMAIN')),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
 
@@ -23,7 +31,6 @@ return [
         // recommended protection, enforced by RequireBasicAuthWebhook.
         'inbound_username' => env('POSTMARK_INBOUND_USERNAME'),
         'inbound_password' => env('POSTMARK_INBOUND_PASSWORD'),
-        'inbound_domain' => env('POSTMARK_INBOUND_DOMAIN'),
 
         // Outbound (delivery) webhook — Delivery/Bounce/Open/SpamComplaint.
         // A separate pair from the inbound one above so either can be
@@ -95,6 +102,41 @@ return [
         'base_url' => env('SUPERFAKTURA_API_URL', 'https://moja.superfaktura.sk'),
     ],
 
+    // Cloudflare Turnstile — captcha for public, unauthenticated endpoints
+    // (currently the waitlist). Off by default: 'enabled' false means
+    // TurnstileVerifier never calls out and always passes, so local/CI never
+    // need a secret key configured. Flip on once a site key + secret exist
+    // for the domain in the Cloudflare dashboard.
+    'turnstile' => [
+        'enabled' => env('TURNSTILE_ENABLED', false),
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => env('TURNSTILE_VERIFY_URL', 'https://challenges.cloudflare.com/turnstile/v0/siteverify'),
+    ],
+
+    // Twilio Programmable Messaging — delivers the SMS one-time codes.
+    //
+    // The Messaging API, deliberately not Verify: Verify generates and
+    // checks codes of its own, which would make Twilio the source of truth
+    // for something phone_verification_codes already owns, and would not fit
+    // PhoneVerificationProviderInterface's sendCode($phone, $code) shape at
+    // all. Plain SMS is also what every other gateway can do, so swapping
+    // Twilio for a local SK/CZ one stays a binding change.
+    //
+    // Reached over REST rather than the SDK: composer.json is shared with
+    // the generated OSS core, and a dependency only the SaaS edition uses
+    // would ship into the AGPL build unused.
+    //
+    // The feature itself is switched by qasa.features.phone_verification;
+    // these are only credentials. Missing credentials surface the same way
+    // an outage does — "verification unavailable" — never a 500.
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'from' => env('TWILIO_FROM'),
+        'base_url' => env('TWILIO_BASE_URL', 'https://api.twilio.com/2010-04-01'),
+    ],
+
     'anthropic' => [
         // Platform key for metered AI invoice extraction (ai_extraction
         // feature). A BYOK credential saved on the account (ai_credentials
@@ -107,6 +149,23 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Redirect URI used for the mobile app's in-app-browser OAuth flow.
+        //
+        // It is an https URL on *this* backend, not the app's `flok://` scheme,
+        // because Google only accepts http(s) redirect URIs on a Web OAuth
+        // client — a custom scheme is rejected at the console. The route it
+        // points at (auth.google.callback.mobile) is a two-line bridge that
+        // 302s Google's answer on to `mobile_app_redirect` below, which the
+        // in-app browser does accept. Must be registered as an additional
+        // authorized redirect URI on the same Google OAuth client — an
+        // external Google Cloud Console step, not something this repo can do.
+        'mobile_redirect' => env(
+            'GOOGLE_MOBILE_REDIRECT_URI',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1/auth/google/callback/mobile'
+        ),
+        // Where that bridge sends the browser: flok_mobile's custom scheme,
+        // the return URL expo-web-browser's openAuthSessionAsync waits for.
+        'mobile_app_redirect' => env('GOOGLE_MOBILE_APP_REDIRECT_URI', 'flok://auth/google/callback'),
     ],
 
     'stripe' => [

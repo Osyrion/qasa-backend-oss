@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Orders\Domain\Models;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Orders\Domain\Enums\OrderStatus;
 use App\Modules\Shared\Enums\BillingType;
@@ -47,7 +46,6 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, OrderNote> $notes
  * @property-read int|null $notes_count
  * @property-read OrderStatus|null $status_enum
- * @property-read User|null $user
  *
  * @method static Builder<static>|Order active()
  * @method static Builder<static>|Order billable()
@@ -170,19 +168,11 @@ class Order extends Model
     {
         return $this->currency
             ?? $this->client->currency
-            ?? $this->user->default_currency
+            ?? $this->user?->supplierProfile()->defaultCurrency
             ?? Currency::EUR;
     }
 
     // ── Relations ─────────────────────────────────────────────────────────────
-
-    /**
-     * @return BelongsTo<User, $this>
-     */
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
 
     /**
      * @return BelongsTo<Client, $this>

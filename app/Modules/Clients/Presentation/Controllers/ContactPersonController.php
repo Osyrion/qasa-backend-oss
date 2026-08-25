@@ -117,6 +117,8 @@ class ContactPersonController extends Controller
     {
         $this->authorize('update', $client);
 
+        $request->validate(ContactPersonData::getValidationRules($request->all()));
+
         try {
             $data = ContactPersonData::fromRequest($request);
             $person = $this->addAction->execute($client, $data);
@@ -187,6 +189,8 @@ class ContactPersonController extends Controller
     {
         $this->authorize('update', $client);
         $this->ensureContactBelongsToClient($client, $contactPerson);
+
+        $request->validate(ContactPersonData::getValidationRules($request->all()));
 
         $data = ContactPersonData::fromRequest($request);
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Application\Actions;
 
-use App\Modules\Auth\Domain\Models\User;
+use App\Modules\Shared\Domain\Contracts\Account;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -27,7 +27,7 @@ readonly class ScanInboxAction
     /**
      * @return array{scanned: int, failed: int, skipped: int}
      */
-    public function execute(User $owner): array
+    public function execute(Account $owner): array
     {
         $userId = $owner->accountOwnerId();
         $disk = (string) config('invoicing.inbox.disk', 'local');

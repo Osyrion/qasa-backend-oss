@@ -6,6 +6,8 @@ namespace App\Modules\Auth\Application\Actions;
 
 use App\Modules\Auth\Application\DTOs\LoginData;
 use App\Modules\Auth\Application\Results\LoginResult;
+use App\Modules\Auth\Application\Services\LoginCaptchaGate;
+use App\Modules\Auth\Application\Services\LoginThrottle;
 use App\Modules\Auth\Application\Services\TwoFactorChallengeStore;
 use App\Modules\Auth\Domain\Events\LoginFailed;
 use App\Modules\Auth\Domain\Events\LoginSucceeded;
@@ -19,12 +21,56 @@ class LoginAction
 {
     public function __construct(
         private readonly TwoFactorChallengeStore $challengeStore,
+        private readonly LoginThrottle $throttle,
+        private readonly LoginCaptchaGate $captchaGate,
     ) {}
 
     /**
      * @throws DomainException
      */
     public function execute(LoginData $data): LoginResult
+    {
+        $ip = request()->ip();
+
+        // Ahead of everything else: an attempt that is already waiting out a
+        // backoff must not cost a database round-trip, and must answer the
+        // same way whether or not the address belongs to a real account.
+        $this->throttle->check($data->email, $ip);
+
+        // Both gates answer before the credentials are looked at, so neither
+        // reveals whether the guess was any good — and so an attacker pays
+        // the captcha per guess rather than per success. Thrown from out
+        // here rather than inside the try below on purpose: a refused
+        // challenge is not a failed password and must not count as one.
+        $this->captchaGate->ensureSolved($data->email, $data->turnstile_token, $ip);
+
+        try {
+            $result = $this->attempt($data);
+        } catch (DomainException $e) {
+            // Every outcome that is not a password this account accepts
+            // counts, including an unknown e-mail and a suspended account.
+            // Counting only the real ones would turn the backoff itself into
+            // the enumeration oracle the rest of this class avoids being.
+            $this->throttle->recordFailure($data->email, $ip);
+            $this->captchaGate->recordFailure($data->email);
+
+            throw $e;
+        }
+
+        // A correct password clears the slate — including on the 2FA branch,
+        // where this class has done its job and the one-shot challenge takes
+        // over. Without this a legitimate sign-in would leave the count
+        // standing and the sixth honest login of the week would be refused.
+        $this->throttle->clear($data->email, $ip);
+        $this->captchaGate->clear($data->email);
+
+        return $result;
+    }
+
+    /**
+     * @throws DomainException
+     */
+    private function attempt(LoginData $data): LoginResult
     {
         // users is now tenant-scoped, and nothing is bound at login — the
         // row must be found via the SECURITY DEFINER lookup before the real

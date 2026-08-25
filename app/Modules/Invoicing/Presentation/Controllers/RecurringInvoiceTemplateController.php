@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Invoicing\Presentation\Controllers;
 
-use App\Modules\Auth\Domain\Models\User;
 use App\Modules\Invoicing\Application\Actions\CreateRecurringTemplateAction;
 use App\Modules\Invoicing\Application\Actions\GenerateInvoiceFromTemplateAction;
 use App\Modules\Invoicing\Application\Actions\PauseRecurringTemplateAction;
@@ -15,6 +14,10 @@ use App\Modules\Invoicing\Application\DTOs\RecurringTemplateData;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
 use App\Modules\Invoicing\Presentation\Resources\InvoiceResource;
 use App\Modules\Invoicing\Presentation\Resources\RecurringInvoiceTemplateResource;
+use App\Modules\Shared\Domain\Contracts\Account;
+use App\Modules\Shared\Domain\Contracts\ProvidesInvoiceNumbering;
+use App\Modules\Shared\Domain\Contracts\ProvidesPlanEntitlements;
+use App\Modules\Shared\Domain\Contracts\ProvidesSupplierProfile;
 use App\Modules\Shared\Exceptions\DomainException;
 use App\Modules\Shared\Support\Pagination;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -176,11 +179,11 @@ class RecurringInvoiceTemplateController extends Controller
     )]
     public function store(Request $request): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         $request->validate([
-            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->accountOwner()->country),
+            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->supplierProfile()->country),
             'first_issue_date' => ['required', 'date', 'after_or_equal:today'],
             'client_id' => $this->clientRule($user),
         ]);
@@ -264,7 +267,7 @@ class RecurringInvoiceTemplateController extends Controller
     )]
     public function update(Request $request, RecurringInvoiceTemplate $template): JsonResponse
     {
-        /** @var User $user */
+        /** @var Account&ProvidesInvoiceNumbering&ProvidesPlanEntitlements&ProvidesSupplierProfile $user */
         $user = $request->user();
 
         // Past first_issue_date is rejected only when it changes on a template
@@ -276,7 +279,7 @@ class RecurringInvoiceTemplateController extends Controller
         }
 
         $request->validate([
-            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->accountOwner()->country),
+            ...RecurringTemplateData::rules($user->accountOwnerId(), $user->supplierProfile()->country),
             'first_issue_date' => $firstIssueDateRules,
             'client_id' => $this->clientRule($user),
         ]);
@@ -446,7 +449,7 @@ class RecurringInvoiceTemplateController extends Controller
      *
      * @return array<int, mixed>
      */
-    private function clientRule(User $user): array
+    private function clientRule(Account $user): array
     {
         return [
             'required', 'uuid',
