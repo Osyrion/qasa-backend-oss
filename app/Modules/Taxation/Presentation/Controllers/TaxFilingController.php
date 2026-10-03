@@ -83,7 +83,7 @@ class TaxFilingController extends Controller
             $query->where('period_year', $request->integer('year'));
         }
 
-        $filings = $query->paginate(Pagination::perPage($request));
+        $filings = Pagination::of($query, $request);
 
         return TaxFilingResource::collection($filings);
     }

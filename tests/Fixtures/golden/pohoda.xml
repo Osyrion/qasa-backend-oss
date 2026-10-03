@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<dat:dataPack xmlns:dat="http://www.stormware.cz/schema/version_2/data.xsd" xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" id="QasaExport" application="Qasa Core" version="2.0" note="Vydané faktúry" ico="12345678">
+<dat:dataPack xmlns:dat="http://www.stormware.cz/schema/version_2/data.xsd" xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" id="ZoadExport" application="Zoad Core" version="2.0" note="Vydané faktúry" ico="12345678">
   <dat:dataPackItem id="1" version="2.0">
     <inv:invoice xmlns:inv="http://www.stormware.cz/schema/version_2/invoice.xsd" xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd" version="2.0">
       <inv:invoiceHeader xmlns:typ="http://www.stormware.cz/schema/version_2/type.xsd">

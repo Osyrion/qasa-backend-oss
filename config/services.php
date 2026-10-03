@@ -163,7 +163,7 @@ return [
             'GOOGLE_MOBILE_REDIRECT_URI',
             rtrim((string) env('APP_URL', 'http://localhost'), '/').'/api/v1/auth/google/callback/mobile'
         ),
-        // Where that bridge sends the browser: flok_mobile's custom scheme,
+        // Where that bridge sends the browser: zoad_mobile's custom scheme,
         // the return URL expo-web-browser's openAuthSessionAsync waits for.
         'mobile_app_redirect' => env('GOOGLE_MOBILE_APP_REDIRECT_URI', 'flok://auth/google/callback'),
     ],

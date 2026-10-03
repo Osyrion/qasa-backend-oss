@@ -1,4 +1,4 @@
-# Roadmap — Flok
+# Roadmap — Zoad
 
 > **Čo tento súbor je:** jediné miesto, kde je vidieť *čo je ďalej* a *prečo v tomto poradí*.
 > Deľba práce medzi dokumentmi:
@@ -7,13 +7,15 @@
 > | --- | --- |
 > | `CHANGELOG.md` | Čo sa už stalo (per commit/release). |
 > | `docs/plans/*.md` | Ako sa konkrétna vec spraví (implementačný detail). |
+> | `docs/adr/*.md` | Čo sme sa vedome rozhodli **nehádať**, a od koho potrebujeme odpoveď. |
 > | `docs/app/APLIKACIA.md` | Ako to funguje dnes (referencia pre ďalšieho inžiniera). |
 > | `docs/app/APLIKACIA.md` kap. 18 | Čo je v kóde rozostavané — vedomé medzery, nie fronta chýb. |
+> | `docs/DEPLOYMENT.md` | Ako to beží na produkcii a ako sa obnoví, keď spadne. |
 > | **`ROADMAP.md`** | **Čo ide ďalej a čo to blokuje.** |
 >
 > Pravidlo údržby je na konci súboru.
 
-**Posledná revízia: 2026-08-25.**
+**Posledná revízia: 2026-08-26.**
 
 ---
 
@@ -41,20 +43,22 @@ smerovanie na beta je už aj v kóde.
 
 Nič z tohto sa nedá odbaviť samotným písaním kódu; každý riadok potrebuje účet,
 kľúč alebo cudzie rozhodnutie. Poradie = poradie, v akom to blokuje beta účet,
-ktorý si chce zaplatiť.
+ktorý si chce zaplatiť — s jednou výnimkou na prvom mieste: zálohy neblokujú
+platbu, blokujú **právo držať cudzie dáta**, a to je skôr.
 
 | # | Položka | Čo presne chýba | Referencia |
 | --- | --- | --- | --- |
-| 1 | **Stripe produkčné tajomstvá** | `STRIPE_WEBHOOK_SECRET` + `STRIPE_CONNECT_WEBHOOK_SECRET` nie sú nastavené. Webhook guard je od 07-28 fail-closed → bez nich neprejde ani jedna platba. Plus 12 `STRIPE_PRICE_*` (3 meny × 2 intervaly × 2 plány). | `SUBSCRIPTIONS_*_PLAN.md`, `.env.example:206–230` |
-| 2 | **Twilio live** | Overenie čísla je dnes *gate na trial* — bez funkčnej SMS brány si nový účet trial nezaslúži a onboarding sa zastaví. Provider je fail-soft (503, nie 500), ale trial neudelí. | `PHONE_VERIFICATION_TRIAL_ABUSE_PLAN.md` |
-| 3 | **Grafana Cloud** | Kód a konfigurácia hotové 08-18 (`docker-compose.observability.yml`, Alloy, 12 alertov). Chýba účet + EU stack, token, spustenie `docker/alloy/monitoring-role.sql` a **notification policy** — bez nej sa pravidlá vyhodnocujú a nikomu nič nepríde. Toto je jediná vec, ktorá zavolá, keď zomrie scheduler alebo dôjde disk. | `GRAFANA_OBSERVABILITY_PLAN.md`, `APLIKACIA.md` kap. 31 |
-| 4 | **Sentry EU** | Chýbajú EU projekty + DSN, CSP hlavička, IP setting, podpísaná DPA. Kód (BE aj FE) je hotový od 08-14. | `SENTRY_OBSERVABILITY_PLAN.md`, `docs/legal/SUBPROCESSORS.md` |
-| 5 | **Cloudflare DNS flip** | Repo-side groundwork hotový 08-17. Po prepnutí DNS **overiť, že rate-limitery vidia skutočnú klientsku IP**, nie CF edge — inak sú per-IP limity (register, phone-send, phone-verify) fikcia. | `CLOUDFLARE_INTEGRATION_PLAN.md` |
-| 6 | **Právna revízia** | `docs/legal/*` (VOP, GDPR, subprocessors) čaká na právnika. Implementácia GDPR je hotová (všetkých 6 fáz, 08-07), chýba len posudok. | `GDPR_COMPLIANCE_PLAN.md` |
-| 7 | **Waitlist → pozvánka (admin UI)** | Backend hotový 08-18: tokenové pozvánky viazané na adresu, dávkové pozývanie, `GET /admin/metrics/waitlist-funnel`. Zostáva obrazovka v admin UI (`flok_frontend`) — dovtedy sa pozýva volaním API priamo, čo betu neblokuje. | `CHANGELOG.md` 08-18, `APLIKACIA.md` kap. 4 |
-| 8 | **Peppol AP** | ePošťák sandbox stále bez odpovede. **Rozhodnutie, ktoré netreba odkladať:** beta ide von bez odosielania cez Peppol (UBL export/import funguje aj tak), alebo sa čaká. Odporúčanie: ísť bez toho. | `PEPPOL_MANAGED_AND_BYOK_PLAN.md` |
-| 9 | **Pay by Square sken** | QR je **živý bez prepínača** — `PayBySquareBuilder` je prvý v `PaymentSchemeRegistry` (`InvoicingServiceProvider.php`, `PaymentSchemeRegistry` binding), takže SK IBAN + EUR faktúra ho dostane už dnes. Naskenovať reálnou bankovou appkou (Tatra, SLSP, VÚB, mBank SK, 365.bank) **pred prvou reálnou faktúrou**. Golden test overuje vlastný dekomprimovaný výstup, nie to, ako cudzí skener prečíta náš LZMA prúd. Zostáva **len ten sken**: „fáza 3 = zapnúť feature flag" bola fikcia (kľúč neexistoval) a „pri chybe buildera sa QR ticho vynechá" neplatilo, kým sa to 08-21 neopravilo. | `PAY_BY_SQUARE_VERIFICATION_PLAN.md` fáza 2 |
-| 10 | **Mobil** | `flok_mobile` fázy 0–6 + druhé kolo (Faktúry/Klienti/Kniha jázd/Notifikácie, reset hesla, overenie telefónu) hotové, ale nespustiteľné bez EAS/Google/Sentry credentials a bez push *delivery*. Maestro E2E flows napísané, nikdy nespustené (žiadny simulátor v tomto prostredí). Mobil nie je blokátor bety, pokiaľ beta = web. | `MOBILE_APP_FOUNDATION_PLAN.md` |
+| 1 | **Zálohy** | Neexistujú — ani skript, ani úložisko, ani alert. Jediná položka v tomto zozname, ktorá sa **nedá opraviť dodatočne**: všetko ostatné je pokazená funkcia, toto je stratená firma. Treba samostatný Cloudflare účet + R2 bucket (Object Lock Governance, versioning, append-only token s výnimkou na `locks/*`), `ops/backup.sh` v hostiteľskom crone, alert `BackupStale` a **jednu reálnu obnovu** — podľa pravidla 3 nižšie sa riadok nezavrie skôr. Pozor na tri pasce: `pg_dump` pod `qasa_app` (RLS ho odstrihne), chýbajúci `pg_dumpall --globals-only` (obnova padne na `GRANT … TO qasa_app`) a `APP_KEY` mimo zálohy (šifrované stĺpce sú bez neho nenávratné). | `docs/DEPLOYMENT.md` §7–8 |
+| 2 | **Stripe produkčné tajomstvá** | `STRIPE_WEBHOOK_SECRET` + `STRIPE_CONNECT_WEBHOOK_SECRET` nie sú nastavené. Webhook guard je od 07-28 fail-closed → bez nich neprejde ani jedna platba. Plus 12 `STRIPE_PRICE_*` (3 meny × 2 intervaly × 2 plány). | `SUBSCRIPTIONS_*_PLAN.md`, `.env.example:206–230` |
+| 3 | **Twilio live** | Overenie čísla je dnes *gate na trial* — bez funkčnej SMS brány si nový účet trial nezaslúži a onboarding sa zastaví. Provider je fail-soft (503, nie 500), ale trial neudelí. | `PHONE_VERIFICATION_TRIAL_ABUSE_PLAN.md` |
+| 4 | **Grafana Cloud** | Kód a konfigurácia hotové 08-18 (`docker-compose.observability.yml`, Alloy, 12 alertov). Chýba účet + EU stack, token, spustenie `docker/alloy/monitoring-role.sql` a **notification policy** — bez nej sa pravidlá vyhodnocujú a nikomu nič nepríde. Toto je jediná vec, ktorá zavolá, keď zomrie scheduler alebo dôjde disk. | `GRAFANA_OBSERVABILITY_PLAN.md`, `APLIKACIA.md` kap. 31 |
+| 5 | **Sentry EU** | Chýbajú EU projekty + DSN, CSP hlavička, IP setting, podpísaná DPA. Kód (BE aj FE) je hotový od 08-14. | `SENTRY_OBSERVABILITY_PLAN.md`, `docs/legal/SUBPROCESSORS.md` |
+| 6 | **Cloudflare DNS flip** | Repo-side groundwork hotový 08-17. Po prepnutí DNS **overiť, že rate-limitery vidia skutočnú klientsku IP**, nie CF edge — inak sú per-IP limity (register, phone-send, phone-verify) fikcia. | `CLOUDFLARE_INTEGRATION_PLAN.md` |
+| 7 | **Právna revízia** | `docs/legal/*` (VOP, GDPR, subprocessors) čaká na právnika. Implementácia GDPR je hotová (všetkých 6 fáz, 08-07), chýba len posudok. | `GDPR_COMPLIANCE_PLAN.md` |
+| 8 | **Waitlist → pozvánka (admin UI)** | Backend hotový 08-18: tokenové pozvánky viazané na adresu, dávkové pozývanie, `GET /admin/metrics/waitlist-funnel`. Zostáva obrazovka v admin UI (`zoad_frontend`) — dovtedy sa pozýva volaním API priamo, čo betu neblokuje. | `CHANGELOG.md` 08-18, `APLIKACIA.md` kap. 4 |
+| 9 | **Peppol AP** | ePošťák sandbox stále bez odpovede. **Rozhodnutie, ktoré netreba odkladať:** beta ide von bez odosielania cez Peppol (UBL export/import funguje aj tak), alebo sa čaká. Odporúčanie: ísť bez toho. | `PEPPOL_MANAGED_AND_BYOK_PLAN.md` |
+| 10 | **Pay by Square sken** | QR je **živý bez prepínača** — `PayBySquareBuilder` je prvý v `PaymentSchemeRegistry` (`InvoicingServiceProvider.php`, `PaymentSchemeRegistry` binding), takže SK IBAN + EUR faktúra ho dostane už dnes. Naskenovať reálnou bankovou appkou (Tatra, SLSP, VÚB, mBank SK, 365.bank) **pred prvou reálnou faktúrou**. Golden test overuje vlastný dekomprimovaný výstup, nie to, ako cudzí skener prečíta náš LZMA prúd. Zostáva **len ten sken**: „fáza 3 = zapnúť feature flag" bola fikcia (kľúč neexistoval) a „pri chybe buildera sa QR ticho vynechá" neplatilo, kým sa to 08-21 neopravilo. | `PAY_BY_SQUARE_VERIFICATION_PLAN.md` fáza 2 |
+| 11 | **Mobil** | `zoad_mobile` fázy 0–6 + druhé kolo (Faktúry/Klienti/Kniha jázd/Notifikácie, reset hesla, overenie telefónu) hotové; **08-31 dorovnané na backend** (2FA stena + obrazovka Bezpečnosť, pozvánka do registrácie, read-only pruh, spec resync). Zostáva nespustiteľné bez EAS/Google/Sentry credentials a bez push *delivery*. Maestro E2E flows napísané, nikdy nespustené (žiadny simulátor v tomto prostredí). Mobil nie je blokátor bety, pokiaľ beta = web. **Pozor na drift:** appka sa generuje z toho istého spec-u ako web, ale nemá CI, ktoré by ho kontrolovalo — po zmene endpointu spustiť `npm run api:sync` aj tam. | `MOBILE_APP_FOUNDATION_PLAN.md` |
 
 ---
 
@@ -64,15 +68,31 @@ Veci, ktoré sa **nedajú dokončiť pred spustením**, lebo potrebujú reálne 
 alebo reálneho používateľa. Držať ich na zozname, aby sa na ne nezabudlo v deň,
 keď dáta konečne budú.
 
-- **Import výpisu na reálnych dátach** — dnes existuje Fio (CSV + API) a generický
-  mapovaný CSV; párovanie platieb (`PaymentMatchingService`) nikdy nebežalo na
-  skutočnom výpise. Prvý reálny výpis od beta účtu = verifikačná úloha.
-  **CAMT.053/GPC parsery neexistujú vôbec** (Časť C plánu) — doplniť až podľa
-  toho, z ktorej banky beta účty reálne prídu. `BANK_STATEMENT_IMPORT_PLAN.md`
+- **Import výpisu na reálnych dátach** — dnes existuje Fio (CSV + API), **camt.053
+  XML (09-06)** a generický mapovaný CSV; párovanie platieb
+  (`PaymentMatchingService`) nikdy nebežalo na skutočnom výpise. Prvý reálny výpis
+  od beta účtu = verifikačná úloha, a pre camt.053 zvlášť: parser je postavený proti
+  norme a syntetickým fixtúram, nie proti exportu konkrétnej banky — čo sa reálne
+  líši, je **v ktorom poli banka nesie variabilný symbol**. GPC parser stále
+  neexistuje (Časť C plánu) — doplniť až podľa toho, z ktorej banky beta účty
+  reálne prídu. `BANK_STATEMENT_IMPORT_PLAN.md`
 - **Revízia DPH riadkov účtovníkom** — XSD validuje tvar, nie správnosť
   mapovania. Pred prvým reálnym podaním.
 - **Aktivačná metrika** — registrácia → overené číslo → prvá faktúra → platba.
   Admin metriky existujú (MRR, growth), onboarding funnel nie.
+- **Aktivácia e-fakturácie v onboardingu (SK + CZ)** — **backend P0 hotový
+  (08-28)**, vrátane všetkých troch pôvodných tichých chýb: overovanie
+  registrácie dopytom na poštára (na generickom SAPI-SK nikdy nemohlo vyjsť),
+  slovenský termín posielaný českým účtom, a **neukladané odoslané UBL bajty**.
+  Zostáva **frontend** (`zoad_frontend`): obrazovky S1–S6 a C1–C5 nad
+  `POST …/registration/{start,path,check,delegate,acknowledge-mismatch}` — bez
+  nich je funkcia dostupná len cez API. Potom potrebuje betu, aby povedala, či
+  rozcestník „kto to vybaví" znižuje odpad na eID kroku; číslo na sledovanie je
+  `portal_return_rate` v `/admin/peppol-registrations/funnel`.
+  **Dátum, ktorý nečaká: 31. 8. 2026** prestáva odpovedať stará SML zóna
+  (`edelivery.tech.ec.europa.eu`). Default už mierime na peppol.org, ale po tom
+  dátume spustiť `scripts/peppol-smp-probe.py --compare` a overiť, že nová zóna
+  odpovedá aj bez DNAME na starú. `EINVOICE_ACTIVATION_ONBOARDING_PLAN.md`
 - **BYOK multi-provider** — dnes je za `LlmProviderDriver` jediný (Anthropic)
   driver. Druhý provider má zmysel až keď bude známa reálna spotreba a cena.
   `BYOK_MULTI_PROVIDER_EXTRACTION_PLAN.md` je stále v stave „návrh".
@@ -83,6 +103,16 @@ keď dáta konečne budú.
 
 Nie je to blokátor ničoho; ťahať podľa toho, čo budú pýtať prví používatelia.
 
+- **Verejné API pre integrácie** — povrch je postavený a **už sa predáva**
+  (`api_access` je feature Pro plánu): scoped tokeny s vynúteným scope,
+  webhooky so 7 eventmi a HMAC podpisom. Chýba mu **dokumentácia, ktorá môže
+  ísť von** — dnešná spec obsahuje aj 68 admin operácií, takže publikovať sa
+  nedá tak, ako je. Rez podľa `AbilityCatalog` + druhá l5-swagger dokumentácia,
+  strážená testom. Rozsah v1 zámerne čaká na prvého reálneho integrátora
+  (účtovný softvér, e-shop a Zapier chcú tri rôzne podmnožiny).
+  **Jedna vec nečaká:** webhook hlavičky sú `X-Zoad-*` — premenovať skôr, než
+  ich niekto zvonku začne overovať, potom je to breaking change v cudzom kóde.
+  `PUBLIC_API_PLAN.md`
 - **Documents e-mail-in** — vedome odložené v `DOCUMENTS_LIGHT_MODULE_PLAN.md`.
 - **Competitor imports V2** — V1 (Superfaktúra + generický CSV) je vonku od
   08-03; ďalšie drivery podľa toho, odkiaľ ľudia reálne prídu.

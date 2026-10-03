@@ -31,6 +31,15 @@ final class TenantContext
     public const SETTING = 'app.account_owner_id';
 
     /**
+     * How many account ids forEachAccount() holds at once.
+     *
+     * Big enough that the paging is not the cost — a job does far more per
+     * account than one row of bookkeeping — and small enough that the array
+     * never grows with the customer base.
+     */
+    private const ACCOUNT_PAGE = 1000;
+
+    /**
      * Bindings parked by push(), innermost last.
      *
      * @var list<string|null>
@@ -138,21 +147,50 @@ final class TenantContext
      *
      * users carries a policy now like everything else, which is exactly what
      * makes a direct Eloquent scan of it unusable here — nothing is bound
-     * yet, that's the whole point of this method. tenant_account_ids() is
-     * the narrow SECURITY DEFINER function that walks it instead (see the
+     * yet, that's the whole point of this method. tenant_account_ids_after()
+     * is the narrow SECURITY DEFINER function that walks it instead (see the
      * phase 7 migrations, docs/plans/POSTGRES_RLS_PLAN.md), already deduped
      * to one row per account and already including soft-deleted owners —
      * their rows are still in the tables being purged.
+     *
+     * A page at a time, by keyset rather than offset. The first version read
+     * every account id into one array, which is a sequential scan of `users`
+     * plus a sort and an array that grows with the customer base for as long
+     * as the job runs. Resuming after the last id keeps memory flat, and —
+     * with the expression index on coalesce(owner_id, id) — makes each page an
+     * index range scan, so the whole walk is still one pass rather than one
+     * scan per page. Ordering by the account id is also what makes the walk
+     * safe against an account being created while it runs: a new id is either
+     * ahead of the cursor and gets visited, or behind it and was already
+     * accounted for. It can never displace another.
+     *
+     * What this does not change is the shape of the cost: one turn per
+     * account is inherent to a policy that only ever admits one. A job that
+     * runs a query per account runs N queries, and no paging here alters
+     * that.
      *
      * @param  callable(string): void  $work
      */
     public static function forEachAccount(callable $work): void
     {
-        /** @var list<object{account: string}> $rows */
-        $rows = DB::select('SELECT public.tenant_account_ids() AS account');
+        $after = null;
 
-        foreach ($rows as $row) {
-            self::for($row->account, fn () => $work($row->account));
+        while (true) {
+            /** @var list<object{account: string}> $rows */
+            $rows = DB::select(
+                'SELECT public.tenant_account_ids_after(?, ?) AS account',
+                [$after, self::ACCOUNT_PAGE],
+            );
+
+            if ($rows === []) {
+                return;
+            }
+
+            foreach ($rows as $row) {
+                self::for($row->account, fn () => $work($row->account));
+            }
+
+            $after = $rows[array_key_last($rows)]->account;
         }
     }
 

@@ -178,7 +178,7 @@ it('guards the tables the policies were written for', function (): void {
         'activity_log', 'ai_credentials', 'bank_accounts', 'bank_connections',
         'cash_documents',
         'clients', 'contribution_payments', 'document_tags', 'documents',
-        'einvoice_dispatches', 'email_deliveries', 'events', 'expenses',
+        'einvoice_activation_events', 'einvoice_archive_entries', 'einvoice_dispatches', 'email_deliveries', 'events', 'expenses',
         'google_calendar_connections', 'google_calendar_sync_runs',
         'idempotency_keys', 'import_runs', 'import_source_credentials',
         'invoice_inbox_items', 'invoices', 'notifications', 'orders',
@@ -247,4 +247,66 @@ it('leaves no tenant-owned table unprotected', function (): void {
         ->all();
 
     expect($unprotected)->toBe([]);
+});
+
+it('refuses to mint an admin token from a tenant-bound connection', function (): void {
+    $owner = createUser();
+
+    // The admin carve-out on personal_access_tokens is unconditional for
+    // reads, and used to be for writes too — so a tenant session could insert
+    // a row claiming to be an admin's token, hash and all. Nothing in the app
+    // offers that, which is exactly the situation a policy is the backstop
+    // for.
+    expect(fn () => asAccount($owner, fn () => DB::table('personal_access_tokens')->insert([
+        'tokenable_type' => 'App\Modules\Admin\Domain\Models\AdminUser',
+        'tokenable_id' => (string) Str::uuid7(),
+        'name' => 'admin',
+        'token' => hash('sha256', 'forged'),
+        'abilities' => '["*"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ])))->toThrow(QueryException::class);
+})->skip(fn (): bool => config('qasa.edition') === 'oss', 'the admin carve-out ships with the Admin module');
+
+it('visits every account when the walk spans more than one page', function (): void {
+    // forEachAccount() reads the account list a page at a time and resumes
+    // after the last id it saw. The page size is larger than any test would
+    // create, so the paging is exercised here by asking the cursored function
+    // for pages of one — the same contract forEachAccount() relies on.
+    $owners = collect(range(1, 5))->map(fn (): string => createUser()->id)->sort()->values()->all();
+
+    $walked = [];
+    $after = null;
+
+    while (true) {
+        /** @var list<object{account: string}> $rows */
+        $rows = DB::select('SELECT public.tenant_account_ids_after(?, ?) AS account', [$after, 1]);
+
+        if ($rows === []) {
+            break;
+        }
+
+        $walked[] = $rows[0]->account;
+        $after = $rows[0]->account;
+    }
+
+    // Every account exactly once, in id order, with no page boundary losing
+    // or repeating one.
+    expect(array_values(array_intersect($walked, $owners)))->toBe($owners)
+        ->and(array_unique($walked))->toHaveCount(count($walked));
+});
+
+it('walks every account through forEachAccount', function (): void {
+    $owners = [createUser()->id, createUser()->id, createUser()->id];
+
+    $seen = [];
+    TenantContext::forEachAccount(function (string $account) use (&$seen): void {
+        $seen[] = $account;
+    });
+
+    sort($owners);
+    $intersection = array_values(array_intersect($seen, $owners));
+    sort($intersection);
+
+    expect($intersection)->toBe($owners);
 });

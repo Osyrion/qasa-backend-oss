@@ -101,9 +101,10 @@ class ClientPortalController extends Controller
     {
         $client = $this->clientFor($token);
 
-        $paginator = $this->visibleInvoices($client)
-            ->orderByDesc('issued_at')
-            ->paginate(Pagination::perPage($request));
+        $paginator = Pagination::of(
+            $this->visibleInvoices($client)->orderByDesc('issued_at'),
+            $request,
+        );
 
         return response()->json([
             'data' => array_map(
@@ -176,11 +177,13 @@ class ClientPortalController extends Controller
     {
         $client = $this->clientFor($token);
 
-        $paginator = Quote::withoutGlobalScope('user')
-            ->where('client_id', $client->id)
-            ->where('status', '!=', QuoteStatus::Draft->value)
-            ->orderByDesc('issued_at')
-            ->paginate(Pagination::perPage($request));
+        $paginator = Pagination::of(
+            Quote::withoutGlobalScope('user')
+                ->where('client_id', $client->id)
+                ->where('status', '!=', QuoteStatus::Draft->value)
+                ->orderByDesc('issued_at'),
+            $request,
+        );
 
         return response()->json([
             'data' => array_map(

@@ -25,7 +25,7 @@ final class PdfRasterizer
      */
     public function rasterize(string $absolutePdfPath): array
     {
-        $tempDir = sys_get_temp_dir().'/qasa-ocr-'.Str::uuid()->toString();
+        $tempDir = sys_get_temp_dir().'/zoad-ocr-'.Str::uuid()->toString();
 
         if (! @mkdir($tempDir, 0700, true)) {
             return [];

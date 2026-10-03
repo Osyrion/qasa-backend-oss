@@ -50,9 +50,10 @@ class ExchangeRateController extends Controller
     {
         $this->authorize('viewAny', ExchangeRate::class);
 
-        $rates = ExchangeRate::query()
-            ->orderBy('date', 'desc')
-            ->paginate(Pagination::perPage($request));
+        $rates = Pagination::of(
+            ExchangeRate::query()->orderBy('date', 'desc'),
+            $request,
+        );
 
         return response()->json($rates);
     }

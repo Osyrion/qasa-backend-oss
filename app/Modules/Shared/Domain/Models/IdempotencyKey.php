@@ -28,9 +28,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property-read Account|null $user
  *
- * @method static \Illuminate\Database\Eloquent\Builder<static>|IdempotencyKey newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|IdempotencyKey newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder<static>|IdempotencyKey query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static> newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static> newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static> query()
  *
  * @mixin \Eloquent
  */

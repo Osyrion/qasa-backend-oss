@@ -25,9 +25,9 @@ use Illuminate\Support\Carbon;
  * @property-read SupplierInvoice|null $supplierInvoice
  *
  * @method static SupplierInvoiceVatLineFactory factory($count = null, $state = [])
- * @method static Builder<static>|SupplierInvoiceVatLine newModelQuery()
- * @method static Builder<static>|SupplierInvoiceVatLine newQuery()
- * @method static Builder<static>|SupplierInvoiceVatLine query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

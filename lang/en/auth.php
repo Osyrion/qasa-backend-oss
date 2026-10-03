@@ -35,7 +35,7 @@ return [
     'invitation_email_mismatch' => 'This invitation was sent to a different email address. Register with the address that received it.',
 
     // Phone verification
-    'phone_code_sms_body' => 'Your Qasa verification code is :code. It expires in 10 minutes.',
+    'phone_code_sms_body' => 'Your Zoad verification code is :code. It expires in 10 minutes.',
     'phone_code_sent' => 'We have sent a verification code to your phone.',
     'phone_verified' => 'Phone number verified successfully.',
     'phone_already_verified' => 'This phone number is already verified on your account.',

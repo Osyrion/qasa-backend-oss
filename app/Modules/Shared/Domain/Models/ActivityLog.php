@@ -39,9 +39,9 @@ use Illuminate\Support\Carbon;
  *
  * @method static ActivityLogFactory factory($count = null, $state = [])
  * @method static Builder<static> forUser($userId = null)
- * @method static Builder<static>|ActivityLog newModelQuery()
- * @method static Builder<static>|ActivityLog newQuery()
- * @method static Builder<static>|ActivityLog query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

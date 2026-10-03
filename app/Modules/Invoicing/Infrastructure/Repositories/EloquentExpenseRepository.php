@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\ExpenseRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\Expense;
+use App\Modules\Shared\Support\Pagination;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class EloquentExpenseRepository implements ExpenseRepositoryInterface
@@ -40,7 +41,7 @@ class EloquentExpenseRepository implements ExpenseRepositoryInterface
 
         $query->orderBy('date', 'desc');
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     public function findById(string $id): ?Expense

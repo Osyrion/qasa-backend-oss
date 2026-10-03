@@ -68,6 +68,20 @@ final readonly class PurgeRequestMetadataAction
      * A token that was never used has no last_used_at, and its age is then
      * its creation date; without the coalesce those rows would keep their
      * metadata forever, which is precisely the case this exists to fix.
+     *
+     * The owner is named in the statement as well as left to the policy, for
+     * the reason Integrations\PurgeWebhookDeliveriesAction spells out: a
+     * policy's EXISTS becomes a hashed SubPlan, which Postgres can only apply
+     * as a row filter, so an account-at-a-time sweep with no owner predicate
+     * scans the entire table on every account's turn. The subquery is exactly
+     * the policy's own condition written where the planner can use it, so the
+     * two cannot select different rows — DB::table, not Eloquent, precisely so
+     * that no scope (users soft-deletes) can make them diverge.
+     *
+     * tokenable_id alone rather than the (tokenable_type, tokenable_id) pair:
+     * the morph string for the account model is edition-dependent and a
+     * retention job has no business hardcoding it. 2026_09_03_000001 adds the
+     * index that makes filtering on the id alone selective.
      */
     private function purgeTokenMetadata(CarbonImmutable $cutoff): int
     {
@@ -75,6 +89,7 @@ final readonly class PurgeRequestMetadataAction
 
         TenantContext::forEachAccount(function () use ($cutoff, &$cleared): void {
             $cleared += DB::table('personal_access_tokens')
+                ->whereIn('tokenable_id', DB::table('users')->select('id'))
                 ->whereRaw('coalesce(last_used_at, created_at) < ?', [$cutoff])
                 ->where(function ($query): void {
                     $query->whereNotNull('ip_address')->orWhereNotNull('user_agent');

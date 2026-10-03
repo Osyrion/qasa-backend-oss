@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Domain\Models;
 
 use App\Modules\Clients\Domain\Models\Client;
 use App\Modules\Invoicing\Domain\Enums\InvoiceInboxStatus;
+use App\Modules\Shared\Traits\HasDeferredColumns;
 use App\Modules\Shared\Traits\HasUserScope;
 use Database\Factories\Modules\Invoicing\Domain\Models\InvoiceInboxItemFactory;
 use Eloquent;
@@ -46,18 +47,20 @@ use Illuminate\Support\Facades\Storage;
  * @property-read string|null $url
  *
  * @method static InvoiceInboxItemFactory factory($count = null, $state = [])
- * @method static Builder<static>|InvoiceInboxItem forUser($userId = null)
- * @method static Builder<static>|InvoiceInboxItem newModelQuery()
- * @method static Builder<static>|InvoiceInboxItem newQuery()
- * @method static Builder<static>|InvoiceInboxItem onlyTrashed()
- * @method static Builder<static>|InvoiceInboxItem query()
- * @method static Builder<static>|InvoiceInboxItem withTrashed(bool $withTrashed = true)
- * @method static Builder<static>|InvoiceInboxItem withoutTrashed()
+ * @method static Builder<static> forUser($userId = null)
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> onlyTrashed()
+ * @method static Builder<static> query()
+ * @method static Builder<static> withTrashed(bool $withTrashed = true)
+ * @method static Builder<static> withoutTrashed()
  *
  * @mixin Eloquent
  */
 class InvoiceInboxItem extends Model
 {
+    use HasDeferredColumns;
+
     /** @use HasFactory<InvoiceInboxItemFactory> */
     use HasFactory;
 
@@ -144,5 +147,19 @@ class InvoiceInboxItem extends Model
     public function matchedClient(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'matched_client_id');
+    }
+
+    /**
+     * ocr_text is a whole scanned document's text — tens of kilobytes a row.
+     * Nothing reads it back out: the job writes it, and the search matches it
+     * through a full-text index in the WHERE clause, which needs the column
+     * indexed, not selected. Carrying it into a listing cost a megabyte a page
+     * for nothing.
+     *
+     * @return list<string>
+     */
+    public function deferredColumns(): array
+    {
+        return ['ocr_text'];
     }
 }

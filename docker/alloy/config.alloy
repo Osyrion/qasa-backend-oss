@@ -1,4 +1,4 @@
-// Grafana Alloy — telemetry agent for a single-server Flok deployment.
+// Grafana Alloy — telemetry agent for a single-server Zoad deployment.
 //
 // What this file is for, and what it deliberately is not:
 //
@@ -243,12 +243,12 @@ prometheus.relabel "alloy_self" {
 local.file_match "app" {
 	path_targets = [
 		{
-			__path__ = "/var/log/flok/laravel-*.log",
+			__path__ = "/var/log/zoad/laravel-*.log",
 			job      = "laravel",
 			stream   = "application",
 		},
 		{
-			__path__ = "/var/log/flok/security-*.log",
+			__path__ = "/var/log/zoad/security-*.log",
 			job      = "laravel",
 			stream   = "security",
 		},

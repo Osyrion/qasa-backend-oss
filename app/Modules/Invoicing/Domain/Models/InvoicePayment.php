@@ -30,9 +30,9 @@ use Illuminate\Support\Carbon;
  * @property-read Invoice|null $invoice
  *
  * @method static InvoicePaymentFactory factory($count = null, $state = [])
- * @method static Builder<static>|InvoicePayment newModelQuery()
- * @method static Builder<static>|InvoicePayment newQuery()
- * @method static Builder<static>|InvoicePayment query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

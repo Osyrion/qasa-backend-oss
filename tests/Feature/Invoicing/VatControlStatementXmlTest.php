@@ -244,10 +244,10 @@ it('builds a byte-identical golden SK KVDPH_2025 XML — payer + domestic RC + d
 
 it('builds a byte-identical golden CZ DPHKH1 XML — payer + domestic RC', function (): void {
     // Pinned, not inherited: nazevSW is config('app.name'), which differs
-    // between a developer's .env (Flok) and .env.example (Laravel) — so a
+    // between a developer's .env (Zoad) and .env.example (Laravel) — so a
     // byte-identical assertion against it passed in CI and failed locally,
     // depending on nothing but which env file happened to load.
-    config(['app.name' => 'Flok']);
+    config(['app.name' => 'Zoad']);
 
     $user = User::factory()->make([
         'title' => null, 'name' => 'Petr', 'surname' => 'Svoboda',

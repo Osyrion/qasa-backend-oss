@@ -31,9 +31,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  *
  * @method static Builder<static> forUser($userId = null)
- * @method static Builder<static>|AccountNotification newModelQuery()
- * @method static Builder<static>|AccountNotification newQuery()
- * @method static Builder<static>|AccountNotification query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

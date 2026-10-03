@@ -74,6 +74,22 @@ enum InvoiceType: string
     /**
      * Corrective documents require a related original invoice.
      */
+    /**
+     * The states of the original invoice this corrective document may be
+     * issued against. A storno cancels the invoice, which a paid one can no
+     * longer be; a credit note corrects either.
+     *
+     * @return list<InvoiceStatus>
+     */
+    public function correctableStatuses(): array
+    {
+        return match ($this) {
+            self::Storno => [InvoiceStatus::Sent],
+            self::CreditNote => [InvoiceStatus::Sent, InvoiceStatus::Paid],
+            self::Invoice, self::Proforma => [],
+        };
+    }
+
     public function isCorrective(): bool
     {
         return $this === self::CreditNote || $this === self::Storno;

@@ -1,11 +1,11 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "QASA API Documentation",
-        "description": "API documentation for QASA Laravel application - invoicing and client management system",
+        "title": "ZOAD API Documentation",
+        "description": "API documentation for ZOAD Laravel application - invoicing and client management system",
         "contact": {
-            "name": "QASA Support",
-            "email": "support@qasa.sk"
+            "name": "ZOAD Support",
+            "email": "support@zoad.sk"
         },
         "license": {
             "name": "MIT",
@@ -18,9 +18,188 @@
             "servers": [
                 {
                     "url": "http://localhost:8000",
-                    "description": "QASA API Server"
+                    "description": "ZOAD API Server"
                 }
             ]
+        },
+        "/api/v1/mcp/qasa": {
+            "get": {
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "Not supported (server-initiated SSE stream)",
+                "description": "The MCP specification lets a client open a server-to-client stream here. This server does not, and always answers 405 with `Allow: POST`.",
+                "operationId": "a182a12d7fff0cd2517cd84e93a42877",
+                "responses": {
+                    "405": {
+                        "description": "Method not allowed",
+                        "headers": {
+                            "Allow": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "POST"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "MCP JSON-RPC endpoint",
+                "description": "Single Streamable HTTP entry point for the Zoad MCP server. The body is a\nJSON-RPC 2.0 envelope, so the operation performed is `method`, not the HTTP\nverb — call `initialize` first, then `tools/list` to discover what this\ndeployment exposes. The tool set differs between editions, so never assume a\ntool exists without listing it.\n\nEvery tool is read-only and runs as the account the Sanctum token belongs to,\nunder the same global scope as the REST endpoints; there is no way to reach\nanother account's data through it.\n\nA request carrying an `id` is answered with `200` and a JSON-RPC result. A\nnotification (no `id`) has no reply and is answered with `202`. Set `Accept`\nto `text/event-stream` to receive a streamed reply instead of a single JSON\nbody. Protocol semantics beyond this are the MCP specification's, not ours:\nhttps://modelcontextprotocol.io/specification",
+                "operationId": "9982dfe1a20eb7df3c8b5e3786bf680e",
+                "parameters": [
+                    {
+                        "name": "MCP-Session-Id",
+                        "in": "header",
+                        "description": "Session id returned by a previous response. Omit it on `initialize`.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "jsonrpc",
+                                    "method"
+                                ],
+                                "properties": {
+                                    "jsonrpc": {
+                                        "type": "string",
+                                        "example": "2.0",
+                                        "enum": [
+                                            "2.0"
+                                        ]
+                                    },
+                                    "id": {
+                                        "description": "Request correlation id. Omit it to send a notification, which is answered with 202 and no body.",
+                                        "nullable": true,
+                                        "oneOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "integer"
+                                            }
+                                        ]
+                                    },
+                                    "method": {
+                                        "type": "string",
+                                        "example": "tools/list"
+                                    },
+                                    "params": {
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "JSON-RPC result",
+                        "headers": {
+                            "MCP-Session-Id": {
+                                "description": "Session id to send with subsequent calls",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "jsonrpc": {
+                                            "type": "string",
+                                            "example": "2.0"
+                                        },
+                                        "id": {
+                                            "oneOf": [
+                                                {
+                                                    "type": "string"
+                                                },
+                                                {
+                                                    "type": "integer"
+                                                }
+                                            ]
+                                        },
+                                        "result": {
+                                            "type": "object"
+                                        },
+                                        "error": {
+                                            "description": "Present instead of `result` when the call failed. Protocol-level failures are reported here with HTTP 200.",
+                                            "properties": {
+                                                "code": {
+                                                    "type": "integer",
+                                                    "example": -32601
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Method not found"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            },
+                            "text/event-stream": {
+                                "schema": {
+                                    "description": "SSE frames, each `data:` line carrying one JSON-RPC message",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "202": {
+                        "description": "Notification accepted; no JSON-RPC reply"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "429": {
+                        "description": "Rate limited"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "MCP"
+                ],
+                "summary": "Not supported (session termination)",
+                "description": "The MCP specification lets a client end its session here. This server does not, and always answers 405 with `Allow: POST`.",
+                "operationId": "08b8d6993a98bc3258cfcd7af9f88105",
+                "responses": {
+                    "405": {
+                        "description": "Method not allowed",
+                        "headers": {
+                            "Allow": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "POST"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         "/api/v1/auth/register": {
             "post": {
@@ -96,6 +275,11 @@
                                         "description": "Beta waitlist invitation. Required while public registration is closed, and must match the address the invitation was sent to.",
                                         "type": "string",
                                         "nullable": true
+                                    },
+                                    "turnstile_token": {
+                                        "description": "Cloudflare Turnstile token. Unlike login, registration verifies it on every call — a client that cannot send it is refused outright once services.turnstile.enabled is on. Nullable because the check is a no-op while it is off.",
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -122,6 +306,9 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "Public registration is closed and no usable invitation was supplied. Raised before validation, so the body carries no field errors — a client should say the beta is invitation-only rather than relay the message."
                     },
                     "422": {
                         "description": "Validation error",
@@ -17898,6 +18085,10 @@
         }
     },
     "tags": [
+        {
+            "name": "MCP",
+            "description": "Model Context Protocol server — JSON-RPC 2.0 over the Streamable HTTP transport, not a REST resource"
+        },
         {
             "name": "Dashboard",
             "description": "Home-screen summary stats for the authenticated account"

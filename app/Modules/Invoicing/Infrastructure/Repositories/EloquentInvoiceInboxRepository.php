@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\InvoiceInboxRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\InvoiceInboxItem;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\Shared\Support\Search;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -20,7 +21,9 @@ class EloquentInvoiceInboxRepository implements InvoiceInboxRepositoryInterface
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {
-        $query = InvoiceInboxItem::query()->with(['matchedClient', 'supplierInvoice']);
+        $query = InvoiceInboxItem::query()
+            ->withoutDeferredColumns()
+            ->with(['matchedClient', 'supplierInvoice']);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -58,7 +61,7 @@ class EloquentInvoiceInboxRepository implements InvoiceInboxRepositoryInterface
 
         $query->orderBy($sort, $direction);
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     public function findByIdOrFail(string $id): InvoiceInboxItem

@@ -195,7 +195,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | flok_mobile deep link scheme
+    | zoad_mobile deep link scheme
     |--------------------------------------------------------------------------
     |
     | Matches app.json's "scheme" in the mobile repo. Unlike the Google OAuth

@@ -80,7 +80,7 @@ class CashDocumentController extends Controller
             $query->whereDate('issued_at', '<=', $request->string('to')->toString());
         }
 
-        return CashDocumentResource::collection($query->paginate(Pagination::perPage($request)));
+        return CashDocumentResource::collection(Pagination::of($query, $request));
     }
 
     #[OA\Post(

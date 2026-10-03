@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Auth\Application\DTOs\RegisterUserData;
 use App\Modules\Auth\Application\DTOs\UpdateProfileData;
 use App\Modules\Auth\Domain\Models\User;
 use Illuminate\Support\Facades\Artisan;
@@ -51,6 +52,13 @@ function documentedRequestBodies(): array
         // rules() only reads $user->id (for the e-mail uniqueness rule), so
         // an unsaved model is enough and this test stays DB-free.
         'PUT /api/v1/auth/profile' => static fn (): array => UpdateProfileData::rules(new User),
+
+        // Registration is the other endpoint the *mobile* client generates
+        // against, and it was missing turnstile_token: RegisterUserAction
+        // verifies the captcha on every call, but no generated client could
+        // send the token, so switching services.turnstile.enabled on would
+        // have refused every registration from the web and the app alike.
+        'POST /api/v1/auth/register' => static fn (): array => RegisterUserData::rules(),
     ];
 }
 

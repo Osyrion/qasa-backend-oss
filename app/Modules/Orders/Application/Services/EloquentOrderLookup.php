@@ -148,15 +148,23 @@ final readonly class EloquentOrderLookup implements OrderLookup, OrderRateCache
     }
 
     /**
-     * Only the columns `display_name` is built from. Without the relation
-     * every summary is one more query; without the column list it is the whole
-     * client row per order.
+     * Both relations a summary reads, eagerly.
+     *
+     * client, down to the columns `display_name` is built from: without the
+     * relation every summary is one more query; without the column list it is
+     * the whole client row per order.
+     *
+     * user, because currency falls through to it. effectiveCurrency() takes
+     * the order's own currency, then the client's, then the account default —
+     * so an order with neither (a personal order has no client at all) reaches
+     * for the account, and that was one query per order again. Every order in
+     * a listing shares the same account, so eager-loading it costs exactly one.
      *
      * @param  Builder<Order>  $query
      * @return Builder<Order>
      */
     private function withClient(Builder $query): Builder
     {
-        return $query->with('client:id,client_type,title,name,surname,company_name');
+        return $query->with(['client:id,client_type,title,name,surname,company_name', 'user']);
     }
 }

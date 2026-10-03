@@ -7,12 +7,12 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'QASA API Documentation',
-                'description' => 'API documentation for QASA Laravel application - invoicing and client management system',
+                'title' => 'ZOAD API Documentation',
+                'description' => 'API documentation for ZOAD Laravel application - invoicing and client management system',
                 'version' => '1.0.0',
                 'contact' => [
-                    'name' => 'QASA Support',
-                    'email' => 'support@qasa.sk',
+                    'name' => 'ZOAD Support',
+                    'email' => 'support@zoad.sk',
                 ],
                 'license' => [
                     'name' => 'MIT',
@@ -22,7 +22,7 @@ return [
             'servers' => [
                 [
                     'url' => env('APP_URL', 'http://localhost:8000'),
-                    'description' => 'QASA API Server',
+                    'description' => 'ZOAD API Server',
                 ],
             ],
             'securitySchemes' => [

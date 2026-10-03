@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "qasa/qasa-core",
+    "name": "zoad/zoad-core",
     "type": "project",
-    "description": "Qasa Core \u2014 open-source invoicing and CRM API for freelancers (Laravel)",
+    "description": "Zoad Core \u2014 open-source invoicing and CRM API for freelancers (Laravel)",
     "keywords": [
         "laravel",
         "framework"

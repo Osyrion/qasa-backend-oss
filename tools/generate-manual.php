@@ -88,13 +88,13 @@ function pageShell(string $locale, string $title, string $body, string $activeSl
     <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{$htmlTitle} — Qasa</title>
+    <title>{$htmlTitle} — Zoad</title>
     <link rel="stylesheet" href="/manual/assets/manual.css">
     </head>
     <body>
     <div class="manual-shell">
         <aside class="manual-nav">
-            <a class="manual-brand" href="/manual/{$locale}/index.html">Qasa — návod</a>
+            <a class="manual-brand" href="/manual/{$locale}/index.html">Zoad — návod</a>
             <nav id="chapter-nav"></nav>
             <a class="lang-switch" href="/manual/{$other}/index.html">{$otherLabel}</a>
         </aside>
@@ -366,7 +366,7 @@ foreach (array_keys(LOCALES) as $locale) {
         static fn (array $c): string => '<li><a href="'.$c['number'].'-'.$c['slug'].'.html">'.$c['number'].'. '.htmlspecialchars($c['title'], ENT_QUOTES).'</a></li>',
         $chapters,
     ));
-    $indexBody = '<h1>Návod na používanie Qasa</h1><ul class="chapter-list">'.$listItems.'</ul>';
+    $indexBody = '<h1>Návod na používanie Zoad</h1><ul class="chapter-list">'.$listItems.'</ul>';
     file_put_contents($localePublicDir.'/index.html', pageShell($locale, 'Návod', $indexBody));
 
     $searchIndex = array_map(

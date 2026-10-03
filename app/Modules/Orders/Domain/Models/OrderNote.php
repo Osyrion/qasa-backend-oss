@@ -29,15 +29,15 @@ use Illuminate\Support\Carbon;
  * @property-read Account|null $user
  *
  * @method static OrderNoteFactory factory($count = null, $state = [])
- * @method static Builder<static>|OrderNote newModelQuery()
- * @method static Builder<static>|OrderNote newQuery()
- * @method static Builder<static>|OrderNote query()
- * @method static Builder<static>|OrderNote whereContent($value)
- * @method static Builder<static>|OrderNote whereCreatedAt($value)
- * @method static Builder<static>|OrderNote whereId($value)
- * @method static Builder<static>|OrderNote whereOrderId($value)
- * @method static Builder<static>|OrderNote whereUpdatedAt($value)
- * @method static Builder<static>|OrderNote whereUserId($value)
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
+ * @method static Builder<static> whereContent($value)
+ * @method static Builder<static> whereCreatedAt($value)
+ * @method static Builder<static> whereId($value)
+ * @method static Builder<static> whereOrderId($value)
+ * @method static Builder<static> whereUpdatedAt($value)
+ * @method static Builder<static> whereUserId($value)
  *
  * @mixin Eloquent
  */

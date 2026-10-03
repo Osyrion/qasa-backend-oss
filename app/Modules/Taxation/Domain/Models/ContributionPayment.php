@@ -31,13 +31,13 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $deleted_at
  *
  * @method static ContributionPaymentFactory factory($count = null, $state = [])
- * @method static Builder<static>|ContributionPayment forUser($userId = null)
- * @method static Builder<static>|ContributionPayment newModelQuery()
- * @method static Builder<static>|ContributionPayment newQuery()
- * @method static Builder<static>|ContributionPayment onlyTrashed()
- * @method static Builder<static>|ContributionPayment query()
- * @method static Builder<static>|ContributionPayment withTrashed(bool $withTrashed = true)
- * @method static Builder<static>|ContributionPayment withoutTrashed()
+ * @method static Builder<static> forUser($userId = null)
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> onlyTrashed()
+ * @method static Builder<static> query()
+ * @method static Builder<static> withTrashed(bool $withTrashed = true)
+ * @method static Builder<static> withoutTrashed()
  *
  * @mixin Eloquent
  */

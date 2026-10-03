@@ -6,6 +6,7 @@ namespace App\Modules\Clients\Infrastructure\Repositories;
 
 use App\Modules\Clients\Application\Contracts\ClientRepositoryInterface;
 use App\Modules\Clients\Domain\Models\Client;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\Shared\Support\Search;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -62,7 +63,7 @@ class EloquentClientRepository implements ClientRepositoryInterface
 
         $query->orderBy($sort, $direction);
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     public function findById(string $id): ?Client

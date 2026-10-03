@@ -48,7 +48,7 @@ it('passes the configured dpi and page limit to the binary', function (): void {
 });
 
 it('returns no pages when the configured binary is missing', function (): void {
-    config(['invoicing.inbox.pdftoppm_path' => 'qasa-nonexistent-pdftoppm-binary']);
+    config(['invoicing.inbox.pdftoppm_path' => 'zoad-nonexistent-pdftoppm-binary']);
 
     $pages = (new PdfRasterizer)->rasterize(base_path('tests/Fixtures/inbox/scanned.pdf'));
 

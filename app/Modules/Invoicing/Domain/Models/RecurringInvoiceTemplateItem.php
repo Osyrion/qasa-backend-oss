@@ -27,9 +27,9 @@ use Illuminate\Support\Carbon;
  * @property-read RecurringInvoiceTemplate|null $template
  *
  * @method static RecurringInvoiceTemplateItemFactory factory($count = null, $state = [])
- * @method static Builder<static>|RecurringInvoiceTemplateItem newModelQuery()
- * @method static Builder<static>|RecurringInvoiceTemplateItem newQuery()
- * @method static Builder<static>|RecurringInvoiceTemplateItem query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

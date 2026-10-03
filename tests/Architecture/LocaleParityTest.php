@@ -94,9 +94,9 @@ function localeKeysFor(string $locale, string $file): array
 }
 
 it('declares config(qasa.locales.available) as a subset of the locale directories that actually exist under lang/', function (): void {
-    /** @var array<string, mixed> $qasaConfig */
-    $qasaConfig = require dirname(__DIR__, 2).'/config/qasa.php';
-    $configured = $qasaConfig['locales']['available'] ?? null;
+    /** @var array<string, mixed> $zoadConfig */
+    $zoadConfig = require dirname(__DIR__, 2).'/config/qasa.php';
+    $configured = $zoadConfig['locales']['available'] ?? null;
 
     expect($configured)->toBeArray();
 
