@@ -36,9 +36,9 @@ use Illuminate\Support\Carbon;
  * @property-read Account $user
  *
  * @method static AiCredentialFactory factory($count = null, $state = [])
- * @method static Builder<static>|AiCredential newModelQuery()
- * @method static Builder<static>|AiCredential newQuery()
- * @method static Builder<static>|AiCredential query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

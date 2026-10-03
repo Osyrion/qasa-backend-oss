@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +26,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // An N+1 is invisible until it is a production incident: the code
+        // reads the same either way, and the extra queries only show up as
+        // latency under a page's worth of rows. Off in production, where a
+        // slow page beats a 500 on one the tests never covered; on everywhere
+        // else, so the query that should have been eager-loaded fails at the
+        // moment it is written. The Resources here are already careful with
+        // whenLoaded()/relationLoaded() — this is what keeps the next one
+        // honest.
+        Model::preventLazyLoading(! $this->app->isProduction());
+
         // Baseline limiter for authenticated API routes — endpoints with
         // stricter needs (e-mail sending, uploads, public pages) stack their
         // own named limiters on top.

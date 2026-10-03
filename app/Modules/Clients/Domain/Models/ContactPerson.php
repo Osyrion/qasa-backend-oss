@@ -17,9 +17,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property-read string $full_name
  *
  * @method static ContactPersonFactory factory($count = null, $state = [])
- * @method static Builder<static>|ContactPerson newModelQuery()
- * @method static Builder<static>|ContactPerson newQuery()
- * @method static Builder<static>|ContactPerson query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

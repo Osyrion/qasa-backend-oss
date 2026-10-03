@@ -64,6 +64,7 @@ class AuthController extends Controller
                     new OA\Property(property: 'locale', type: 'string', example: 'sk'),
                     new OA\Property(property: 'device_name', type: 'string', example: 'mobile-app'),
                     new OA\Property(property: 'invitation_token', type: 'string', nullable: true, description: 'Beta waitlist invitation. Required while public registration is closed, and must match the address the invitation was sent to.'),
+                    new OA\Property(property: 'turnstile_token', type: 'string', nullable: true, description: 'Cloudflare Turnstile token. Unlike login, registration verifies it on every call — a client that cannot send it is refused outright once services.turnstile.enabled is on. Nullable because the check is a no-op while it is off.'),
                 ]
             )
         ),
@@ -76,6 +77,10 @@ class AuthController extends Controller
                     new OA\Property(property: 'user', ref: '#/components/schemas/User'),
                     new OA\Property(property: 'token', type: 'string', example: '1|abc123...'),
                 ])
+            ),
+            new OA\Response(
+                response: 404,
+                description: 'Public registration is closed and no usable invitation was supplied. Raised before validation, so the body carries no field errors — a client should say the beta is invitation-only rather than relay the message.'
             ),
             new OA\Response(
                 response: 422,
@@ -426,7 +431,7 @@ class AuthController extends Controller
             ? $this->exportService->build($user)
             : $this->exportService->buildForMember($user);
 
-        $filename = 'qasa-export-'.now()->toDateString().'.json';
+        $filename = 'zoad-export-'.now()->toDateString().'.json';
 
         return response()->streamDownload(function () use ($data): void {
             echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

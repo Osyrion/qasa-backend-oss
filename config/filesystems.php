@@ -38,6 +38,22 @@ return [
             'report' => false,
         ],
 
+        /*
+         * E-invoices as they went on, or came off, the Peppol wire.
+         *
+         * Its own disk rather than a folder on `local` so it can be pointed at
+         * object storage with versioning and object lock, which is what a
+         * ten-year retention obligation actually wants. Never public and never
+         * served: these are legal documents belonging to one account, reached
+         * only through the API, and the tenant scoping lives on the rows that
+         * name them.
+         */
+        'peppol_archive' => [
+            'driver' => env('QASA_PEPPOL_ARCHIVE_DRIVER', 'local'),
+            'root' => env('QASA_PEPPOL_ARCHIVE_ROOT', storage_path('app/peppol-archive')),
+            'throw' => true,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

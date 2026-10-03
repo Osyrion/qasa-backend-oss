@@ -49,7 +49,12 @@ final readonly class OverdueInvoiceReminder implements InvoiceReminderRunner
         // and writes back per invoice, and the reminders-exhausted branch
         // still has to see rows that are no longer eligible, so a tighter
         // WHERE would change behaviour.
+        // user and client eagerly: RemindInvoiceAction reads both on every
+        // invoice it is handed (the sender guard, then the usage guard), and a
+        // scheduled run over an account's overdue invoices was two queries per
+        // invoice. The account is the same row for all of them.
         $candidates = Invoice::withoutGlobalScope('user')
+            ->with(['user', 'client'])
             ->where('user_id', $owner->accountOwnerId())
             ->whereIn('status', [InvoiceStatus::Sent->value, InvoiceStatus::Reminded->value])
             ->where('due_at', '<=', $today)

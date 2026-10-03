@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Banka — Qasa</title>
+<title>Banka — Zoad</title>
 <link rel="stylesheet" href="/manual/assets/manual.css">
 </head>
 <body>
 <div class="manual-shell">
     <aside class="manual-nav">
-        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <a class="manual-brand" href="/manual/cs/index.html">Zoad — návod</a>
         <nav id="chapter-nav"></nav>
         <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
     </aside>
@@ -23,7 +23,8 @@
 <h2>Bankovní účty</h2>
 <p>V <strong>Nastavení → Bankovní účty</strong> přidej účty, ze kterých fakturuješ a platíš. Každá faktura si vybírá konkrétní účet — díky tomu můžeš mít samostatné účty např. pro různé měny.</p>
 <h2>Import výpisu</h2>
-<p><strong>Banka → Importovat výpis</strong> přijímá výpis ve formátu <strong>CSV</strong> nebo <strong>GPC</strong> (formát běžně exportovaný slovenskými a českými bankami z internetového bankovnictví).</p>
+<p><strong>Banka → Importovat výpis</strong> přijímá výpis ve formátu <strong>CSV</strong> nebo <strong>XML camt.053</strong> (ISO 20022 „Bank to Customer Statement&quot; — v internetovém bankovnictví bývá nabízen pod tímto názvem nebo jako „SEPA XML výpis&quot;; podporují ho prakticky všechny slovenské i české banky).</p>
+<p>Pokud ti banka camt.053 nabízí, použij ho — je to normovaný formát, takže se načte bez dalšího nastavování. U CSV rozpozná aplikace sama export z <strong>Fio banky</strong>; u CSV z jiné banky si při nahrávání vybereš, který sloupec je částka, datum a variabilní symbol.</p>
 <p>Import probíhá ve dvou krocích:</p>
 <ol>
 <li><strong>Náhled (preview)</strong> — aplikace řádky výpisu spáruje s vystavenými fakturami podle variabilního symbolu, částky a měny a ukáže ti návrh párování ještě před uložením. Řádky, ke kterým se nenašla jednoznačná shoda, se označí k ručnímu přiřazení.</li>
@@ -33,7 +34,7 @@
 <h2>Automatické stahování výpisů (Fio banka)</h2>
 <p>Pro Fio banku nemusíš výpis stahovat a nahrávat ručně — účet lze napojit přímo přes API.</p>
 <ol>
-<li>V internetovém bankovnictví Fio si vygeneruj <strong>API token</strong> (Fio ho vydává ve své vlastní administraci, ne v aplikaci flok).</li>
+<li>V internetovém bankovnictví Fio si vygeneruj <strong>API token</strong> (Fio ho vydává ve své vlastní administraci, ne v aplikaci zoad).</li>
 <li>V aplikaci v <strong>Banka → Připojení</strong> zadej tento token. Aplikace ho hned ověří reálným stažením — pokud je token nesprávně zkopírovaný nebo neplatný, upozorní tě na to okamžitě, ne až za den.</li>
 <li>Od té chvíle aplikace jednou denně sama stáhne nové transakce a spáruje je s fakturami stejně jako při ručním importu: přesné shody (variabilní symbol, částka, měna) se přiřadí a faktura se označí jako uhrazená automaticky, nejisté shody čekají na tvé potvrzení nebo zamítnutí v přehledu návrhů spárování k danému připojení.</li>
 </ol>
@@ -49,7 +50,7 @@
 <li><strong>PDF</strong> — k ručnímu zadání platby, pokud import do internetového bankovnictví nevyužíváš.</li>
 </ul>
 <h2>Co modul (zatím) nedělá automaticky</h2>
-<p>Automatické stahování výpisů přes API funguje zatím jen pro <strong>Fio banku</strong>. Pro ostatní banky je stále potřeba ruční import výpisu (CSV/GPC) z internetového bankovnictví — přímé propojení přes open banking pro další banky je připravovaná funkce, ne součást aktuální verze. Stejně tak platba dodavateli se neodesílá z aplikace přímo — připravený export se importuje nebo zadává v tvém internetovém bankovnictví.</p>
+<p>Automatické stahování výpisů přes API funguje zatím jen pro <strong>Fio banku</strong>. Pro ostatní banky je stále potřeba ruční import výpisu (CSV nebo camt.053) z internetového bankovnictví — přímé propojení přes open banking pro další banky je připravovaná funkce, ne součást aktuální verze. Stejně tak platba dodavateli se neodesílá z aplikace přímo — připravený export se importuje nebo zadává v tvém internetovém bankovnictví.</p>
 <div class="chapter-nav-links"><a href="04-inbox.html">&larr; Přijaté faktury a inbox</a><a href="06-dane.html">Daně pro OSVČ &rarr;</a></div>
     </main>
 </div>

@@ -10,6 +10,7 @@ use App\Modules\Invoicing\Domain\Enums\ExportPeriodBasis;
 use App\Modules\Invoicing\Domain\Enums\SupplierInvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\SupplierInvoice;
 use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Support\Pagination;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -61,7 +62,7 @@ class EloquentSupplierInvoiceRepository implements SupplierInvoiceRepositoryInte
 
         $query->orderBy($sort, $direction);
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     /**

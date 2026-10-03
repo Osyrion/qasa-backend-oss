@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Clients\Application\DTOs;
 
 use App\Modules\Clients\Domain\Enums\ClientType;
+use App\Modules\Shared\Domain\ValueObjects\PeppolParticipantId;
 use App\Modules\Shared\Enums\Currency;
 use Spatie\LaravelData\Attributes\Validation\Max;
 use Spatie\LaravelData\Attributes\Validation\Min;
@@ -96,7 +97,10 @@ class ClientData extends Data
             'reverse_charge_allowed' => ['sometimes', 'boolean'],
             // scheme:identifier — an address with no scheme routes to nobody,
             // so a half-filled value is worse than an empty one.
-            'peppol_id' => ['nullable', 'string', 'regex:/^[0-9]{4}:[A-Za-z0-9._~\\-]{1,50}$/'],
+            // One expression, shared with the Peppol DTOs — a counterparty's
+            // address and our own are the same kind of thing, and three copies
+            // of this regex were three places for that to stop being true.
+            'peppol_id' => ['nullable', 'string', 'regex:'.PeppolParticipantId::PATTERN],
         ];
     }
 }

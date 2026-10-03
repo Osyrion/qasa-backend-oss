@@ -55,15 +55,15 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, Invoice> $invoices
  * @property-read int|null $invoices_count
  *
- * @method static Builder<static>|RecurringInvoiceTemplate dueForGeneration(CarbonImmutable $today)
+ * @method static Builder<static> dueForGeneration(CarbonImmutable $today)
  * @method static RecurringInvoiceTemplateFactory factory($count = null, $state = [])
- * @method static Builder<static>|RecurringInvoiceTemplate forUser($userId = null)
- * @method static Builder<static>|RecurringInvoiceTemplate newModelQuery()
- * @method static Builder<static>|RecurringInvoiceTemplate newQuery()
- * @method static Builder<static>|RecurringInvoiceTemplate onlyTrashed()
- * @method static Builder<static>|RecurringInvoiceTemplate query()
- * @method static Builder<static>|RecurringInvoiceTemplate withTrashed(bool $withTrashed = true)
- * @method static Builder<static>|RecurringInvoiceTemplate withoutTrashed()
+ * @method static Builder<static> forUser($userId = null)
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> onlyTrashed()
+ * @method static Builder<static> query()
+ * @method static Builder<static> withTrashed(bool $withTrashed = true)
+ * @method static Builder<static> withoutTrashed()
  *
  * @mixin Eloquent
  */

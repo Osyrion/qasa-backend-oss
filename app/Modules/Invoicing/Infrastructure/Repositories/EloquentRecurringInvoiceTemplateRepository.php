@@ -6,6 +6,7 @@ namespace App\Modules\Invoicing\Infrastructure\Repositories;
 
 use App\Modules\Invoicing\Application\Contracts\RecurringInvoiceTemplateRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\RecurringInvoiceTemplate;
+use App\Modules\Shared\Support\Pagination;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -28,7 +29,7 @@ class EloquentRecurringInvoiceTemplateRepository implements RecurringInvoiceTemp
             $query->where('client_id', $filters['client_id']);
         }
 
-        return $query->orderBy('next_run_date')->paginate($perPage);
+        return Pagination::of($query->orderBy('next_run_date'), $perPage);
     }
 
     public function findByIdOrFail(string $id): RecurringInvoiceTemplate

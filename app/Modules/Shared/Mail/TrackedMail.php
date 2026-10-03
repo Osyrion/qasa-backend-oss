@@ -21,6 +21,10 @@ use Symfony\Component\Mime\Email;
  */
 final class TrackedMail
 {
+    // A wire contract, not branding: the provider echoes these keys back on
+    // its webhooks, days after sending. Renaming one strands the delivery and
+    // bounce events of every message already sent, so they keep the name the
+    // first messages left with.
     public const DOCUMENT_TYPE = 'qasa_document_type';
 
     public const DOCUMENT_ID = 'qasa_document_id';

@@ -67,6 +67,30 @@ final class WebhookUrlGuard
     }
 
     /**
+     * curl's CURLOPT_RESOLVE mapping that forces this URL's host:port to the
+     * address resolveSafeIp() just vetted, so the address that was checked is
+     * the exact address dialled and DNS cannot be re-pointed in between. TLS
+     * SNI and certificate validation still use the original hostname.
+     *
+     * Here rather than at either call site: the pin is only meaningful
+     * alongside the check above, and two copies would be two chances for one
+     * of them to drift into pinning an address nobody vetted.
+     *
+     * @return array<int, list<string>>
+     */
+    public static function curlPinning(string $url, string $ip): array
+    {
+        $parts = parse_url($url);
+        $host = is_array($parts) ? (string) ($parts['host'] ?? '') : '';
+        $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? 'https')) : 'https';
+        $port = is_array($parts) && isset($parts['port'])
+            ? (int) $parts['port']
+            : ($scheme === 'http' ? 80 : 443);
+
+        return [CURLOPT_RESOLVE => ["{$host}:{$port}:{$ip}"]];
+    }
+
+    /**
      * @return list<string> Every A/AAAA record for the host (or the literal
      *                      IP), so an internal record can't hide behind a
      *                      public sibling.

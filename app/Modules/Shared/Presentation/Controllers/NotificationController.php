@@ -71,7 +71,7 @@ class NotificationController extends Controller
         }
 
         return NotificationResource::collection(
-            $query->paginate(Pagination::perPage($request))
+            Pagination::of($query, $request)
         );
     }
 

@@ -35,7 +35,7 @@ return [
     'invitation_email_mismatch' => 'Táto pozvánka bola odoslaná na iný e-mail. Zaregistrujte sa s adresou, na ktorú prišla.',
 
     // Overenie telefónneho čísla
-    'phone_code_sms_body' => 'Váš overovací kód pre Qasa je :code. Platí 10 minút.',
+    'phone_code_sms_body' => 'Váš overovací kód pre Zoad je :code. Platí 10 minút.',
     'phone_code_sent' => 'Overovací kód sme odoslali na vaše telefónne číslo.',
     'phone_verified' => 'Telefónne číslo bolo úspešne overené.',
     'phone_already_verified' => 'Toto telefónne číslo už máte na účte overené.',

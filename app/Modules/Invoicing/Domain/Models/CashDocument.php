@@ -54,9 +54,9 @@ use Illuminate\Support\Carbon;
  *
  * @method static CashDocumentFactory factory($count = null, $state = [])
  * @method static Builder<static> forUser($userId = null)
- * @method static Builder<static>|CashDocument newModelQuery()
- * @method static Builder<static>|CashDocument newQuery()
- * @method static Builder<static>|CashDocument query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

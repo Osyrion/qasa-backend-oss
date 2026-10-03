@@ -35,7 +35,7 @@ return [
     'invitation_email_mismatch' => 'Tato pozvánka byla odeslána na jiný e-mail. Zaregistrujte se s adresou, na kterou dorazila.',
 
     // Ověření telefonního čísla
-    'phone_code_sms_body' => 'Váš ověřovací kód pro Qasa je :code. Platí 10 minut.',
+    'phone_code_sms_body' => 'Váš ověřovací kód pro Zoad je :code. Platí 10 minut.',
     'phone_code_sent' => 'Ověřovací kód jsme odeslali na vaše telefonní číslo.',
     'phone_verified' => 'Telefonní číslo bylo úspěšně ověřeno.',
     'phone_already_verified' => 'Toto telefonní číslo už máte na účtu ověřené.',

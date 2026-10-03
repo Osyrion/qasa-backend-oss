@@ -7,6 +7,7 @@ namespace App\Modules\Invoicing\Infrastructure\Repositories;
 use App\Modules\Invoicing\Application\Contracts\QuoteRepositoryInterface;
 use App\Modules\Invoicing\Domain\Models\Quote;
 use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Support\Pagination;
 use Carbon\CarbonImmutable;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,7 @@ class EloquentQuoteRepository implements QuoteRepositoryInterface
 
         $query->orderBy($sort, $direction);
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     public function findById(string $id): ?Quote

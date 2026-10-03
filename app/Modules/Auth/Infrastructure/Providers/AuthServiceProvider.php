@@ -159,7 +159,7 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         // Reset links land on the SPA by default, which posts the token back
-        // to the API — flok_mobile gets its own deep link instead when the
+        // to the API — zoad_mobile gets its own deep link instead when the
         // request that triggered this came from the app.
         //
         // sendPasswordResetNotification() re-resolves its own $user instance
@@ -175,7 +175,7 @@ class AuthServiceProvider extends ServiceProvider
                 // The scheme (default "flok://") already ends in the slashes
                 // a URL needs — unlike frontend_url below, appending it here
                 // must not run through rtrim('/'), or "flok://" collapses to
-                // "flok:" and the link no longer opens the app at all.
+                // "zoad:" and the link no longer opens the app at all.
                 return config('qasa.mobile_app_scheme').'reset-password'
                     .'?token='.$token
                     .'&email='.urlencode($user->email);

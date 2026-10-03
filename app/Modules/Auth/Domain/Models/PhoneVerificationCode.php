@@ -25,9 +25,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @method static Builder<static>|PhoneVerificationCode newModelQuery()
- * @method static Builder<static>|PhoneVerificationCode newQuery()
- * @method static Builder<static>|PhoneVerificationCode query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

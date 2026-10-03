@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Shared\Application\Actions\PurgeRequestMetadataAction;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -153,4 +154,74 @@ it('reaches tokens across every account', function (): void {
 
 it('runs from the console', function (): void {
     $this->artisan('qasa:privacy:purge-request-metadata')->assertSuccessful();
+});
+
+/**
+ * personal_access_tokens reaches its account through tokenable_id rather than
+ * a user_id of its own, so the account filter is a *policy* predicate — and
+ * Postgres plans a policy's EXISTS as a hashed SubPlan, a filter applied to a
+ * row it has already read, never an index condition. An account-at-a-time
+ * sweep that names only the age therefore reads every token in the system on
+ * every account's turn.
+ *
+ * Naming the owner in the statement is what puts it back into the join. See
+ * Integrations\PurgeWebhookDeliveriesAction for the same shape measured.
+ */
+it('clears one account\'s token metadata without scanning every other account\'s', function (): void {
+    // Enough accounts that a sequential scan is the wrong plan and the planner
+    // knows it — on a handful of rows Postgres seq-scans either way.
+    $accounts = [];
+
+    for ($i = 0; $i < 12; $i++) {
+        $owner = createUser();
+        $accounts[] = $owner;
+
+        asAccount($owner, function () use ($owner): void {
+            for ($n = 0; $n < 4; $n++) {
+                $token = $owner->createToken('device-'.$n);
+
+                DB::table('personal_access_tokens')
+                    ->where('id', $token->accessToken->id)
+                    ->update(['ip_address' => '203.0.113.10', 'last_used_at' => now()->subDays(91)]);
+            }
+        });
+    }
+
+    DB::statement('ANALYZE personal_access_tokens');
+    DB::statement('ANALYZE users');
+
+    $captured = null;
+
+    DB::listen(function (QueryExecuted $query) use (&$captured): void {
+        if ($captured === null && str_starts_with($query->sql, 'update "personal_access_tokens"')) {
+            $captured = [$query->sql, $query->bindings];
+        }
+    });
+
+    purgeRequestMetadata();
+
+    expect($captured)->not->toBeNull('the purge issued no update against personal_access_tokens');
+
+    /** @var array{0: string, 1: array<int, mixed>} $captured */
+    [$sql, $bindings] = $captured;
+
+    $plan = asAccount($accounts[0], function () use ($sql, $bindings): string {
+        $rows = DB::select('EXPLAIN (COSTS OFF) '.$sql, $bindings);
+
+        // The column is literally named "QUERY PLAN", space included, so it
+        // is reached through the array cast rather than as a property.
+        return implode("\n", array_map(
+            static fn (object $row): string => (string) ((array) $row)['QUERY PLAN'],
+            $rows,
+        ));
+    });
+
+    // Naming the node, not just the words: the account subquery on `users`
+    // also prints an "Index Cond" mentioning tokenable_id, so matching that
+    // text alone passes with the owner predicate removed — it did, before this
+    // assertion was tightened. What has to be true is that
+    // personal_access_tokens itself is reached through the owner index rather
+    // than read whole.
+    expect($plan)->toContain('Index Scan using personal_access_tokens_tokenable_id_index')
+        ->and($plan)->not->toContain('Seq Scan on personal_access_tokens');
 });

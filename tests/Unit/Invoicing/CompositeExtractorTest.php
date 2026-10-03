@@ -41,7 +41,7 @@ it('degrades to an empty result without throwing when OCR yields nothing', funct
 });
 
 it('degrades to an empty result without throwing when pdftoppm itself is unavailable', function (): void {
-    config(['invoicing.inbox.pdftoppm_path' => 'qasa-nonexistent-pdftoppm-binary']);
+    config(['invoicing.inbox.pdftoppm_path' => 'zoad-nonexistent-pdftoppm-binary']);
 
     $result = compositeExtractor()->extract(base_path('tests/Fixtures/inbox/scanned.pdf'), 'application/pdf');
 

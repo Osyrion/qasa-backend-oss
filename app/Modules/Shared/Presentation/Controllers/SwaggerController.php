@@ -10,14 +10,14 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(
     version: '1.0.0',
-    description: 'API documentation for QASA Laravel application - invoicing and client management system',
-    title: 'QASA API Documentation',
-    contact: new OA\Contact(name: 'QASA Support', email: 'support@qasa.sk'),
+    description: 'API documentation for ZOAD Laravel application - invoicing and client management system',
+    title: 'ZOAD API Documentation',
+    contact: new OA\Contact(name: 'ZOAD Support', email: 'support@zoad.sk'),
     license: new OA\License(name: 'MIT', url: 'https://opensource.org/licenses/MIT'),
 )]
 #[OA\Server(
     url: 'http://localhost:8000',
-    description: 'QASA API Server',
+    description: 'ZOAD API Server',
 )]
 #[OA\SecurityScheme(
     securityScheme: 'sanctum',
@@ -31,6 +31,6 @@ class SwaggerController extends Controller
 {
     public function index(): JsonResponse
     {
-        return response()->json(['message' => 'QASA API Documentation']);
+        return response()->json(['message' => 'ZOAD API Documentation']);
     }
 }

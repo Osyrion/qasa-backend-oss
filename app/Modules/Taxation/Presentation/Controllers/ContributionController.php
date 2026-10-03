@@ -56,7 +56,7 @@ class ContributionController extends Controller
             $query->where('period_year', $request->integer('year'));
         }
 
-        $payments = $query->paginate(Pagination::perPage($request));
+        $payments = Pagination::of($query, $request);
 
         return ContributionPaymentResource::collection($payments);
     }

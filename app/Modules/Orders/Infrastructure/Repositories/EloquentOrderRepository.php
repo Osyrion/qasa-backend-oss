@@ -6,6 +6,7 @@ namespace App\Modules\Orders\Infrastructure\Repositories;
 
 use App\Modules\Orders\Application\Contracts\OrderRepositoryInterface;
 use App\Modules\Orders\Domain\Models\Order;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\Shared\Support\Search;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -18,7 +19,11 @@ class EloquentOrderRepository implements OrderRepositoryInterface
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {
-        $query = Order::query()->with('client');
+        // user as well as client: OrderResource asks every row for
+        // effectiveCurrency(), which falls back through the client to the
+        // account's own default. An order with no currency of its own — the
+        // normal case — was one query per row.
+        $query = Order::query()->with(['client', 'user']);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -55,7 +60,7 @@ class EloquentOrderRepository implements OrderRepositoryInterface
 
         $query->orderBy($sort, $direction);
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     /**
@@ -66,7 +71,7 @@ class EloquentOrderRepository implements OrderRepositoryInterface
     {
         $query = Order::query()
             ->where('client_id', $clientId)
-            ->with('client');
+            ->with(['client', 'user']);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -74,7 +79,7 @@ class EloquentOrderRepository implements OrderRepositoryInterface
 
         $query->orderBy('created_at', 'desc');
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     public function findById(string $id): ?Order

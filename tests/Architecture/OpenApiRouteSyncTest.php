@@ -47,15 +47,17 @@ uses(TestCase::class);
  */
 function undocumentedRouteAllowlist(): array
 {
-    return [
-        // laravel/mcp's streamable-HTTP transport: GET/DELETE are static 405
-        // stubs (see RoutePermissionCoverageTest's publicRouteAllowlist for
-        // the same routes), and POST is the MCP JSON-RPC protocol itself —
-        // self-describing via MCP's own tool/resource listing, not REST.
-        'GET api/v1/mcp/qasa' => 'laravel/mcp transport, self-describing via the MCP protocol, not REST',
-        'DELETE api/v1/mcp/qasa' => 'laravel/mcp transport, self-describing via the MCP protocol, not REST',
-        'POST api/v1/mcp/qasa' => 'laravel/mcp transport, self-describing via the MCP protocol, not REST',
-    ];
+    // Empty, and worth keeping that way. laravel/mcp's streamable-HTTP
+    // transport used to sit here on the argument that MCP is self-describing
+    // via tools/list; that was true of the protocol and false of the
+    // endpoint. An integrator still has to learn the URL exists, that it
+    // takes a JSON-RPC envelope rather than a resource body, that it wants a
+    // Sanctum token, and that GET/DELETE are 405 stubs — none of which
+    // tools/list can tell you, because you cannot call tools/list until you
+    // already know all of it. It is annotated on App\Mcp\Servers\QasaServer
+    // (the class handling the route; there is no controller) and the two 405
+    // stubs are documented as exactly that.
+    return [];
 }
 
 /**

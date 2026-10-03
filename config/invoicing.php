@@ -136,6 +136,62 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Peppol participant identifier schemes
+    |--------------------------------------------------------------------------
+    |
+    | Which registry number a business in each country publishes itself under
+    | on the Peppol network, and under which Peppol EAS/ICD scheme code.
+    | Read by Shared\Domain\ValueObjects\PeppolParticipantId.
+    |
+    | Core rather than config/integrations.php on purpose: the OSS build deletes
+    | that file with the rest of the premium transport, but `clients.peppol_id`
+    | is a core column and core still has to render and validate an address.
+    |
+    | These are codes from the Peppol Code List, which is amended — hence
+    | configuration. They are also the single easiest thing here to get wrong
+    | in a way nothing catches: a wrong scheme still produces a well-formed
+    | identifier, still validates, and still gets accepted, it merely names an
+    | address in the wrong registry where no one is listening. Two codes that
+    | look like reasonable guesses for a Czech business are 0060 (D-U-N-S, a
+    | global commercial number) and 9928 (Cyprus VAT). Neither is Czech.
+    |
+    | Verified against the Peppol BIS Billing 3.0 EAS code list, 2026-08-28:
+    |   0245  Tax identification number (DIČ), Slovakia
+    |   0158  Identification number of economic subject (IČO), Czech Republic
+    |   9950  Slovakia VAT number      (alternative, not used here)
+    |   9929  Czech Republic VAT number (alternative, not used here)
+    |
+    | `source` picks which number off the account: ico | dic | vat_id.
+    | `strip_prefix` removes the country letters people write a tax number
+    | with — the scheme code already says the country.
+    |
+    | **A list, most likely first, not a single answer.** Which scheme a
+    | subject actually ends up published under is decided by the provider that
+    | registers them, and for Czechia we have been told the subjects will be
+    | registered but not under which code — 0158 over the IČO and 9929 over the
+    | VAT number are both real Peppol codes for a Czech business.
+    |
+    | Rather than guess, the directory lookup tries the candidates and records
+    | whichever one the network answers on. Slovakia has one entry, so that
+    | costs nothing there.
+    |
+    */
+
+    'peppol' => [
+        'participant_schemes' => [
+            'SK' => [
+                // Verified against the code list; not in doubt.
+                ['scheme' => env('QASA_PEPPOL_SCHEME_SK', '0245'), 'source' => 'dic', 'strip_prefix' => 'SK'],
+            ],
+            'CZ' => [
+                ['scheme' => env('QASA_PEPPOL_SCHEME_CZ', '0158'), 'source' => 'ico', 'strip_prefix' => null],
+                ['scheme' => env('QASA_PEPPOL_SCHEME_CZ_ALT', '9929'), 'source' => 'vat_id', 'strip_prefix' => null],
+            ],
+        ],
+    ],
+
     'ubl' => [
         'customization_id' => env(
             'QASA_UBL_CUSTOMIZATION_ID',

@@ -32,14 +32,14 @@ services:
       GRAFANA_LOKI_URL: ${GRAFANA_LOKI_URL:?set GRAFANA_LOKI_URL in .env}
       GRAFANA_LOKI_USER: ${GRAFANA_LOKI_USER:?set GRAFANA_LOKI_USER in .env}
       GRAFANA_POSTGRES_DSN: ${GRAFANA_POSTGRES_DSN:?set GRAFANA_POSTGRES_DSN in .env}
-      GRAFANA_INSTANCE: ${GRAFANA_INSTANCE:-flok-prod}
+      GRAFANA_INSTANCE: ${GRAFANA_INSTANCE:-zoad-prod}
       GRAFANA_ENVIRONMENT: ${APP_ENV:-production}
     volumes:
       - ./docker/alloy:/etc/alloy:ro
       # The application's JSON log files. Read from disk rather than from the
       # container's stdout — config.alloy explains why PHP-FPM makes stdout
       # useless for this.
-      - ./storage/logs:/var/log/flok:ro
+      - ./storage/logs:/var/log/zoad:ro
       # Written by `php artisan qasa:metrics:export` (config/qasa.php →
       # qasa.metrics.textfile_dir). Read-only here: the agent must never be
       # able to write into the application's storage directory.

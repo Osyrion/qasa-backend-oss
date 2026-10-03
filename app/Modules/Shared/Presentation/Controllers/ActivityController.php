@@ -43,11 +43,13 @@ class ActivityController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
-        $entries = ActivityLog::query()
-            ->when($request->filled('subject_type'), fn ($query) => $query->where('subject_type', $request->string('subject_type')->toString()))
-            ->when($request->filled('subject_id'), fn ($query) => $query->where('subject_id', $request->string('subject_id')->toString()))
-            ->orderByDesc('created_at')
-            ->paginate(Pagination::perPage($request));
+        $entries = Pagination::of(
+            ActivityLog::query()
+                ->when($request->filled('subject_type'), fn ($query) => $query->where('subject_type', $request->string('subject_type')->toString()))
+                ->when($request->filled('subject_id'), fn ($query) => $query->where('subject_id', $request->string('subject_id')->toString()))
+                ->orderByDesc('created_at'),
+            $request,
+        );
 
         return ActivityLogResource::collection($entries);
     }

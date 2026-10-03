@@ -43,10 +43,10 @@ use Illuminate\Support\Carbon;
  * @property-read TaxFiling|null $supersedes
  *
  * @method static TaxFilingFactory factory($count = null, $state = [])
- * @method static Builder<static>|TaxFiling forUser($userId = null)
- * @method static Builder<static>|TaxFiling newModelQuery()
- * @method static Builder<static>|TaxFiling newQuery()
- * @method static Builder<static>|TaxFiling query()
+ * @method static Builder<static> forUser($userId = null)
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

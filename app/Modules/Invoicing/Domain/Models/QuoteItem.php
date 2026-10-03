@@ -33,9 +33,9 @@ use Illuminate\Support\Carbon;
  * @property-read Quote|null $quote
  *
  * @method static QuoteItemFactory factory($count = null, $state = [])
- * @method static Builder<static>|QuoteItem newModelQuery()
- * @method static Builder<static>|QuoteItem newQuery()
- * @method static Builder<static>|QuoteItem query()
+ * @method static Builder<static> newModelQuery()
+ * @method static Builder<static> newQuery()
+ * @method static Builder<static> query()
  *
  * @mixin Eloquent
  */

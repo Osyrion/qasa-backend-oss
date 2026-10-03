@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Faktura: od konceptu po úhradu — Qasa</title>
+<title>Faktura: od konceptu po úhradu — Zoad</title>
 <link rel="stylesheet" href="/manual/assets/manual.css">
 </head>
 <body>
 <div class="manual-shell">
     <aside class="manual-nav">
-        <a class="manual-brand" href="/manual/cs/index.html">Qasa — návod</a>
+        <a class="manual-brand" href="/manual/cs/index.html">Zoad — návod</a>
         <nav id="chapter-nav"></nav>
         <a class="lang-switch" href="/manual/sk/index.html">Slovensky</a>
     </aside>
@@ -76,6 +76,41 @@
 <p>Pokud fakturuješ na Slovensku, týká se tě zákon 385/2025 Z. z.: tuzemské B2B faktury budou putovat sítí <strong>Peppol</strong>. Vystavovat takto budou muset plátci DPH, ale <strong>přijímat e-faktury musí umět každý podnikatel</strong> — včetně neplátců a živnostníků. Od Q2 2026 běží dobrovolná fáze na vyzkoušení nanečisto.</p>
 <p>Prakticky to znamená, že potřebuješ <strong>digitálního pošťáka</strong> — certifikovaného zprostředkovatele, který fakturu odešle a doručí. Seznam schválených pošťáků vede slovenská Finanční správa a jde o placenou službu nezávislou na této aplikaci.</p>
 <p>Náš export je na to připravený: XML, které si stáhneš, odpovídá <strong>Peppol BIS Billing 3.0</strong> a je ověřené proti oficiálním pravidlům, která pošťák kontroluje. Už dnes si ho tedy můžeš stáhnout a nahrát ve webovém rozhraní svého pošťáka — a přijatou fakturu stejně tak stáhnout od něj a nahrát do Doručené pošty.</p>
+<h3>Zapnutí e-fakturace (průvodce)</h3>
+<p>Od placeného tarifu tě aplikace provede krok za krokem — <strong>Nastavení → E-fakturace</strong>, nebo přes položku v úvodním checklistu. Nemusíš to řešit hned; dokud to nedokončíš, fakturuješ úplně normálně v PDF a nic se neztratí.</p>
+<p>Průvodce má čtyři obrazovky:</p>
+<ol>
+<li><strong>Co to je.</strong> Kolik to zabere, co budeš potřebovat, a jméno <strong>doručovacího partnera</strong> — certifikovaného poskytovatele, který za nás doklady přenáší. To jméno si zapamatuj, za chvíli ho budeš hledat ve státním portálu.</li>
+<li><strong>Tvoje údaje.</strong> Aplikace z IČO a DIČ spočítá tvoji <strong>adresu v síti Peppol</strong> a ukáže ti ji. Pokud IČO nebo DIČ chybí, pošle tě je nejdřív doplnit — bez nich adresu vytvořit nelze.</li>
+<li><strong>Kdo to vyřídí.</strong> Tři rovnocenné možnosti: <em>vyřídím to sám</em>, <em>vyřídí to můj účetní</em>, nebo <em>nevím si rady</em>.</li>
+<li><strong>Kontrola.</strong> Tlačítko <em>Zkontrolovat</em> se zeptá přímo veřejného registru Peppol. Žádné zaškrtávátko „hotovo&quot; tu záměrně není — o tom, jestli jsi v síti, nerozhoduje to, co naklikáš u nás.</li>
+</ol>
+<h3>Krok, který za tebe neuděláme</h3>
+<p>Tohle platí pro <strong>slovenské</strong> subjekty: výběr doručovacího poskytovatele probíhá <strong>na portálu Finanční správy SR</strong> a je na něj potřeba <strong>občanský průkaz s čipem (eID)</strong> nebo přihlášení přes slovensko.sk. Je to jediná část, kterou za tebe nemůže udělat ani aplikace, ani my.</p>
+<p>V portálu budeš hledat <strong>jméno našeho partnera, ne Zoad</strong>. Je to tak správně: Zoad je integrátor a doklady fyzicky přenáší certifikovaný poskytovatel.</p>
+<p>Pokud na to nemáš chuť, jsou dvě zcela legitimní cesty:</p>
+<ul>
+<li><strong>Účetní.</strong> Finanční správa výslovně připouští, aby to vyřídil on. V průvodci zadáš jeho e-mail a pošleme mu přesný postup i s tvým Peppol ID. Jeho adresu si neukládáme.</li>
+<li><strong>Vytištěný návod.</strong> U kroku 3 si stáhneš <strong>PDF</strong> s očíslovanými kroky, tvým Peppol ID a jménem partnera.</li>
+</ul>
+<p>Po výběru se vrať a stiskni <em>Zkontrolovat</em>. Obvykle to trvá do 24 hodin — čekat tu nemusíš, napíšeme ti e-mail.</p>
+<blockquote>
+<p><strong>Pro české subjekty</strong> je e-fakturace přes Peppol <strong>dobrovolná</strong> — žádný mandát, žádný státní portál a žádné eID. Vyplatí se, když fakturuješ do zahraničí nebo to po tobě odběratel vyžaduje. Zápis do registru za tebe vyřídí náš partner.</p>
+</blockquote>
+<h3>Když ti přijaté faktury chodí jinam</h3>
+<p>Pokud jsi v portálu vybral jiného poštáka než našeho partnera, jsi <strong>zaregistrovaný správně</strong> — jen ti přijaté e-faktury doručuje někdo jiný, takže se tu neobjeví. Odesílat přes Zoad můžeš dál bez omezení.</p>
+<p>Aplikace to sama zjistí a řekne ti to. Máš dvě možnosti: přepnout se v portálu na našeho partnera, nebo v Nastavení potvrdit <strong>„vím o tom, nechat tak&quot;</strong> — pak přestaneme upozorňovat a Doručená pošta ti férově napíše, že příjem přes Zoad je vypnutý, místo aby vypadala jen prázdně.</p>
+<h3>Archiv e-faktur</h3>
+<p>Každou odeslanou i přijatou e-fakturu ukládáme <strong>přesně tak, jak šla sítí</strong> — ne znovu vygenerovanou. Najdeš je v <strong>Nastavení → E-fakturace → Archiv</strong>, i s kontrolním součtem, kterým si ověříš, že stažený soubor je opravdu ten původní.</p>
+<p>Držíme je po zákonnou lhůtu (v Česku i na Slovensku 10 let) a konkrétní datum vidíš v nastavení. <strong>Archiv ti zůstane dostupný i tehdy, když přejdeš na levnější tarif nebo Peppol přestaneš používat</strong> — jsou to tvoje doklady a povinnost uchovat je je tvoje, ne naše.</p>
+<h3>Když budeš chtít odejít</h3>
+<p>Nic tě tu nedrží a není co rozplétat:</p>
+<ul>
+<li><strong>Registrace je tvoje, ne naše.</strong> Patří daňovému subjektu; poskytovatele měníš v portálu bez toho, abys s námi cokoli řešil.</li>
+<li><strong>Adresa v síti je tvoje</strong> a bereš si ji s sebou.</li>
+<li><strong>Archiv si stáhneš</strong> kdykoli, i po zrušení placeného tarifu.</li>
+</ul>
+<p>Jediná zdvořilost, o kterou prosíme: dej nám vědět v <strong>Nastavení → E-fakturace → Odcházím</strong>. Nic to neblokuje — jen přestaneme kontrolovat registr a nebudeme ti posílat upozornění, že ti něco nefunguje, když sis to sám změnil.</p>
 <h3>Odeslání jedním kliknutím (placený plán)</h3>
 <p>S placeným plánem mezikrok přes web pošťáka odpadá. Jednou nastavíš přístupové údaje svého digitálního pošťáka a u faktury přibude <strong>Odeslat přes Peppol</strong>.</p>
 <p>Co k tomu potřebuješ:</p>

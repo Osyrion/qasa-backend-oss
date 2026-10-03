@@ -1,4 +1,4 @@
-# Alert rules for the Flok production deployment, in Prometheus rule format.
+# Alert rules for the Zoad production deployment, in Prometheus rule format.
 #
 # Loaded into Grafana Cloud's Mimir ruler by scripts/grafana-rules-sync.sh.
 # They live in the repository rather than in the Grafana UI for the same reason
@@ -17,7 +17,7 @@
 #   * DiskFillingUp — Postgres, the queue, the cache and the sessions are all
 #     the same disk, and running it out takes everything down at once.
 groups:
-  - name: flok-availability
+  - name: zoad-availability
     interval: 1m
     rules:
       - alert: AppDown
@@ -57,7 +57,7 @@ groups:
             never ran since deploy, or the storage/app/metrics mount in
             docker-compose.observability.yml is wrong.
 
-  - name: flok-resources
+  - name: zoad-resources
     interval: 1m
     rules:
       - alert: DiskFillingUp
@@ -98,7 +98,7 @@ groups:
             restart: unless-stopped hides a crash loop perfectly — the container
             is always "up" a second after it died.
 
-  - name: flok-database
+  - name: zoad-database
     interval: 1m
     rules:
       - alert: PostgresDown
@@ -127,7 +127,7 @@ groups:
             (Shared\Support\TenantContext), so connection exhaustion shows up as
             500s across the whole API rather than as a slow endpoint.
 
-  - name: flok-queue
+  - name: zoad-queue
     interval: 1m
     rules:
       # Depth alone is a bad signal — a bulk import legitimately queues
@@ -158,7 +158,7 @@ groups:
             Individually these are also Sentry events; this fires on the rate,
             which is what distinguishes one unlucky job from a broken deploy.
 
-  - name: flok-application
+  - name: zoad-application
     interval: 1m
     rules:
       - alert: ErrorLogSpike

@@ -1,4 +1,4 @@
-# Qasa Core
+# Zoad Core
 
 Open-source invoicing and CRM API for freelancers and small businesses in
 Slovakia and Czechia. Laravel modular monolith on Clean Architecture layers:
@@ -6,7 +6,7 @@ Domain, Application, Infrastructure, Presentation.
 
 Licensed under **AGPL-3.0-only** — see `LICENSE`.
 
-> This repository is **generated**. It is built from the Qasa SaaS repository
+> This repository is **generated**. It is built from the Zoad SaaS repository
 > by removing the premium modules, and every build overwrites it — changes
 > committed here directly will be lost. Please open issues rather than pull
 > requests.

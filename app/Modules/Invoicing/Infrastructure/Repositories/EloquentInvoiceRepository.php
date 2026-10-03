@@ -12,6 +12,7 @@ use App\Modules\Invoicing\Domain\Enums\InvoiceStatus;
 use App\Modules\Invoicing\Domain\Models\Invoice;
 use App\Modules\Invoicing\Domain\Models\InvoiceItem;
 use App\Modules\Invoicing\Domain\ValueObjects\InvoiceNumberMask;
+use App\Modules\Shared\Support\Pagination;
 use App\Modules\Shared\Support\Search;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,8 +35,12 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
      */
     public function paginate(int $perPage = 20, array $filters = []): LengthAwarePaginator
     {
+        // bankAccount as well as client: InvoiceResource asks PaymentQrService
+        // for a qr_scheme on every row, and that falls back to the live
+        // relation whenever bank_account_snapshot is null — which is every
+        // draft. A page of drafts was one query per row.
         $query = Invoice::query()
-            ->with('client')
+            ->with(['client', 'bankAccount'])
             ->withSum('payments', 'amount');
 
         if (! empty($filters['status'])) {
@@ -125,7 +130,7 @@ class EloquentInvoiceRepository implements InvoiceRepositoryInterface
             $query->orderBy($sort, $direction);
         }
 
-        return $query->paginate($perPage);
+        return Pagination::of($query, $perPage);
     }
 
     /**
